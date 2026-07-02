@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useReveal } from '../useReveal.js';
 import TeamService from '../team/TeamService.js';
 import ApplicationsService from '../team/ApplicationsService.js';
+import PageBackdrop from './PageBackdrop.jsx';
 
 export default function Team({ tx }) {
   const [members,  setMembers]  = useState([]);
@@ -26,6 +27,7 @@ export default function Team({ tx }) {
 
   return (
     <section id="team" className="team">
+      <PageBackdrop image="/uploads/team/team-group.jpg" />
       <div className="team__inner">
         <div ref={r0} className="reveal mb-10">
           <span className="sec-label">{tx.teamLabel}</span>

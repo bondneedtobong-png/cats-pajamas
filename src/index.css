@@ -72,6 +72,7 @@ html { scroll-behavior: smooth; }
   --accent-dim: rgba(155,93,229,0.1);
   --glow:       rgba(155,93,229,0.65);
   --theme-name: "VIOLET NIGHT";
+  --nav-w:      236px; /* sidebar width — shared by .book/.book-controls offsets */
 }
 
 /* ── App shell ─────────────────────────────────────────── */
@@ -91,9 +92,13 @@ html { scroll-behavior: smooth; }
 .book {
   position: fixed;
   inset: 0;
+  left: var(--nav-w); /* room for the sidebar; reset to 0 under the burger breakpoint */
   overflow: hidden;
   perspective: 2600px;
   background: var(--bg);
+}
+@media (max-width: 900px) {
+  .book { left: 0; }
 }
 .book__page {
   position: absolute;
@@ -203,7 +208,7 @@ html { scroll-behavior: smooth; }
 /* ── Book flip controls (prev/next + page count) ──────────── */
 .book-controls {
   position: fixed;
-  left: 50%;
+  left: 50%; /* re-centered on the content area (right of the sidebar) below */
   bottom: 22px;
   transform: translateX(-50%);
   z-index: 60;
@@ -215,6 +220,9 @@ html { scroll-behavior: smooth; }
   backdrop-filter: blur(8px);
   border: 1px solid var(--border);
   border-radius: 999px;
+}
+@media (min-width: 901px) {
+  .book-controls { left: calc(var(--nav-w) / 2 + 50vw); }
 }
 .book-controls__arrow {
   width: 34px;
@@ -284,6 +292,32 @@ html { scroll-behavior: smooth; }
 }
 .ornament__line { height: 1px; background: currentColor; }
 
+/* ── Page backdrop (photo + violet brand tint, every page) ─
+   Recommended source images: landscape, ≥1920×1280px (min ~1600px on the
+   short side), JPG ~70-80% quality. object-fit:cover crops to whatever
+   viewport shows up, so keep the subject roughly centered with breathing
+   room on all sides — no important detail near the edges. */
+.page-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.page-bg__photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: .22;
+}
+.page-bg__tint {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 40%, var(--bg) 15%, transparent 80%),
+    linear-gradient(160deg, rgba(var(--accent-rgb), .3), rgba(var(--accent-rgb), 0) 55%);
+}
+
 /* ── Section label (eyebrow) ───────────────────────────── */
 .sec-label {
   font-family: 'Avenir Next', sans-serif;
@@ -295,26 +329,27 @@ html { scroll-behavior: smooth; }
   text-align: center;
 }
 
-/* ── NAV ───────────────────────────────────────────────── */
+/* ── NAV — left sidebar (≥900px), burger overlay below that ─ */
 .nav {
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: 0; left: 0; bottom: 0;
+  width: var(--nav-w);
   z-index: 50;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22px 5%;
-  transition: background .4s, border-color .4s, backdrop-filter .4s;
-}
-.nav--solid {
-  background: color-mix(in srgb, var(--bg) 93%, transparent);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 30px 22px 26px;
+  background: color-mix(in srgb, var(--bg2) 90%, transparent);
+  backdrop-filter: blur(14px);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
 }
 .nav__logo {
   display: flex;
   align-items: center;
   color: inherit;
+  margin-bottom: 18px;
 }
 /* ── Cat logo (navbar) ─────────────────────────────────── */
 .nav__cat {
@@ -340,37 +375,61 @@ html { scroll-behavior: smooth; }
 }
 .nav__links {
   display: flex;
-  gap: 34px;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
 }
+
+/* Shared "shift + shimmer" hover treatment for every clickable nav item —
+   a light sweep crosses the label and it nudges sideways, per explicit
+   request ("при наводке на любую кнопку она должна смещаться,
+   переливаться"). Reused by .nav__link/.nav__lang/.nav__tg/.nav__profile. */
+.nav__shimmer {
+  background-image: linear-gradient(100deg, transparent 30%, rgba(var(--gold-rgb),.4) 48%, transparent 66%);
+  background-size: 260% 100%;
+  background-position: 150% 0;
+  transition: background-position .7s ease, transform .25s cubic-bezier(.34,1.56,.64,1), color .2s, border-color .2s, box-shadow .25s;
+}
+.nav__shimmer:hover { background-position: -60% 0; transform: translateX(6px); }
+@media (prefers-reduced-motion: reduce) {
+  .nav__shimmer { transition: color .2s, border-color .2s; }
+  .nav__shimmer:hover { transform: none; }
+}
+
 .nav__link {
   position: relative;
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 11px;
-  letter-spacing: 2.5px;
+  font-family: 'Baskerville', serif;
+  font-size: 15px;
+  letter-spacing: 1.5px;
   color: var(--text-dim);
   text-transform: uppercase;
-  transition: color .2s;
-  padding-bottom: 3px;
+  padding: 9px 4px;
 }
 .nav__link:hover { color: var(--text); }
-/* Sliding underline — grows from the center, stays put on the active section */
-.nav__link::after {
+.nav__link--active { color: var(--gold); }
+/* Left tick — marks the active page in a vertical list (the old sliding
+   underline doesn't read as well stacked vertically). */
+.nav__link::before {
   content: '';
   position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 1px;
+  left: -14px; top: 50%;
+  width: 6px; height: 1px;
   background: var(--gold);
-  transform: scaleX(0);
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: left;
   transition: transform .3s cubic-bezier(.34,1.56,.64,1);
 }
-.nav__link:hover::after { transform: scaleX(.6); }
-.nav__link--active { color: var(--text); }
-.nav__link--active::after { transform: scaleX(1); }
+.nav__link:hover::before,
+.nav__link--active::before { transform: translateY(-50%) scaleX(1); }
+
 .nav__actions {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-items: center;
+  align-items: stretch;
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
 }
 .nav__lang {
   background: transparent;
@@ -379,22 +438,33 @@ html { scroll-behavior: smooth; }
   font-family: 'Avenir Next', sans-serif;
   font-size: 10px;
   letter-spacing: 2px;
-  padding: 7px 14px;
-  transition: border-color .2s, color .2s;
+  padding: 9px 14px;
 }
 .nav__lang:hover { border-color: var(--gold); color: var(--text); }
+
+/* CTA — "крупная, чуть светящаяся": biggest, brightest item in the sidebar */
+@keyframes navCtaGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0), 0 4px 16px rgba(0,0,0,.3); }
+  50%      { box-shadow: 0 0 22px 3px rgba(var(--accent-rgb), .45), 0 4px 16px rgba(0,0,0,.3); }
+}
 .nav__cta {
   background: var(--accent);
   color: #fff;
   font-family: 'Avenir Next', sans-serif;
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
-  padding: 9px 22px;
-  display: inline-block;
-  transition: opacity .2s;
+  text-align: center;
+  padding: 16px 18px;
+  display: block;
+  animation: navCtaGlow 3.2s ease-in-out infinite;
+  transition: transform .2s, background .2s;
 }
-.nav__cta:hover { opacity: .85; }
+.nav__cta:hover { background: color-mix(in srgb, var(--accent) 85%, white); transform: translateY(-2px); }
+@media (prefers-reduced-motion: reduce) {
+  .nav__cta { animation: none; }
+}
 
 /* ── Telegram login / profile link ────────────────────── */
 @keyframes navTgGlow {
@@ -434,14 +504,14 @@ html { scroll-behavior: smooth; }
   .nav__tg { animation: none; }
 }
 
-/* Collapse to icon-only before the nav gets cramped (still well above the
-   681px+ breakpoint where the whole row gives way to the burger menu).
-   Scoped to the desktop row only — the mobile overlay has plenty of room
-   and should always show the full label. */
-@media (max-width: 1180px) {
-  .nav__actions .nav__tg-label { display: none; }
-  .nav__actions .nav__tg, .nav__actions .nav__profile { padding: 9px 11px; }
-}
+/* Icon-only in the sidebar — it's a fixed 236px column regardless of
+   viewport width, "ВОЙТИ ЧЕРЕЗ TELEGRAM" doesn't fit next to the icon at
+   any screen size. Scoped to .nav__actions only, so the mobile drawer
+   (.nav__mobile-actions, a different container) keeps the full label —
+   it has the width to spare. */
+.nav__actions .nav__tg-label { display: none; }
+.nav__actions .nav__tg,
+.nav__actions .nav__profile { justify-content: center; }
 
 /* ── HERO ──────────────────────────────────────────────── */
 .hero {
@@ -698,8 +768,8 @@ html { scroll-behavior: smooth; }
 .about__divider { width: 1px; height: 72px; background: var(--border); }
 
 /* ── MENU ──────────────────────────────────────────────── */
-.menu { padding: 110px 6% 96px; background: var(--bg); }
-.menu__inner { max-width: 1080px; margin: 0 auto; }
+.menu { padding: 110px 6% 96px; background: var(--bg); position: relative; overflow: hidden; }
+.menu__inner { max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; }
 .menu__title {
   font-family: 'Baskerville', serif;
   font-size: 54px;
@@ -1182,8 +1252,10 @@ html { scroll-behavior: smooth; }
 .team {
   padding: 110px 6% 96px;
   background: var(--bg);
+  position: relative;
+  overflow: hidden;
 }
-.team__inner { max-width: 1080px; margin: 0 auto; }
+.team__inner { max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; }
 .team__sub {
   font-family: 'Baskerville', serif;
   font-size: 20px;
@@ -1418,8 +1490,8 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── BOOKING ───────────────────────────────────────────── */
-.booking { padding: 110px 6% 96px; background: var(--bg); }
-.booking__inner { max-width: 660px; margin: 0 auto; }
+.booking { padding: 110px 6% 96px; background: var(--bg); position: relative; overflow: hidden; }
+.booking__inner { max-width: 660px; margin: 0 auto; position: relative; z-index: 1; }
 .booking__title {
   font-family: 'Baskerville', serif;
   font-size: 54px;
@@ -1466,8 +1538,8 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── CONTACTS ──────────────────────────────────────────── */
-.contacts { padding: 110px 6% 96px; background: var(--bg2); }
-.contacts__inner { max-width: 980px; margin: 0 auto; }
+.contacts { padding: 110px 6% 96px; background: var(--bg2); position: relative; overflow: hidden; }
+.contacts__inner { max-width: 980px; margin: 0 auto; position: relative; z-index: 1; }
 .contacts__title {
   font-family: 'Baskerville', serif;
   font-size: 54px;
@@ -1661,8 +1733,18 @@ html { scroll-behavior: smooth; }
 /* ── MOBILE ≤ 680px ─────────────────────────────────────── */
 @media (max-width: 900px) {
 
-  /* Nav */
-  .nav { padding: 14px 5%; }
+  /* Nav — collapse the sidebar back into a slim top bar + burger overlay */
+  .nav {
+    top: 0; left: 0; right: 0; bottom: auto;
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 5%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav__logo { margin-bottom: 0; }
   .nav__links,
   .nav__actions { display: none; }
   .nav__cat { width: 32px; height: 32px; }
@@ -1717,19 +1799,23 @@ html { scroll-behavior: smooth; }
     color: var(--text);
     text-decoration: none;
     text-transform: uppercase;
-    transition: color .2s;
+    padding: 4px 10px;
   }
   .nav__mobile-link:hover,
   .nav__mobile-link--active { color: var(--gold); }
 
   .nav__mobile-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 12px;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    max-width: 280px;
     margin-top: 8px;
   }
+  .nav__mobile-actions .nav__tg,
+  .nav__mobile-actions .nav__profile,
+  .nav__mobile-actions .nav__lang { justify-content: center; }
 
   /* Hero */
   .hero { padding: 78px 0 92px; }

@@ -1,4 +1,5 @@
 import { useReveal } from '../useReveal.js';
+import PageBackdrop from './PageBackdrop.jsx';
 
 export default function Contacts({ tx }) {
   const r0   = useReveal(0);
@@ -8,6 +9,7 @@ export default function Contacts({ tx }) {
 
   return (
     <section id="contacts" className="contacts">
+      <PageBackdrop image="/uploads/team/bar-atmosphere.jpg" />
       <div className="contacts__inner">
         <div ref={r0} className="reveal mb-10">
           <span className="sec-label">{tx.contactsLabel}</span>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useReveal } from '../useReveal.js';
 import EventsService from '../events/EventsService.js';
+import PageBackdrop from './PageBackdrop.jsx';
 
 // Event content itself is RU-only (same decision as cocktails) — but the day
 // label is a real calendar date, so we can derive it in either UI language
@@ -38,6 +39,7 @@ export default function Events({ tx, lang }) {
 
   return (
     <section id="events" className="events">
+      <PageBackdrop image="/uploads/team/live-music.jpg" />
       <div className="events__dots" />
       <div className="events__inner">
         <div ref={r0} className="reveal mb-10">

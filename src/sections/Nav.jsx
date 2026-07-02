@@ -6,7 +6,7 @@ import AuthService from '../auth/AuthService.js';
 function TelegramNavLink({ loggedIn, onClick, tx }) {
   if (loggedIn) {
     return (
-      <a href="/profile" className="nav__profile" onClick={onClick} aria-label={tx.navProfile}>
+      <a href="/profile" className="nav__profile nav__shimmer" onClick={onClick} aria-label={tx.navProfile}>
         <svg className="nav__tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <circle cx="12" cy="8" r="3.4" />
           <path d="M4.5 20c1.4-3.8 4.4-5.8 7.5-5.8s6.1 2 7.5 5.8" strokeLinecap="round" />
@@ -16,7 +16,7 @@ function TelegramNavLink({ loggedIn, onClick, tx }) {
     );
   }
   return (
-    <a href="/auth?next=/profile" className="nav__tg" onClick={onClick} aria-label={tx.navLoginTg}>
+    <a href="/auth?next=/profile" className="nav__tg nav__shimmer" onClick={onClick} aria-label={tx.navLoginTg}>
       <svg className="nav__tg-icon" viewBox="0 0 24 24" fill="currentColor">
         <path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l.002.001-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.228c.309-1.239-.473-1.8-1.282-1.434z" />
       </svg>
@@ -26,12 +26,12 @@ function TelegramNavLink({ loggedIn, onClick, tx }) {
 }
 
 // Page-flip nav — clicking a link no longer scrolls, it turns the book to
-// that page directly (App.jsx owns activePage/onNavigate).
+// that page directly (App.jsx owns activePage/onNavigate). Renders as a
+// vertical sidebar on the left from 900px up, and the usual burger + full
+// screen overlay below that.
 export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggedIn] = useState(() => AuthService.isAuthenticated());
-
-  const solid = activePage !== 'hero';
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
@@ -41,12 +41,12 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) 
   const close = () => setMenuOpen(false);
   const nav = (id) => (e) => { e.preventDefault(); onNavigate(id); close(); };
 
-  const linkCls = (id) => `nav__link${activePage === id ? ' nav__link--active' : ''}`;
-  const mobileLinkCls = (id) => `nav__mobile-link${activePage === id ? ' nav__mobile-link--active' : ''}`;
+  const linkCls = (id) => `nav__link nav__shimmer${activePage === id ? ' nav__link--active' : ''}`;
+  const mobileLinkCls = (id) => `nav__mobile-link nav__shimmer${activePage === id ? ' nav__mobile-link--active' : ''}`;
 
   return (
     <>
-      <nav className={`nav${solid ? ' nav--solid' : ''}`}>
+      <nav className="nav">
         <a href="#" className="nav__logo" onClick={nav('hero')} aria-label="The Cat's Pajamas Club">
           <svg className="nav__cat" viewBox="0 0 64 64" width="38" height="38" fill="none"
                stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
@@ -69,13 +69,14 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) 
           <a href="#" className={linkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
           <a href="#" className={linkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
           <a href="#" className={linkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
+          <a href="#" className={linkCls('gallery')}  onClick={nav('gallery')}>{tx.navGallery}</a>
           <a href="#" className={linkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
           <a href="#" className={linkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
         </div>
 
         <div className="nav__actions">
-          <button className="nav__lang" onClick={onLangToggle}>{tx.langBtn}</button>
           <TelegramNavLink loggedIn={loggedIn} tx={tx} />
+          <button className="nav__lang nav__shimmer" onClick={onLangToggle}>{tx.langBtn}</button>
           <a href="/booking" className="nav__cta">{tx.heroCta}</a>
         </div>
 
@@ -92,11 +93,12 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) 
         <a href="#" className={mobileLinkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
         <a href="#" className={mobileLinkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
         <a href="#" className={mobileLinkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
+        <a href="#" className={mobileLinkCls('gallery')}  onClick={nav('gallery')}>{tx.navGallery}</a>
         <a href="#" className={mobileLinkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
         <a href="#" className={mobileLinkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
         <div className="nav__mobile-actions">
-          <button className="nav__lang" onClick={() => { onLangToggle(); close(); }}>{tx.langBtn}</button>
           <TelegramNavLink loggedIn={loggedIn} onClick={close} tx={tx} />
+          <button className="nav__lang nav__shimmer" onClick={() => { onLangToggle(); close(); }}>{tx.langBtn}</button>
           <a href="/booking" className="nav__cta" onClick={close}>{tx.heroCta}</a>
         </div>
       </div>

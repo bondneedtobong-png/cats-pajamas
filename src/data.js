@@ -2,7 +2,7 @@ export const translations = {
   ru: {
     langBtn: 'EN',
     navAbout: 'Легенда', navMenu: 'Напитки', navEvents: 'Афиша',
-    navTeam: 'Бармены', navContacts: 'Как найти',
+    navGallery: 'Полка', navTeam: 'Бармены', navContacts: 'Как найти',
     navLoginTg: 'Войти через Telegram', navProfile: 'Профиль',
     heroEdition: 'Барная карта',
     heroCta: 'Забронировать стол',
@@ -72,7 +72,7 @@ export const translations = {
   en: {
     langBtn: 'RU',
     navAbout: 'Legend', navMenu: 'Drinks', navEvents: 'Bill',
-    navTeam: 'Bartenders', navContacts: 'Find Us',
+    navGallery: 'Shelf', navTeam: 'Bartenders', navContacts: 'Find Us',
     navLoginTg: 'Log in with Telegram', navProfile: 'Profile',
     heroEdition: 'The Bar Menu',
     heroCta: 'Reserve a Table',
