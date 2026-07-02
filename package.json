@@ -5,10 +5,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start:api": "node server.js",
+    "start:bot": "node bot-start.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
+    "express": "^4.22.2",
     "grammy": "^1.44.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -137,7 +137,7 @@ function subGate() {
 let _bot = null;
 let _inited = false;
 
-function buildBot() {
+export function buildBot() {
   const bot = new Bot(TOKEN);
 
   // Персистентная сессия (переживает холодный старт serverless-функции) —
