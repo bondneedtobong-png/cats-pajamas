@@ -114,7 +114,12 @@ html { scroll-behavior: smooth; }
   padding-bottom: 90px;
   box-sizing: border-box;
   transition: transform 1.05s cubic-bezier(.65,0,.35,1), opacity .6s ease;
-  will-change: transform, opacity;
+  /* No permanent will-change here — with 8 pages always mounted, hinting
+     the browser to keep all 8 as standing GPU compositor layers forever
+     (instead of only the 1-2 actually mid-transition at any moment) was
+     a likely cause of the flicker/stutter reported on both phone and
+     desktop. Transitions still work fine without it; the browser just
+     promotes the layer lazily when a transform/opacity change starts. */
 }
 @media (max-width: 900px) {
   .book__page { padding-bottom: 74px; }
@@ -137,6 +142,17 @@ html { scroll-behavior: smooth; }
   opacity: 0;
   pointer-events: none;
 }
+/* Hero keeps its own looping animations (Ken Burns slideshow, logo glow,
+   the "next" float) running 24/7 even while completely hidden, because
+   every page stays mounted for state. That's constant, invisible GPU work
+   stacking on top of the other 7 pages — pause it whenever hero isn't the
+   one on screen. */
+.book__page:not(.book__page--active) .hero__bg-slide,
+.book__page:not(.book__page--active) .hero__logo,
+.book__page:not(.book__page--active) .hero__next,
+.book__page:not(.book__page--active) .contacts__social {
+  animation-play-state: paused;
+}
 @media (prefers-reduced-motion: reduce) {
   .book__page { transition: opacity .4s ease; }
   .book__page--before, .book__page--after { transform: none; }
@@ -154,7 +170,7 @@ html { scroll-behavior: smooth; }
   gap: 18px;
   padding: 8px 10px;
   background: color-mix(in srgb, var(--bg) 55%, transparent);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
   border: 1px solid var(--border);
   border-radius: 999px;
 }
@@ -288,8 +304,13 @@ html { scroll-behavior: smooth; }
   align-items: stretch;
   gap: 10px;
   padding: 26px 20px 58px;
-  background: color-mix(in srgb, var(--bg2) 94%, transparent);
-  backdrop-filter: blur(16px);
+  /* Nearly opaque (96%) on purpose — backdrop-filter has to re-sample
+     whatever's behind it on every frame the page-flip is transforming,
+     which was very likely contributing to the reported flicker/stutter on
+     both phone and desktop. At 96% solid, a heavy blur adds almost nothing
+     visible, so it's cut way down instead of removed outright. */
+  background: color-mix(in srgb, var(--bg2) 96%, transparent);
+  backdrop-filter: blur(4px);
   box-shadow: 0 30px 70px -20px rgba(0,0,0,.65), 0 10px 26px rgba(0,0,0,.4);
   /* Fixed-px notch depth (not %) — a percentage clip and a fixed-px bottom
      padding drift apart at different nav heights, which let the CTA button
@@ -1790,8 +1811,14 @@ html { scroll-behavior: smooth; }
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 28px;
+    /* NOT center — a centered flex container that overflows makes the far
+       side unreachable by scroll in most browsers (content silently gets
+       clipped instead of scrolled to). Confirmed live on a real phone:
+       the bottom nav links + CTA were invisible below the fold with no
+       way to scroll to them. flex-start + top/bottom padding keeps the
+       same visual balance when content DOES fit, but never clips. */
+    justify-content: flex-start;
+    gap: 22px;
     position: fixed;
     top: 56px;
     left: 0; right: 0; bottom: 0;
@@ -1800,8 +1827,9 @@ html { scroll-behavior: smooth; }
     border-top: 1px solid var(--border);
     transform: translateX(100%);
     transition: transform .4s cubic-bezier(.77,0,.175,1);
-    padding: 40px 24px;
+    padding: 28px 24px 40px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .nav__mobile--open { transform: translateX(0); }
 
