@@ -1,7 +1,10 @@
 import { supabase } from './supabase.js';
 import { TABLES, activeSeats } from '../../src/booking/tablesConfig.js';
 import { BOOKING_RULES } from '../../src/booking/bookingRules.js';
-import { awardVisitPoints } from './loyalty.js';
+import { awardAttendancePoints } from './loyalty.js';
+import { notifyStaff } from './staffNotify.js';
+
+const SRC_LABEL = { web: 'сайт', telegram_bot: 'Telegram', phone_manual: 'звонок' };
 
 // Server-side mirror of src/booking/BookingService.js, backed by Supabase.
 // Same business logic, channel-agnostic (web + telegram + admin call the same fns).
@@ -58,6 +61,7 @@ function rowToRes(r) {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     cancelledAt: r.cancelled_at || null,
+    attendancePromptSentAt: r.attendance_prompt_sent_at || null,
   };
 }
 
@@ -204,7 +208,14 @@ export async function createReservation(p) {
     if (error.code === '23505') throw new Error(`Стол ${tableId} уже занят на это время`);
     throw new Error(error.message);
   }
-  return rowToRes(data);
+  const res = rowToRes(data);
+  notifyStaff(
+    `🪑 *Новая бронь*\n\nСтол ${res.tableId} · ${res.date} ${res.timeFrom}–${res.timeTo}\n`
+    + `${res.guestName}${res.guestPhone ? ' · ' + res.guestPhone : ''} · ${res.guestsCount} гостей\n`
+    + `Источник: ${SRC_LABEL[res.source] || res.source}`,
+    { threadId: process.env.TELEGRAM_STAFF_BOOKINGS_THREAD_ID },
+  ).catch(() => {}); // best-effort — сбой уведомления не должен ронять создание брони
+  return res;
 }
 
 export async function cancelReservation(id, reason = '') {
@@ -234,7 +245,9 @@ export async function updateReservationStatus(id, newStatus) {
   // обновляется в реальном времени) всё ещё висит старый статус — защита от
   // случайного «Завершить»/«Подтвердить» на уже отменённой/завершённой брони
   // (например, начисления баллов за отменённый визит) (BACKLOG.md #20).
-  if (existing.status === 'cancelled' || existing.status === 'completed') {
+  // 'no_show' тоже финальный статус — тот же guard защищает от повторного
+  // нажатия кнопки «Гость был?»/«Не пришёл» в уведомлении персоналу.
+  if (['cancelled', 'completed', 'no_show'].includes(existing.status)) {
     throw new Error('Бронь уже в финальном статусе — обновите список');
   }
 
@@ -243,12 +256,20 @@ export async function updateReservationStatus(id, newStatus) {
   const { data, error } = await supabase.from('reservations').update(patch).eq('id', id).select().single();
   if (error) throw new Error('Бронь не найдена');
 
-  // Баллы лояльности — за реальный визит, начисляются один раз при переходе в 'completed'.
-  // Работает независимо от того, кто перевёл статус — сайт-админка или бот.
+  // Баллы лояльности (по текущему уровню гостя) — за реальный визит,
+  // начисляются один раз при переходе в 'completed'. Работает независимо от
+  // того, кто перевёл статус — сайт-админка, бот-админка или уведомление
+  // персоналу с подтверждением явки.
   if (newStatus === 'completed' && existing.status !== 'completed' && existing.guest_id) {
-    awardVisitPoints(existing.guest_id).catch(e => console.error('[loyalty] award failed:', e.message));
+    awardAttendancePoints(existing.guest_id).catch(e => console.error('[loyalty] award failed:', e.message));
   }
   return rowToRes(data);
+}
+
+// Ставится поллером (attendancePoller.js) сразу после отправки «Гость был?» в
+// группу персонала — не начисление баллов и не смена статуса, просто дедуп-метка.
+export async function markAttendancePromptSent(id) {
+  await supabase.from('reservations').update({ attendance_prompt_sent_at: new Date().toISOString() }).eq('id', id);
 }
 
 export async function updateReservation(id, updates) {

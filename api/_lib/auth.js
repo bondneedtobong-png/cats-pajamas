@@ -78,6 +78,16 @@ export function isTelegramAdmin(tgId) {
   return ADMIN_TG_IDS.includes(String(tgId));
 }
 
+const STAFF_TG_IDS = (process.env.TELEGRAM_STAFF_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+
+// Более узкая роль, чем isTelegramAdmin — только подтверждать/отклонять явку
+// по бронях и RSVP (кнопки в группе персонала), без доступа к /admin
+// (создание событий, рассылки, выдача призов). Админы неявно тоже персонал,
+// чтобы владелец не терял доступ к этим кнопкам.
+export function isTelegramStaff(tgId) {
+  return STAFF_TG_IDS.includes(String(tgId)) || isTelegramAdmin(tgId);
+}
+
 export async function updateProfile(userId, updates) {
   const patch = {};
   if (typeof updates.name === 'string') patch.name = updates.name; // whitelist

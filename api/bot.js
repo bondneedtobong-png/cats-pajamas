@@ -1,6 +1,6 @@
 import { Bot, InlineKeyboard, Keyboard, session } from 'grammy';
 import { readBody } from './_lib/http.js';
-import { ensureTelegramUser, isTelegramAdmin, completeLoginToken, setUserPhone } from './_lib/auth.js';
+import { ensureTelegramUser, isTelegramAdmin, isTelegramStaff, completeLoginToken, setUserPhone } from './_lib/auth.js';
 import {
   getTablesWithStatusAdmin, getTablesMerged, getReservations,
   createReservation, cancelReservation, updateReservationStatus,
@@ -10,6 +10,7 @@ import {
   getLoyaltyStatus, getTodaySpin, spinWheel, getUnredeemedPrizes, markPrizeRedeemed,
 } from './_lib/loyalty.js';
 import { getEvents, createEvent } from './_lib/events.js';
+import { rsvpToEvent, confirmRsvp } from './_lib/eventRsvps.js';
 import { sendBroadcast } from './_lib/broadcast.js';
 import { supabaseSessionStorage } from './_lib/botSession.js';
 import { createReview, checkReviewCooldown } from './_lib/reviews.js';
@@ -585,7 +586,8 @@ export function buildBot() {
     const events = await getEvents({ upcomingOnly: true });
     const found = events.find(e => e.id === ctx.match[1]);
     if (!found) return ctx.editMessageText('Событие не найдено.', { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') });
-    const { total, sent, blocked } = await sendBroadcast(ctx.api, eventBroadcastText(found, true));
+    const rsvpKb = new InlineKeyboard().text('🙋 Я приду', `rsvp:${found.id}`);
+    const { total, sent, blocked } = await sendBroadcast(ctx.api, eventBroadcastText(found, true), { replyMarkup: rsvpKb });
     return ctx.editMessageText(
       `✅ Напоминание отправлено.\nПолучателей: ${total}, доставлено: ${sent}${blocked ? `, недоступно: ${blocked}` : ''}.`,
       { reply_markup: new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'adminmenu') },
@@ -601,9 +603,10 @@ export function buildBot() {
       return ctx.editMessageText('Черновик события утерян, начните заново.', { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') });
     }
     try {
-      const ev = await createEvent({ title: d.title, date: d.date, time: d.time, description: d.description });
+      const ev = await createEvent({ title: d.title, date: d.date, time: d.time, description: d.description, awardsPoints: d.awardsPoints });
       resetSession(ctx);
-      const { total, sent, blocked } = await sendBroadcast(ctx.api, eventBroadcastText(ev, false));
+      const rsvpKb = new InlineKeyboard().text('🙋 Я приду', `rsvp:${ev.id}`);
+      const { total, sent, blocked } = await sendBroadcast(ctx.api, eventBroadcastText(ev, false), { replyMarkup: rsvpKb });
       return ctx.editMessageText(
         `✅ Событие сохранено и разослано.\nПолучателей: ${total}, доставлено: ${sent}${blocked ? `, недоступно: ${blocked}` : ''}.`,
         { reply_markup: new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'adminmenu') },
@@ -656,16 +659,31 @@ export function buildBot() {
     if (step === 'ev_desc') {
       ctx.session.draft.description = text === '-' ? '' : text;
       ctx.session.step = null;
-      const d = ctx.session.draft;
-      const kb = new InlineKeyboard()
-        .text('✅ Сохранить и разослать', 'evsave').row()
-        .text('✏️ Начать заново', 'evadd').row()
-        .text('‹ Отмена', 'evcancel');
       return ctx.reply(
-        `Проверьте событие:\n\n*${d.title}*\n📅 ${fmtEventDate(d.date)}${d.time ? ' ' + d.time : ''}\n${d.description || '(без описания)'}\n\nСохранить и разослать подписчикам?`,
-        { reply_markup: kb, parse_mode: 'Markdown' },
+        'Начислять баллы лояльности за участие в этом событии?\n\n'
+        + 'Гости отмечаются кнопкой «🙋 Я приду» в рассылке, персонал потом подтверждает явку — баллы дадутся только тем, кого подтвердят, и только если тут «Да».',
+        { reply_markup: new InlineKeyboard().text('Да', 'evpts:yes').text('Нет', 'evpts:no') },
       );
     }
+  });
+
+  bot.callbackQuery(/^evpts:(yes|no)$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    if (!isTelegramAdmin(ctx.from.id)) return;
+    const d = ctx.session.draft;
+    if (!d?.title || !d?.date) {
+      resetSession(ctx);
+      return ctx.editMessageText('Черновик события утерян, начните заново.', { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') });
+    }
+    d.awardsPoints = ctx.match[1] === 'yes';
+    const kb = new InlineKeyboard()
+      .text('✅ Сохранить и разослать', 'evsave').row()
+      .text('✏️ Начать заново', 'evadd').row()
+      .text('‹ Отмена', 'evcancel');
+    return ctx.editMessageText(
+      `Проверьте событие:\n\n*${d.title}*\n📅 ${fmtEventDate(d.date)}${d.time ? ' ' + d.time : ''}\n${d.description || '(без описания)'}\n🎖 Баллы за участие: ${d.awardsPoints ? 'да' : 'нет'}\n\nСохранить и разослать подписчикам?`,
+      { reply_markup: kb, parse_mode: 'Markdown' },
+    );
   });
 
   // ─── admin: призы колеса дня (выдать вручную на месте) ──────────────────────
@@ -690,6 +708,60 @@ export function buildBot() {
     return ctx.editMessageText('Готово. Обновить список — «Призы».', {
       reply_markup: new InlineKeyboard().text('🎁 Призы', 'prizes').text('🏠 Меню', 'adminmenu'),
     });
+  });
+
+  // ─── RSVP на события + подтверждение явки персоналом ────────────────────────
+  // Гость жмёт «🙋 Я приду» в рассылке о событии — идемпотентно (повторный тап
+  // тем же гостем не дублирует запись, см. rsvpToEvent/unique(event_id,guest_id)).
+  bot.callbackQuery(/^rsvp:(.+)$/, async (ctx) => {
+    const eventId = ctx.match[1];
+    try {
+      const user = await ensureTelegramUser(ctx.from);
+      const result = await rsvpToEvent(eventId, user.id, String(ctx.from.id));
+      await ctx.answerCallbackQuery({ text: result ? 'Записал! Увидимся 🎷' : 'Вы уже записаны 🙌' });
+    } catch (e) {
+      await ctx.answerCallbackQuery({ text: e.message || 'Не получилось записаться', show_alert: true });
+    }
+  });
+
+  // Кнопки из уведомления attendancePoller.js «Проверка визита» (группа персонала,
+  // тема «Брони») — гейт isTelegramStaff, а не isTelegramAdmin: бармены должны
+  // уметь подтверждать явку, не имея доступа к остальной админке.
+  bot.callbackQuery(/^att(yes|no):(.+)$/, async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    const attended = ctx.match[1] === 'yes';
+    try {
+      await updateReservationStatus(ctx.match[2], attended ? 'completed' : 'no_show');
+      await ctx.answerCallbackQuery({ text: attended ? 'Отмечено, баллы начислены' : 'Отмечено как неявка' });
+    } catch (e) {
+      await ctx.answerCallbackQuery({ text: e.message, show_alert: true });
+      return;
+    }
+    return ctx.editMessageText(
+      ctx.callbackQuery.message.text + (attended ? '\n\n✅ Гость был.' : '\n\n❌ Гость не пришёл.'),
+    );
+  });
+
+  // Кнопки из уведомления attendancePoller.js «Подтвердите явку» по событию —
+  // одно сообщение на событие с рядом кнопок на каждого записавшегося гостя;
+  // после подтверждения убираем только его ряд, остальные кнопки остаются.
+  bot.callbackQuery(/^evatt(_no)?:(.+)$/, async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    const attended = !ctx.match[1];
+    const rsvpId = ctx.match[2];
+    try {
+      await confirmRsvp(rsvpId, attended);
+      await ctx.answerCallbackQuery({ text: attended ? 'Отмечено: был' : 'Отмечено: не пришёл' });
+    } catch (e) {
+      await ctx.answerCallbackQuery({ text: e.message, show_alert: true });
+      return;
+    }
+    const rows = (ctx.callbackQuery.message.reply_markup?.inline_keyboard || [])
+      .filter(row => !row.some(btn => btn.callback_data?.endsWith(`:${rsvpId}`)));
+    if (rows.length) {
+      return ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: rows } });
+    }
+    return ctx.editMessageText(ctx.callbackQuery.message.text + '\n\n✅ Все гости отмечены.');
   });
 
   bot.catch((err) => console.error('[bot] error:', err?.error || err));

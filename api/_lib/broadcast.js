@@ -18,14 +18,14 @@ export async function getBroadcastRecipients() {
 }
 
 /** @param api ctx.api (grammY Api instance) */
-export async function sendBroadcast(api, text) {
+export async function sendBroadcast(api, text, { replyMarkup } = {}) {
   const recipients = await getBroadcastRecipients();
   let sent = 0, blocked = 0;
 
   for (let i = 0; i < recipients.length; i += CHUNK_SIZE) {
     const batch = recipients.slice(i, i + CHUNK_SIZE);
     const results = await Promise.allSettled(
-      batch.map(u => api.sendMessage(u.telegram_id, text, { parse_mode: 'Markdown' })),
+      batch.map(u => api.sendMessage(u.telegram_id, text, { parse_mode: 'Markdown', reply_markup: replyMarkup })),
     );
     for (let j = 0; j < results.length; j++) {
       const r = results[j];

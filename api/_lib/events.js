@@ -19,6 +19,8 @@ function rowToEvent(r) {
     active: r.active,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    awardsPoints: !!r.awards_points,
+    attendancePromptSentAt: r.attendance_prompt_sent_at || null,
   };
 }
 
@@ -49,6 +51,7 @@ export async function createEvent(input) {
     image_url: input.imageUrl?.trim() || '',
     sort_order: 0,
     active: input.active !== false,
+    awards_points: !!input.awardsPoints,
   };
   const { data, error } = await supabase.from('events').insert(row).select().single();
   if (error) throw new Error(error.message);
@@ -72,4 +75,10 @@ export async function updateEvent(id, input) {
 export async function deleteEvent(id) {
   const { error } = await supabase.from('events').delete().eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+// Ставится поллером (attendancePoller.js) после отправки списка RSVP на
+// подтверждение в группу персонала — дедуп-метка, как у reservations.
+export async function markEventAttendancePromptSent(id) {
+  await supabase.from('events').update({ attendance_prompt_sent_at: new Date().toISOString() }).eq('id', id);
 }

@@ -2,10 +2,11 @@ import { supabase } from './supabase.js';
 
 // Программа лояльности + ежедневное колесо. Пока живёт только в боте
 // (сайт её не показывает — по решению владельца это следующая фаза).
-// Баллы начисляются, когда бронь переходит в статус 'completed'
-// (см. awardVisitPoints, вызывается из booking.js/updateReservationStatus).
+// Баллы начисляются, когда бронь переходит в статус 'completed', и за
+// подтверждённую явку на события (см. awardAttendancePoints ниже, вызывается
+// из booking.js/updateReservationStatus и eventRsvps.js/confirmRsvp).
 
-const VISIT_POINTS = 10;
+const VISIT_POINTS = 10; // фолбэк для awardAttendancePoints, если уровень не распознан
 
 export const TIERS = [
   { key: 'kitten',  label: '🐾 Котёнок',             min: 0 },
@@ -60,13 +61,22 @@ export function nextTier(points) {
   return TIERS.find(t => t.min > points) || null;
 }
 
-/** Best-effort: начисляет баллы за визит. Не бросает — вызывающий код (booking.js)
- *  не должен падать, если начисление не удалось. */
-export async function awardVisitPoints(guestId) {
+// Баллы за подтверждённую явку (брони и события с awards_points) — по текущему
+// уровню гостя, а не фиксированно: чем выше уровень, тем больше баллов за
+// тот же самый визит (тот же принцип, что уже есть у пулов призов колеса).
+const ATTENDANCE_POINTS = { kitten: 10, jazzcat: 15, oldpaw: 20, boss: 30 };
+
+/** Best-effort, как и awardVisitPoints — не бросает, вызывающий код (booking.js,
+ *  eventRsvps.js) не должен падать, если начисление не удалось. Защита от
+ *  повторного начисления — на уровне вызывающего кода (guard терминальных
+ *  статусов в updateReservationStatus/confirmRsvp), не здесь. */
+export async function awardAttendancePoints(guestId) {
   if (!guestId) return;
   const { data: user } = await supabase.from('users').select('id, loyalty_points').eq('id', guestId).maybeSingle();
   if (!user) return;
-  await supabase.from('users').update({ loyalty_points: (user.loyalty_points || 0) + VISIT_POINTS }).eq('id', guestId);
+  const points = user.loyalty_points || 0;
+  const amount = ATTENDANCE_POINTS[tierForPoints(points).key] ?? VISIT_POINTS;
+  await supabase.from('users').update({ loyalty_points: points + amount }).eq('id', guestId);
 }
 
 export async function getLoyaltyStatus(guestId) {

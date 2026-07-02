@@ -75,6 +75,11 @@ create unique index if not exists reservations_no_double_book_idx
   on public.reservations (table_id, date, time_from)
   where status in ('pending', 'confirmed');
 
+-- Уведомления персоналу с подтверждением явки (см. api/_lib/attendancePoller.js):
+-- метка, что напоминание «Гость был?» уже отправлено в группу персонала — не
+-- даёт поллеру слать его повторно на каждом цикле, пока бармен не нажал кнопку.
+alter table public.reservations add column if not exists attendance_prompt_sent_at timestamptz;
+
 -- ─── Конфиг столов и прочие настройки приложения ────────────────────────────
 -- Зеркалит ключи localStorage (например 'table_config' = бывший cpjc_table_config:
 -- per-table overrides, __custom[], __removed[]). Один jsonb на ключ — гибко.
@@ -143,6 +148,27 @@ create table if not exists public.events (
   updated_at   timestamptz not null default now()
 );
 create index if not exists events_date_idx on public.events (event_date);
+
+-- RSVP на события + начисление баллов по явке (см. api/_lib/eventRsvps.js).
+-- Баллы за конкретное событие — опциональная настройка, не обязательная
+-- (владелец включает при создании события, не для всех событий подряд).
+alter table public.events add column if not exists awards_points boolean not null default false;
+-- Та же метка-дедупликатор, что у reservations.attendance_prompt_sent_at —
+-- не даёт поллеру слать список RSVP на подтверждение повторно.
+alter table public.events add column if not exists attendance_prompt_sent_at timestamptz;
+
+create table if not exists public.event_rsvps (
+  id           text primary key,        -- 'rsvp_...'
+  event_id     text        not null references public.events (id) on delete cascade,
+  guest_id     text        references public.users (id) on delete set null,
+  telegram_id  text        not null,
+  status       text        not null default 'going' check (status in ('going','attended','no_show')),
+  created_at   timestamptz not null default now(),
+  confirmed_at timestamptz,
+  unique (event_id, guest_id)            -- повторное «Я приду» — идемпотентный upsert, не дубль
+);
+create index if not exists event_rsvps_event_idx  on public.event_rsvps (event_id);
+create index if not exists event_rsvps_status_idx on public.event_rsvps (status);
 
 -- ─── Отзывы ──────────────────────────────────────────────────────────────────
 -- Ручной ввод администратором (решение владельца) — у Яндекс.Карт нет
@@ -238,6 +264,7 @@ alter table public.reviews           enable row level security;
 alter table public.team_members      enable row level security;
 alter table public.team_applications enable row level security;
 alter table public.wheel_spins        enable row level security;
+alter table public.event_rsvps        enable row level security;
 -- Намеренно без policy: анонимный клиент ничего не видит, всё ходит через сервер.
 
 -- ─── Автообновление updated_at ──────────────────────────────────────────────
