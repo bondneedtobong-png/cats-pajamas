@@ -425,14 +425,28 @@ export default function FloorPlanPage() {
   // подписывает initData заново при каждом открытии, поэтому логинимся молча
   // каждый раз, не полагаясь на то, что localStorage переживёт предыдущий сеанс
   // (в WebView разных клиентов Telegram это не всегда гарантировано).
+  //
+  // Скрипт SDK грузится ЗДЕСЬ, а не глобально в index.html: вне Telegram он всё
+  // равно пытается согласовать viewport/safe-area с несуществующим хостом, а
+  // .nav у нас position:fixed — это ровно тот тип элемента, который так может
+  // задёргать на каждой странице сайта. Нужен только тут, на /booking.
   useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    if (!tg?.initData) return; // обычный браузер — Telegram.WebApp либо не загружен, либо initData пуст
-    tg.ready();
-    tg.expand();
-    AuthService.authViaTelegramWebApp(tg.initData)
-      .then(setCurrentUser)
-      .catch(() => {}); // тихо — гость всё ещё может забронировать анонимно, просто без автовхода
+    function tryAuth() {
+      const tg = window.Telegram?.WebApp;
+      if (!tg?.initData) return; // открыто обычным браузером, не как Mini App
+      tg.ready();
+      tg.expand();
+      AuthService.authViaTelegramWebApp(tg.initData)
+        .then(setCurrentUser)
+        .catch(() => {}); // тихо — гость всё ещё может забронировать анонимно, просто без автовхода
+    }
+
+    if (window.Telegram?.WebApp) { tryAuth(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://telegram.org/js/telegram-web-app.js';
+    script.async = true;
+    script.onload = tryAuth;
+    document.head.appendChild(script);
   }, []);
 
   const [tables,  setTables]  = useState([]);
