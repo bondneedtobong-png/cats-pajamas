@@ -4,6 +4,7 @@
 // serverless functions. Handler code itself is untouched — only the
 // transport changes. Static frontend (dist/) and TLS are nginx's job, not
 // this process's — see HANDOFF_CATS_PAJAMAS.md "VPS-миграция".
+import 'dotenv/config'; // must run before any api/_lib/*.js reads process.env at import time
 import express from 'express';
 
 import authHandler          from './api/auth.js';

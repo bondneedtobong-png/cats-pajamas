@@ -2,6 +2,7 @@
 // (api/bot.js's default export). No public HTTPS endpoint needed for the bot
 // specifically; see HANDOFF_CATS_PAJAMAS.md "VPS-миграция". Same buildBot()
 // as the webhook version — logic is untouched, only the transport differs.
+import 'dotenv/config'; // must run before api/bot.js reads process.env at import time
 import { buildBot } from './api/bot.js';
 
 const bot = buildBot();
