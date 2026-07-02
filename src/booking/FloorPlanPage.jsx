@@ -6,6 +6,7 @@ import FloorPlanSvg from './FloorPlanSvg.jsx';
 import DatePicker from './DatePicker.jsx';
 import { BOOKING_RULES } from './bookingRules.js';
 import { useFeedback } from '../ui/FeedbackProvider.jsx';
+import { useTelegramWebApp } from '../useTelegramWebApp.js';
 import './booking.css';
 
 const TIME_SLOTS = ['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30','22:00','22:30','23:00'];
@@ -421,33 +422,9 @@ export default function FloorPlanPage() {
     return () => window.removeEventListener('focus', syncAuth);
   }, []);
 
-  // Opened as a Telegram Mini App (bot → «🪑 План зала» кнопка) — Telegram
-  // подписывает initData заново при каждом открытии, поэтому логинимся молча
-  // каждый раз, не полагаясь на то, что localStorage переживёт предыдущий сеанс
-  // (в WebView разных клиентов Telegram это не всегда гарантировано).
-  //
-  // Скрипт SDK грузится ЗДЕСЬ, а не глобально в index.html: вне Telegram он всё
-  // равно пытается согласовать viewport/safe-area с несуществующим хостом, а
-  // .nav у нас position:fixed — это ровно тот тип элемента, который так может
-  // задёргать на каждой странице сайта. Нужен только тут, на /booking.
-  useEffect(() => {
-    function tryAuth() {
-      const tg = window.Telegram?.WebApp;
-      if (!tg?.initData) return; // открыто обычным браузером, не как Mini App
-      tg.ready();
-      tg.expand();
-      AuthService.authViaTelegramWebApp(tg.initData)
-        .then(setCurrentUser)
-        .catch(() => {}); // тихо — гость всё ещё может забронировать анонимно, просто без автовхода
-    }
-
-    if (window.Telegram?.WebApp) { tryAuth(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://telegram.org/js/telegram-web-app.js';
-    script.async = true;
-    script.onload = tryAuth;
-    document.head.appendChild(script);
-  }, []);
+  // Открыто как Telegram Mini App (бот → «🪑 Открыть» кнопка) — молча логинит
+  // через initData. См. src/useTelegramWebApp.js.
+  useTelegramWebApp(setCurrentUser);
 
   const [tables,  setTables]  = useState([]);
   const [loading, setLoading] = useState(true);

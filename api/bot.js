@@ -95,29 +95,32 @@ async function isSubscribed(api, userId) {
   }
 }
 
-function mainMenu(isAdmin) {
-  const kb = new InlineKeyboard()
-    .webApp('🪑 План зала', `${SITE_URL}/booking`).row()
-    .text('📅 Забронировать стол (по шагам)', 'bk').row()
+// Гостевое меню — запасной путь на случай, если Mini App не открылся (старое
+// устройство, десктопный клиент без поддержки webApp и т.п.). Админ-функции
+// сюда больше не попадают — у них отдельный /admin, см. adminMenu() ниже.
+function guestMenu() {
+  return new InlineKeyboard()
+    .webApp("🪑 Открыть Cat's Pajamas", `${SITE_URL}/app`).row()
+    .text('📝 Забронировать текстом', 'bk').row()
     .text('📋 Мои брони', 'my').row()
     .text('🎖 Мой уровень', 'loy').row();
-  if (isAdmin) {
-    kb.text('🛠 Заявки (админ)', 'adm').row()
-      .text('📢 Событие', 'ev').row()
-      .text('🎁 Призы', 'prizes').row();
-  }
-  return kb;
+}
+
+function adminMenu() {
+  return new InlineKeyboard()
+    .text('🛠 Заявки', 'adm').row()
+    .text('📢 Событие', 'ev').row()
+    .text('🎁 Призы', 'prizes').row()
+    .text('🏠 Обычное меню', 'menu');
 }
 
 // Persistent reply-keyboard — в отличие от inline-меню, не «уезжает» вверх
-// истории чата и не пропадает между сообщениями. Решает жалобу из бэклога
-// (юзер жмёт /start заново, потому что старое меню пришлось скроллить искать).
-// Пока намеренно минимальный — только «План зала» (Mini App) и «Меню»
-// (открывает привычный inline-список), чтобы не трогать существующие
-// протестированные обработчики (my/loy/adm/ev и т.д.).
+// истории чата и не пропадает между сообщениями. Ровно 2 кнопки: сам Mini
+// App и текстовый fallback — раньше один и тот же список действий дублировался
+// в трёх местах (сюда, в /start и в «🏠 Меню»), теперь только тут и в fallback.
 function persistentKeyboard() {
   return new Keyboard()
-    .webApp('🪑 План зала', `${SITE_URL}/booking`)
+    .webApp('🪑 Открыть', `${SITE_URL}/app`)
     .text('🏠 Меню')
     .resized()
     .persistent();
@@ -196,16 +199,25 @@ export function buildBot() {
     }
     if (await proceedWebLogin(ctx)) return;
     await ensureTelegramUser(ctx.from);
-    await ctx.reply('🎷 Быстрый доступ теперь всегда под рукой снизу экрана.', {
+    await ctx.replyWithPhoto(`${SITE_URL}/uploads/team/bar-evening.jpg`, {
+      caption: `🎷 Привет, ${ctx.from.first_name}! Это Cat's Pajamas — джаз-бар, где столик ждёт, колесо дня крутится, а бариста уже разогревают шейкеры.\n\nЖми ниже — и вы внутри, без лишних меню.`,
+      reply_markup: new InlineKeyboard().webApp("🐾 Открыть Cat's Pajamas", `${SITE_URL}/app`),
+    });
+    if (isTelegramAdmin(ctx.from.id)) {
+      await ctx.reply('Вы админ — панель заявок и событий доступна через /admin.');
+    }
+    return ctx.reply('Быстрый доступ теперь всегда под рукой снизу экрана.', {
       reply_markup: persistentKeyboard(),
     });
-    return ctx.reply(
-      `*Cat's Pajamas Club*\nДобро пожаловать, ${ctx.from.first_name}!\nВыберите действие:`,
-      { reply_markup: mainMenu(isTelegramAdmin(ctx.from.id)), parse_mode: 'Markdown' },
-    );
   };
 
   bot.command('start', greet);
+
+  bot.command('admin', async (ctx) => {
+    if (!isTelegramAdmin(ctx.from.id)) return;
+    resetSession(ctx);
+    return ctx.reply('🛠 *Админ-панель*', { reply_markup: adminMenu(), parse_mode: 'Markdown' });
+  });
 
   // Персистентная клавиатура «🏠 Меню» — открывает привычное inline-меню новым
   // сообщением (в отличие от callbackQuery('menu'), тут нечего редактировать).
@@ -214,7 +226,7 @@ export function buildBot() {
   // застревать (следующее его сообщение иначе ушло бы обратно в мастер).
   bot.hears('🏠 Меню', async (ctx) => {
     resetSession(ctx);
-    return ctx.reply('Выберите действие:', { reply_markup: mainMenu(isTelegramAdmin(ctx.from.id)) });
+    return ctx.reply('Выберите действие:', { reply_markup: guestMenu() });
   });
 
   // recheck subscription
@@ -228,7 +240,7 @@ export function buildBot() {
     if (await proceedWebLogin(ctx)) return;
     await ensureTelegramUser(ctx.from);
     await ctx.editMessageText('Готово! Доступ открыт 🎉\nВыберите действие:', {
-      reply_markup: mainMenu(isTelegramAdmin(ctx.from.id)),
+      reply_markup: guestMenu(),
     });
     return ctx.reply('🎷 Быстрый доступ теперь всегда под рукой снизу экрана.', {
       reply_markup: persistentKeyboard(),
@@ -238,15 +250,23 @@ export function buildBot() {
   // main menu
   bot.callbackQuery('menu', async (ctx) => {
     await ctx.answerCallbackQuery();
-    return ctx.editMessageText('Выберите действие:', { reply_markup: mainMenu(isTelegramAdmin(ctx.from.id)) });
+    return ctx.editMessageText('Выберите действие:', { reply_markup: guestMenu() });
   });
 
-  // booking: choose date
-  bot.callbackQuery('bk', async (ctx) => {
+  // «Меню» внутри админ-экранов (adm/ev/prizes) ведёт обратно в adminMenu,
+  // а не в гостевое — иначе админ терял бы доступ к своим кнопкам в один тап.
+  bot.callbackQuery('adminmenu', async (ctx) => {
     await ctx.answerCallbackQuery();
+    if (!isTelegramAdmin(ctx.from.id)) return;
+    return ctx.editMessageText('🛠 *Админ-панель*', { reply_markup: adminMenu(), parse_mode: 'Markdown' });
+  });
+
+  // booking: choose date (запасной путь для тех, у кого не открылся Mini App —
+  // единственная точка входа теперь и кнопка «Забронировать текстом», и /booking_steps)
+  async function bookingStepsStart(ctx, { edit } = {}) {
     if (!(await isSubscribed(ctx.api, ctx.from.id))) {
       const g = subGate();
-      return ctx.editMessageText(g.text, { reply_markup: g.kb });
+      return edit ? ctx.editMessageText(g.text, { reply_markup: g.kb }) : ctx.reply(g.text, { reply_markup: g.kb });
     }
     const kb = new InlineKeyboard();
     nextDays(7).forEach((d, i) => {
@@ -254,8 +274,18 @@ export function buildBot() {
       if (i % 2 === 1) kb.row();
     });
     kb.row().text('‹ Назад', 'menu');
-    return ctx.editMessageText('На какой день бронируем?', { reply_markup: kb });
+    const text = 'На какой день бронируем?';
+    return edit ? ctx.editMessageText(text, { reply_markup: kb }) : ctx.reply(text, { reply_markup: kb });
+  }
+
+  bot.callbackQuery('bk', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return bookingStepsStart(ctx, { edit: true });
   });
+
+  // Telegram не разрешает дефис в именах команд (только [a-z0-9_]) —
+  // /booking_steps вместо /booking-steps.
+  bot.command('booking_steps', (ctx) => bookingStepsStart(ctx, { edit: false }));
 
   // booking: choose time
   bot.callbackQuery(/^bkd:(.+)$/, async (ctx) => {
@@ -385,7 +415,7 @@ export function buildBot() {
     await ctx.reply('Спасибо! Номер сохранён 🎷', { reply_markup: { remove_keyboard: true } });
 
     if (!loginToken) {
-      return ctx.reply('Выберите действие:', { reply_markup: mainMenu(isTelegramAdmin(ctx.from.id)) });
+      return ctx.reply('Выберите действие:', { reply_markup: guestMenu() });
     }
     try {
       await completeLoginToken(loginToken, ctx.from, contact.phone_number);
@@ -460,7 +490,7 @@ export function buildBot() {
       .sort((a, b) => (a.date + a.timeFrom < b.date + b.timeFrom ? -1 : 1))
       .slice(0, 10);
     if (!upcoming.length) {
-      return ctx.editMessageText('Заявок нет.', { reply_markup: new InlineKeyboard().text('🏠 Меню', 'menu') });
+      return ctx.editMessageText('Заявок нет.', { reply_markup: new InlineKeyboard().text('🏠 Меню', 'adminmenu') });
     }
     const kb = new InlineKeyboard();
     const lines = upcoming.map(r => {
@@ -474,7 +504,7 @@ export function buildBot() {
       if (r.status === 'confirmed') kb.text(`🏁 Завершить`, `admdone:${r.id}`);
       kb.row();
     });
-    kb.text('🏠 Меню', 'menu');
+    kb.text('🏠 Меню', 'adminmenu');
     return ctx.editMessageText(`🛠 *Ближайшие заявки:*\n\n${lines.join('\n')}`, { reply_markup: kb, parse_mode: 'Markdown' });
   });
 
@@ -483,7 +513,7 @@ export function buildBot() {
     try { await updateReservationStatus(ctx.match[1], 'confirmed'); await ctx.answerCallbackQuery({ text: 'Подтверждено' }); }
     catch (e) { await ctx.answerCallbackQuery({ text: e.message, show_alert: true }); }
     return ctx.editMessageText('Готово. Обновить список — «Заявки».', {
-      reply_markup: new InlineKeyboard().text('🛠 Заявки', 'adm').text('🏠 Меню', 'menu'),
+      reply_markup: new InlineKeyboard().text('🛠 Заявки', 'adm').text('🏠 Меню', 'adminmenu'),
     });
   });
 
@@ -492,7 +522,7 @@ export function buildBot() {
     try { await updateReservationStatus(ctx.match[1], 'completed'); await ctx.answerCallbackQuery({ text: 'Визит завершён, баллы начислены' }); }
     catch (e) { await ctx.answerCallbackQuery({ text: e.message, show_alert: true }); }
     return ctx.editMessageText('Готово. Обновить список — «Заявки».', {
-      reply_markup: new InlineKeyboard().text('🛠 Заявки', 'adm').text('🏠 Меню', 'menu'),
+      reply_markup: new InlineKeyboard().text('🛠 Заявки', 'adm').text('🏠 Меню', 'adminmenu'),
     });
   });
 
@@ -501,7 +531,7 @@ export function buildBot() {
     try { await cancelReservation(ctx.match[1], 'Отменено администратором через Telegram'); await ctx.answerCallbackQuery({ text: 'Отменено' }); }
     catch (e) { await ctx.answerCallbackQuery({ text: e.message, show_alert: true }); }
     return ctx.editMessageText('Бронь отменена. Обновить — «Заявки».', {
-      reply_markup: new InlineKeyboard().text('🛠 Заявки', 'adm').text('🏠 Меню', 'menu'),
+      reply_markup: new InlineKeyboard().text('🛠 Заявки', 'adm').text('🏠 Меню', 'adminmenu'),
     });
   });
 
@@ -510,7 +540,7 @@ export function buildBot() {
   const eventsMenuKb = () => new InlineKeyboard()
     .text('➕ Добавить и разослать', 'evadd').row()
     .text('📋 Ближайшие события', 'evlist').row()
-    .text('‹ Назад', 'menu');
+    .text('‹ Назад', 'adminmenu');
 
   bot.callbackQuery('ev', async (ctx) => {
     await ctx.answerCallbackQuery();
@@ -558,7 +588,7 @@ export function buildBot() {
     const { total, sent, blocked } = await sendBroadcast(ctx.api, eventBroadcastText(found, true));
     return ctx.editMessageText(
       `✅ Напоминание отправлено.\nПолучателей: ${total}, доставлено: ${sent}${blocked ? `, недоступно: ${blocked}` : ''}.`,
-      { reply_markup: new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'menu') },
+      { reply_markup: new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'adminmenu') },
     );
   });
 
@@ -576,7 +606,7 @@ export function buildBot() {
       const { total, sent, blocked } = await sendBroadcast(ctx.api, eventBroadcastText(ev, false));
       return ctx.editMessageText(
         `✅ Событие сохранено и разослано.\nПолучателей: ${total}, доставлено: ${sent}${blocked ? `, недоступно: ${blocked}` : ''}.`,
-        { reply_markup: new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'menu') },
+        { reply_markup: new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'adminmenu') },
       );
     } catch (e) {
       return ctx.editMessageText(`Не удалось сохранить: ${e.message}`, { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') });
@@ -593,7 +623,7 @@ export function buildBot() {
 
     if (text === '/cancel') {
       resetSession(ctx);
-      return ctx.reply('Отменено.', { reply_markup: mainMenu(true) });
+      return ctx.reply('Отменено.', { reply_markup: adminMenu() });
     }
 
     if (step === 'ev_title') {
@@ -644,12 +674,12 @@ export function buildBot() {
     if (!isTelegramAdmin(ctx.from.id)) return;
     const list = await getUnredeemedPrizes(10);
     if (!list.length) {
-      return ctx.editMessageText('Невыданных призов нет 🎉', { reply_markup: new InlineKeyboard().text('🏠 Меню', 'menu') });
+      return ctx.editMessageText('Невыданных призов нет 🎉', { reply_markup: new InlineKeyboard().text('🏠 Меню', 'adminmenu') });
     }
     const kb = new InlineKeyboard();
     const lines = list.map(p => `• ${p.guestName || 'Гость'} — ${p.prize_label} (${fmtEventDate(p.spin_date)})`);
     list.forEach(p => kb.text(`✅ Выдано: ${p.guestName || 'Гость'}`, `prizeok:${p.id}`).row());
-    kb.text('🏠 Меню', 'menu');
+    kb.text('🏠 Меню', 'adminmenu');
     return ctx.editMessageText(`🎁 *Призы к выдаче:*\n\n${lines.join('\n')}`, { reply_markup: kb, parse_mode: 'Markdown' });
   });
 
@@ -658,7 +688,7 @@ export function buildBot() {
     try { await markPrizeRedeemed(ctx.match[1]); await ctx.answerCallbackQuery({ text: 'Отмечено как выдано' }); }
     catch (e) { await ctx.answerCallbackQuery({ text: e.message, show_alert: true }); }
     return ctx.editMessageText('Готово. Обновить список — «Призы».', {
-      reply_markup: new InlineKeyboard().text('🎁 Призы', 'prizes').text('🏠 Меню', 'menu'),
+      reply_markup: new InlineKeyboard().text('🎁 Призы', 'prizes').text('🏠 Меню', 'adminmenu'),
     });
   });
 

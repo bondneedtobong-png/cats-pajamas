@@ -14,6 +14,7 @@ import Footer   from './sections/Footer.jsx';
 import FloorPlanPage from './booking/FloorPlanPage.jsx';
 import AuthPage      from './auth/AuthPage.jsx';
 import ProfilePage   from './profile/ProfilePage.jsx';
+import AppHubPage    from './app/AppHubPage.jsx';
 import AdminPage        from './admin/AdminPage.jsx';
 import BookingRulesPage from './pages/BookingRulesPage.jsx';
 import PrivacyPage      from './pages/PrivacyPage.jsx';
@@ -154,6 +155,7 @@ export default function App() {
         <Route path="/booking" element={<FloorPlanPage />} />
         <Route path="/auth"    element={<AuthPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/app"     element={<AppHubPage />} />
         <Route path="/admin"         element={<AdminPage />} />
         <Route path="/booking-rules" element={<BookingRulesPage />} />
         <Route path="/privacy"       element={<PrivacyPage />} />

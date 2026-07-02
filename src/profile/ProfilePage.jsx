@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthService from '../auth/AuthService.js';
 import BookingService from '../booking/BookingService.js';
 import LoyaltyService from '../loyalty/LoyaltyService.js';
@@ -378,8 +378,12 @@ function LoyaltyTab() {
 // ─────────────────────────────── Page ───────────────────────────────
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [user, setUser] = useState(null);
-  const [tab,  setTab]  = useState('profile');
+  // Позволяет глубокой ссылке (например, из /app-хаба Mini App) открыть сразу
+  // нужную вкладку: /profile?tab=loyalty — иначе всегда «Профиль» по умолчанию.
+  const requestedTab = searchParams.get('tab');
+  const [tab, setTab] = useState(TABS.some(t => t.key === requestedTab) ? requestedTab : 'profile');
 
   useEffect(() => {
     const u = AuthService.getCurrentUser();

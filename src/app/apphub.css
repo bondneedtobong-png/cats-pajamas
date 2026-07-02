@@ -1,0 +1,96 @@
+/* Отдельный роут (не часть MainSite/.book) — переменные темы из index.css
+   scoped на [data-theme="A"], сюда не долетают. Те же значения — просто
+   прямыми цветами, как уже сделано в booking.css/auth.css/profile.css. */
+*, *::before, *::after { box-sizing: border-box; }
+
+.apphub-root {
+  min-height: 100vh;
+  background: #0C0A18;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px;
+  font-family: 'Avenir Next', sans-serif;
+  color: #F2EDE4;
+}
+
+.apphub-card {
+  width: 100%;
+  max-width: 420px;
+  background: #0E0B1E;
+  border: 1px solid rgba(212,168,67,0.14);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.apphub-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.apphub-logo__icon { height: 30px; width: auto; display: block; }
+.apphub-logo__text {
+  font-family: 'Baskerville', serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.apphub-greeting {
+  font-family: 'Baskerville', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: rgba(242,237,228,0.75);
+  margin: 0 0 26px;
+  text-align: center;
+}
+
+.apphub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.apphub-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 22px 12px;
+  background: transparent;
+  border: 1px solid rgba(212,168,67,0.2);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color .2s, transform .2s, box-shadow .2s;
+}
+.apphub-tile:hover,
+.apphub-tile:active {
+  border-color: #D4A843;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(212,168,67,0.15);
+}
+.apphub-tile__icon { font-size: 26px; line-height: 1; }
+.apphub-tile__label {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #F2EDE4;
+}
+.apphub-tile__hint {
+  font-size: 11px;
+  color: rgba(242,237,228,0.45);
+  line-height: 1.4;
+}
+
+@media (max-width: 380px) {
+  .apphub-tile { padding: 18px 8px; }
+  .apphub-tile__icon { font-size: 22px; }
+}
