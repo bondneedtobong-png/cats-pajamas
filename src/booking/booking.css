@@ -1,0 +1,951 @@
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ─── Root layout ─── */
+.bk-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0C0A18;
+  color: #F2EDE4;
+  font-family: 'Avenir Next', sans-serif;
+  overflow: hidden;
+}
+
+/* ─── Header ─── */
+.bk-header {
+  height: 52px;
+  min-height: 52px;
+  flex-shrink: 0;
+  background: #0E0B1E;
+  border-bottom: 1px solid rgba(212,168,67,0.1);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  z-index: 30;
+}
+
+.bk-header__logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  color: inherit;
+  flex-shrink: 0;
+}
+.bk-header__logo-text {
+  font-family: 'Baskerville', serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.bk-header__divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(212,168,67,0.12);
+  flex-shrink: 0;
+}
+.bk-header__title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #9B5DE5;
+  flex-shrink: 0;
+}
+
+/* Date nav */
+.bk-date-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.bk-date-nav__btn {
+  background: transparent;
+  border: 1px solid rgba(212,168,67,0.15);
+  color: rgba(242,237,228,0.45);
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+/* ─── Custom date picker (replaces native <input type=date>) ─── */
+.bk-datepicker { position: relative; flex-shrink: 0; }
+.bk-datepicker__trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(212,168,67,0.22);
+  color: #F2EDE4;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 11px;
+  padding: 2px 5px;
+  cursor: pointer;
+  outline: none;
+  min-width: 96px;
+  white-space: nowrap;
+}
+.bk-datepicker__trigger svg { color: #D4A843; flex-shrink: 0; opacity: 0.8; }
+.bk-datepicker__trigger:hover { border-bottom-color: rgba(212,168,67,0.5); }
+
+.bk-datepicker__pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  width: 240px;
+  background: #14101f;
+  border: 1px solid rgba(212,168,67,0.2);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  padding: 12px;
+}
+.bk-datepicker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.bk-datepicker__month {
+  font-family: 'Baskerville', serif;
+  font-size: 13px;
+  color: #F2EDE4;
+}
+.bk-datepicker__nav {
+  background: transparent;
+  border: 1px solid rgba(212,168,67,0.15);
+  color: rgba(242,237,228,0.55);
+  width: 22px; height: 22px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+.bk-datepicker__nav:hover { color: #D4A843; border-color: rgba(212,168,67,0.4); }
+
+.bk-datepicker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.bk-datepicker__grid--head { margin-bottom: 4px; }
+.bk-datepicker__wd {
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: rgba(242,237,228,0.35);
+  padding-bottom: 2px;
+}
+.bk-datepicker__day {
+  aspect-ratio: 1;
+  background: transparent;
+  border: none;
+  color: #F2EDE4;
+  font-size: 12px;
+  font-family: 'Avenir Next', sans-serif;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.bk-datepicker__day:hover { background: rgba(212,168,67,0.12); }
+.bk-datepicker__day--today { color: #D4A843; font-weight: 700; }
+.bk-datepicker__day--past { color: rgba(242,237,228,0.25); }
+.bk-datepicker__day--sel { background: #D4A843; color: #0C0A18; font-weight: 700; }
+.bk-datepicker__day--sel:hover { background: #D4A843; }
+
+.bk-datepicker__today-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 7px;
+  background: transparent;
+  border: 1px solid rgba(212,168,67,0.2);
+  color: #D4A843;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: 'Avenir Next', sans-serif;
+}
+.bk-datepicker__today-btn:hover { background: rgba(212,168,67,0.1); }
+
+/* Time slots */
+.bk-timeslots {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  align-items: center;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155,93,229,0.3) transparent;
+}
+.bk-timeslots::-webkit-scrollbar { height: 2px; }
+.bk-timeslots::-webkit-scrollbar-thumb { background: rgba(155,93,229,0.35); }
+.bk-ts {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border: 1px solid rgba(212,168,67,0.12);
+  background: transparent;
+  color: rgba(242,237,228,0.38);
+  font-size: 11px;
+  font-family: 'Avenir Next', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.bk-ts--active {
+  border-color: #9B5DE5;
+  background: rgba(155,93,229,0.18);
+  color: #9B5DE5;
+}
+
+/* Party size */
+.bk-party {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(212,168,67,0.14);
+  padding: 2px 9px;
+  flex-shrink: 0;
+}
+.bk-party__lbl {
+  font-size: 8px;
+  color: rgba(242,237,228,0.3);
+  letter-spacing: 1px;
+}
+.bk-party__btn {
+  background: transparent;
+  border: none;
+  color: rgba(242,237,228,0.4);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0 2px;
+  line-height: 1;
+}
+.bk-party__num {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 13px;
+  text-align: center;
+}
+
+/* New booking button */
+.bk-new-btn {
+  background: #9B5DE5;
+  border: none;
+  color: #fff;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 7px 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.bk-new-btn:hover { background: #8a4fd4; }
+
+/* ─── Body layout ─── */
+.bk-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ─── Sidebar ─── */
+@keyframes bkFadeIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+.bk-sidebar {
+  width: 262px;
+  min-width: 262px;
+  background: #090717;
+  border-right: 1px solid rgba(212,168,67,0.09);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: bkFadeIn 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) { .bk-sidebar { animation: none; } }
+
+.bk-legend {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(212,168,67,0.07);
+  flex-shrink: 0;
+}
+.bk-legend__row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+.bk-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bk-legend__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.bk-legend__lbl {
+  font-size: 8px;
+  color: rgba(242,237,228,0.38);
+  letter-spacing: 1px;
+}
+
+.bk-stats {
+  display: flex;
+  border: 1px solid rgba(212,168,67,0.09);
+  background: rgba(255,255,255,0.015);
+}
+.bk-stats__cell {
+  flex: 1;
+  padding: 7px 4px;
+  text-align: center;
+  border-right: 1px solid rgba(212,168,67,0.09);
+}
+.bk-stats__cell:last-child { border-right: none; }
+.bk-stats__num {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+.bk-stats__lbl {
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: rgba(242,237,228,0.25);
+  margin-top: 2px;
+}
+
+.bk-res-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155,93,229,0.2) transparent;
+}
+.bk-res-list::-webkit-scrollbar { width: 3px; }
+.bk-res-list::-webkit-scrollbar-thumb { background: rgba(155,93,229,0.2); }
+
+.bk-res-group {
+  padding: 9px 14px 3px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 8px;
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+.bk-res-group__line {
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.18;
+}
+.bk-res-group__count {
+  font-size: 10px;
+  color: rgba(242,237,228,0.22);
+}
+
+.bk-res-item {
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(212,168,67,0.05);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bk-res-item:hover { background: rgba(255,255,255,0.025); }
+.bk-res-item--sel  { background: rgba(155,93,229,0.07); }
+.bk-res-item__row  { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.bk-res-item__info { flex: 1; min-width: 0; }
+.bk-res-item__name { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-res-item__meta { font-size: 10px; color: rgba(242,237,228,0.36); margin-top: 2px; }
+.bk-res-item__badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-width: 1px;
+  border-style: solid;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.bk-res-empty {
+  padding: 32px 14px;
+  text-align: center;
+}
+.bk-res-empty__icon { color: rgba(242,237,228,0.1); font-size: 32px; margin-bottom: 8px; }
+.bk-res-empty__text { font-size: 11px; color: rgba(242,237,228,0.22); font-style: italic; }
+
+/* ─── Floor plan SVG interactions ─── */
+.fp-table { transition: filter 0.18s ease; }
+.fp-table:hover { filter: brightness(1.28); }
+
+.fp-pulse-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fp-pulse 2.2s ease-in-out infinite;
+}
+@keyframes fp-pulse {
+  0%, 100% { opacity: 0.12; transform: scale(0.97); }
+  50%      { opacity: 0.40; transform: scale(1.03); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fp-pulse-ring { animation: none; }
+}
+
+/* ─── Sidebar seat dots ─── */
+.bk-res-item__seats {
+  display: flex;
+  gap: 3px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+.bk-seat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ─── Main (floor plan) ─── */
+.bk-main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  background: #090718;
+}
+
+.bk-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.bk-hint span {
+  display: block;
+  background: rgba(14,11,30,0.85);
+  border: 1px solid rgba(212,168,67,0.2);
+  padding: 7px 18px;
+  font-size: 11px;
+  color: rgba(242,237,228,0.45);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+/* ─── Info / Booking panel ─── */
+.bk-panel {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 354px;
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.16,1,0.3,1);
+  z-index: 20;
+  pointer-events: none;
+}
+.bk-panel--open {
+  transform: translateX(0);
+  pointer-events: all;
+}
+.bk-panel__inner {
+  width: 354px;
+  height: 100%;
+  background: #0C0A18;
+  border-left: 1px solid rgba(212,168,67,0.14);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bk-panel__head {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(212,168,67,0.1);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 8px;
+}
+.bk-panel__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.bk-panel__table-id {
+  font-family: 'Baskerville', serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #F2EDE4;
+}
+.bk-panel__zone {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: rgba(242,237,228,0.38);
+  text-transform: uppercase;
+}
+.bk-panel__sub {
+  font-size: 11px;
+  color: rgba(242,237,228,0.38);
+  margin-top: 2px;
+}
+.bk-panel__close {
+  background: transparent;
+  border: 1px solid rgba(212,168,67,0.2);
+  color: rgba(242,237,228,0.4);
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.bk-panel__close:hover {
+  border-color: rgba(212,168,67,0.5);
+  color: rgba(242,237,228,0.8);
+}
+
+.bk-panel__badge-row {
+  padding: 9px 16px;
+  border-bottom: 1px solid rgba(212,168,67,0.07);
+  flex-shrink: 0;
+}
+.bk-panel__badge {
+  display: inline-block;
+  font-size: 8px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-width: 1px;
+  border-style: solid;
+}
+
+/* Reservation info */
+.bk-panel__body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bk-panel__field-lbl {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: rgba(212,168,67,0.55);
+  margin-bottom: 5px;
+}
+.bk-panel__field-val {
+  font-size: 13px;
+  color: rgba(242,237,228,0.75);
+}
+.bk-panel__field-val--lg   { font-size: 16px; font-weight: 600; color: #F2EDE4; }
+.bk-panel__field-val--note { font-size: 12px; color: rgba(242,237,228,0.55); font-style: italic; line-height: 1.6; }
+
+/* Booking form */
+.bk-panel__form {
+  padding: 14px 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bk-form-field  { display: flex; flex-direction: column; }
+.bk-form-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bk-form-label  {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: rgba(212,168,67,0.65);
+  margin-bottom: 5px;
+}
+.bk-form-input,
+.bk-form-select,
+.bk-form-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: 2px;
+  color: #F2EDE4;
+  font-size: 13px;
+  font-family: 'Avenir Next', sans-serif;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.bk-form-input:focus,
+.bk-form-select:focus,
+.bk-form-textarea:focus { border-color: rgba(155,93,229,0.55); }
+.bk-form-input::placeholder,
+.bk-form-textarea::placeholder { color: rgba(242,237,228,0.22); font-style: italic; }
+.bk-form-select { cursor: pointer; appearance: none; }
+.bk-form-textarea { resize: vertical; min-height: 58px; line-height: 1.5; }
+select option { background: #110E22; color: #F2EDE4; }
+
+.bk-form-input--warn { border-color: rgba(248,113,113,0.5); }
+.bk-form-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: #f87171;
+}
+
+.bk-form-submit {
+  width: 100%;
+  background: #9B5DE5;
+  border: none;
+  color: #fff;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 13px;
+  cursor: pointer;
+  margin-top: 2px;
+  transition: background 0.15s;
+}
+.bk-form-submit:hover { background: #8a4fd4; }
+
+/* Success state */
+.bk-panel__success {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  text-align: center;
+}
+.bk-panel__success-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(34,197,94,0.12);
+  border: 1px solid rgba(34,197,94,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  font-size: 22px;
+  color: #22c55e;
+}
+.bk-panel__success-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #F2EDE4;
+  margin-bottom: 8px;
+}
+.bk-panel__success-text {
+  font-size: 12px;
+  color: rgba(242,237,228,0.45);
+  line-height: 1.7;
+}
+
+/* ─── Auth gate in panel ─── */
+.bk-auth-gate {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  text-align: center;
+  gap: 14px;
+}
+.bk-auth-gate__icon {
+  color: rgba(212,168,67,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: 50%;
+  background: rgba(212,168,67,0.06);
+  flex-shrink: 0;
+}
+.bk-auth-gate__text {
+  font-size: 13px;
+  color: rgba(242,237,228,0.55);
+  line-height: 1.6;
+  margin: 0;
+}
+.bk-auth-gate__text strong { color: rgba(242,237,228,0.85); }
+.bk-auth-gate__btn {
+  display: block;
+  background: #9B5DE5;
+  border: none;
+  color: #fff;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 11px 18px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.bk-auth-gate__btn:hover { background: #8a4fd4; }
+
+/* ─── User / login buttons in header ─── */
+.bk-user-btn,
+.bk-login-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-decoration: none;
+  padding: 5px 11px;
+  border: 1px solid rgba(212,168,67,0.18);
+  color: rgba(242,237,228,0.55);
+  background: transparent;
+  transition: border-color 0.15s, color 0.15s;
+}
+.bk-user-btn:hover,
+.bk-login-btn:hover {
+  border-color: rgba(212,168,67,0.45);
+  color: rgba(242,237,228,0.85);
+}
+.bk-login-btn {
+  border-color: rgba(155,93,229,0.35);
+  color: #9B5DE5;
+}
+.bk-admin-btn {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-decoration: none;
+  padding: 5px 10px;
+  border: 1px solid rgba(212,168,67,0.45);
+  color: #D4A843;
+  background: rgba(212,168,67,0.07);
+  transition: background 0.15s;
+}
+.bk-admin-btn:hover { background: rgba(212,168,67,0.14); }
+
+/* ─── Deposit notice in booking form ─── */
+.bk-deposit-notice {
+  background: rgba(212,168,67,0.07);
+  border: 1px solid rgba(212,168,67,0.2);
+  padding: 10px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bk-deposit-notice__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.bk-deposit-notice__lbl {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: rgba(212,168,67,0.55);
+}
+.bk-deposit-notice__val {
+  font-size: 16px;
+  font-weight: 600;
+  color: #D4A843;
+}
+.bk-deposit-notice__sub {
+  font-size: 10px;
+  color: rgba(242,237,228,0.35);
+  line-height: 1.4;
+}
+
+/* ─── Payment step ─── */
+.bk-payment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 16px 10px;
+  gap: 8px;
+}
+.bk-payment__icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(212,168,67,0.07);
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.bk-payment__title {
+  font-family: 'Baskerville', serif;
+  font-size: 17px;
+  color: #F2EDE4;
+}
+.bk-payment__sub {
+  font-size: 11px;
+  color: rgba(242,237,228,0.45);
+  line-height: 1.5;
+}
+.bk-payment__amount {
+  font-size: 34px;
+  font-weight: 700;
+  color: #D4A843;
+  line-height: 1;
+  padding: 6px 0;
+}
+.bk-payment__rub {
+  font-size: 22px;
+  font-weight: 400;
+}
+.bk-payment__info {
+  font-size: 11px;
+  color: rgba(242,237,228,0.35);
+  line-height: 1.5;
+}
+
+/* ─── Cancel button (payment step) ─── */
+.bk-form-cancel {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(248,113,113,0.2);
+  color: rgba(248,113,113,0.55);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 9px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  margin-top: 6px;
+}
+.bk-form-cancel:hover {
+  border-color: rgba(248,113,113,0.45);
+  color: rgba(248,113,113,0.85);
+}
+
+/* ─── Rules summary in payment step ─── */
+.bk-rules-summary {
+  background: rgba(212,168,67,0.04);
+  border: 1px solid rgba(212,168,67,0.12);
+  padding: 10px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bk-rules-summary__title {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: rgba(212,168,67,0.55);
+  margin-bottom: 2px;
+}
+.bk-rules-summary__item {
+  font-size: 11px;
+  color: rgba(242,237,228,0.5);
+  line-height: 1.5;
+  padding-left: 10px;
+  border-left: 1px solid rgba(212,168,67,0.15);
+}
+
+/* ─── Consent checkbox ─── */
+.bk-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.bk-consent__check {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  accent-color: #9B5DE5;
+  cursor: pointer;
+}
+.bk-consent__text {
+  font-size: 11px;
+  color: rgba(242,237,228,0.55);
+  line-height: 1.5;
+}
+.bk-consent__link {
+  color: #D4A843;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.bk-consent__link:hover { opacity: 0.75; }
+
+/* ─── Success deposit badge ─── */
+.bk-panel__success-deposit {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #22c55e;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+  padding: 5px 10px;
+}
+
+/* ─── Mobile / tablet (<768px) ─── */
+@media (max-width: 768px) {
+  .bk-root { height: 100dvh; }
+
+  /* Header wraps; time slots drop to their own full-width row */
+  .bk-header {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    row-gap: 8px;
+  }
+  .bk-header__title,
+  .bk-header__divider { display: none; }
+  .bk-timeslots {
+    order: 10;
+    flex: 0 0 100%;
+    width: 100%;
+  }
+  .bk-datepicker__trigger { min-width: 84px; }
+  .bk-datepicker__pop { left: auto; right: 0; }
+  .bk-new-btn { padding: 7px 11px; }
+
+  /* Body stacks: floor plan on top, sidebar as a bottom sheet */
+  .bk-body { flex-direction: column; }
+  .bk-main {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 46vh;
+  }
+  .bk-sidebar {
+    order: 2;
+    width: 100%;
+    min-width: 0;
+    border-right: none;
+    border-top: 1px solid rgba(212,168,67,0.12);
+    max-height: 38vh;
+  }
+  /* Reservation list scrolls inside the bottom sheet */
+  .bk-res-list { overflow-y: auto; }
+
+  /* Booking panel covers the full width on small screens */
+  .bk-panel,
+  .bk-panel__inner { width: 100%; }
+}

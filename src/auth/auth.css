@@ -1,0 +1,215 @@
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ─── Auth root ─── */
+.auth-root {
+  min-height: 100vh;
+  background: #0C0A18;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  font-family: 'Avenir Next', sans-serif;
+  color: #F2EDE4;
+}
+
+@keyframes authFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: #0E0B1E;
+  border: 1px solid rgba(212,168,67,0.14);
+  padding: 36px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  animation: authFadeIn 0.35s ease;
+}
+@media (prefers-reduced-motion: reduce) { .auth-card { animation: none; } }
+
+/* ─── Logo ─── */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  align-self: flex-start;
+  margin-bottom: 20px;
+}
+.auth-logo__text {
+  font-family: 'Baskerville', serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.auth-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(212,168,67,0.1);
+  margin-bottom: 24px;
+}
+
+/* ─── Titles ─── */
+.auth-title {
+  font-family: 'Baskerville', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #F2EDE4;
+  margin: 0 0 6px;
+}
+.auth-sub {
+  font-size: 12px;
+  color: rgba(242,237,228,0.4);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+/* ─── Form ─── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.auth-label {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: rgba(212,168,67,0.65);
+}
+.auth-input {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: 2px;
+  color: #F2EDE4;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 15px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.auth-input:focus { border-color: rgba(155,93,229,0.55); }
+.auth-input::placeholder { color: rgba(242,237,228,0.22); font-style: italic; }
+.auth-input--code {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 8px;
+  text-align: center;
+  padding: 12px;
+}
+
+.auth-hint {
+  font-size: 13px;
+  color: rgba(242,237,228,0.55);
+  line-height: 1.6;
+  margin: 0;
+}
+.auth-hint strong { color: rgba(242,237,228,0.8); }
+
+/* Dev OTP display */
+.auth-dev-code {
+  background: rgba(155,93,229,0.08);
+  border: 1px solid rgba(155,93,229,0.25);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.auth-dev-code__lbl {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: rgba(155,93,229,0.7);
+  text-transform: uppercase;
+}
+.auth-dev-code__val {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: #9B5DE5;
+}
+
+.auth-error {
+  font-size: 12px;
+  color: #f87171;
+  padding: 8px 10px;
+  background: rgba(248,113,113,0.07);
+  border: 1px solid rgba(248,113,113,0.2);
+}
+
+/* ─── Buttons ─── */
+.auth-btn {
+  width: 100%;
+  background: #9B5DE5;
+  border: none;
+  color: #fff;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 13px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.auth-btn:hover:not(:disabled) { background: #8a4fd4; }
+.auth-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.auth-btn--tg {
+  background: #0088cc;
+}
+.auth-btn--tg:hover:not(:disabled) { background: #0077b5; }
+
+.auth-link {
+  background: none;
+  border: none;
+  color: rgba(242,237,228,0.38);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px 0;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.auth-link:hover { color: rgba(242,237,228,0.7); }
+
+/* ─── Telegram states ─── */
+.auth-checking {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 0;
+  color: rgba(242,237,228,0.45);
+  font-size: 13px;
+}
+.auth-checking__spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(155,93,229,0.25);
+  border-top-color: #9B5DE5;
+  border-radius: 50%;
+  animation: auth-spin 0.8s linear infinite;
+}
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+
+/* ─── Back link at bottom ─── */
+.auth-back-link {
+  margin-top: 20px;
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(212,168,67,0.08);
+}

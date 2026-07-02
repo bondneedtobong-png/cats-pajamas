@@ -1,0 +1,429 @@
+
+*, *::before, *::after { box-sizing: border-box; }
+
+.adm-root {
+  min-height: 100vh;
+  background: #0C0A18;
+  color: #F2EDE4;
+  font-family: 'Avenir Next', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ─── */
+.adm-header {
+  height: 52px;
+  background: #0E0B1E;
+  border-bottom: 1px solid rgba(212,168,67,0.12);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.adm-header__logo {
+  display: flex; align-items: center; gap: 7px;
+  text-decoration: none; color: inherit; flex-shrink: 0;
+}
+.adm-header__logo-text {
+  font-family: 'Baskerville', serif;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; opacity: 0.7;
+}
+.adm-header__divider { width: 1px; height: 20px; background: rgba(212,168,67,0.12); }
+.adm-header__title {
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #D4A843;
+}
+.adm-header__link {
+  font-size: 11px; color: rgba(242,237,228,0.38);
+  text-decoration: none; transition: color 0.15s; white-space: nowrap;
+}
+.adm-header__link:hover { color: rgba(242,237,228,0.7); }
+.adm-header__logout {
+  background: transparent;
+  border: 1px solid rgba(212,168,67,0.2);
+  color: rgba(242,237,228,0.38);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px; letter-spacing: 1px;
+  padding: 5px 12px; cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+}
+.adm-header__logout:hover { border-color: rgba(212,168,67,0.45); color: rgba(242,237,228,0.7); }
+
+/* ─── Tabs ─── */
+.adm-tabs {
+  display: flex;
+  background: #0E0B1E;
+  border-bottom: 1px solid rgba(212,168,67,0.08);
+  padding: 0 24px;
+  gap: 0;
+  flex-shrink: 0;
+}
+.adm-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(242,237,228,0.38);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 13px 18px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.adm-tab-btn:hover { color: rgba(242,237,228,0.65); }
+.adm-tab-btn--active { color: #D4A843; border-bottom-color: #D4A843; }
+
+/* ─── Main area ─── */
+.adm-main {
+  flex: 1;
+  padding: 0;
+  overflow: auto;
+}
+
+/* ─── Tab container ─── */
+@keyframes admFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.adm-tab { padding: 20px 24px; animation: admFadeIn 0.3s ease; }
+@media (prefers-reduced-motion: reduce) { .adm-tab { animation: none; } }
+.adm-tab--center {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60vh;
+}
+.adm-tab__desc {
+  font-size: 12px; color: rgba(242,237,228,0.38);
+  margin: 0 0 16px;
+}
+
+/* ─── Filters row ─── */
+.adm-filters {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.adm-select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(212,168,67,0.18);
+  border-radius: 3px;
+  color: #F2EDE4;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 11px;
+  padding: 6px 10px;
+  outline: none;
+  cursor: pointer;
+}
+.adm-select:focus { border-color: rgba(212,168,67,0.45); }
+
+/* ─── Buttons ─── */
+.adm-btn {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  padding: 8px 14px;
+  cursor: pointer; border: none;
+  border-radius: 3px;
+  transition: background 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+.adm-btn--primary { background: #9B5DE5; color: #fff; }
+.adm-btn--primary:hover { background: #8a4fd4; box-shadow: 0 2px 12px rgba(155,93,229,0.35); transform: translateY(-1px); }
+.adm-btn--ghost {
+  background: transparent;
+  border: 1px solid rgba(212,168,67,0.25);
+  color: rgba(242,237,228,0.55);
+}
+.adm-btn--ghost:hover { border-color: rgba(212,168,67,0.55); color: rgba(242,237,228,0.85); }
+.adm-btn--saved {
+  background: rgba(34,197,94,0.12);
+  border: 1px solid rgba(34,197,94,0.3);
+  color: #22c55e;
+}
+
+/* ─── Table ─── */
+.adm-table-wrap { overflow-x: auto; }
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.adm-table th {
+  text-align: left;
+  font-size: 8px; letter-spacing: 1.5px; font-weight: 600;
+  color: rgba(212,168,67,0.55);
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(212,168,67,0.1);
+  white-space: nowrap;
+}
+.adm-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: middle;
+  color: rgba(242,237,228,0.75);
+  transition: background 0.12s;
+}
+.adm-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+.adm-table__row--muted td { opacity: 0.45; }
+.adm-table__table-id {
+  font-family: 'Baskerville', serif;
+  font-size: 15px; font-weight: 700; color: #F2EDE4;
+}
+.adm-table__time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.adm-table__name { color: #F2EDE4; font-size: 14px; }
+.adm-table__phone { font-size: 12px; color: rgba(242,237,228,0.5); }
+
+/* ─── Badges ─── */
+.adm-badge {
+  display: inline-block;
+  font-size: 8px; letter-spacing: 1px; font-weight: 600;
+  padding: 3px 8px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+/* ─── Action buttons ─── */
+.adm-actions { display: flex; gap: 4px; }
+.adm-act-btn {
+  width: 26px; height: 26px;
+  border: 1px solid; border-radius: 2px;
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s;
+}
+.adm-act-btn--ok   { color: #22c55e; border-color: rgba(34,197,94,0.3); }
+.adm-act-btn--ok:hover { background: rgba(34,197,94,0.1); }
+.adm-act-btn--del  { color: #f87171; border-color: rgba(248,113,113,0.3); }
+.adm-act-btn--del:hover { background: rgba(248,113,113,0.1); }
+.adm-act-btn--move { color: #D4A843; border-color: rgba(212,168,67,0.3); }
+.adm-act-btn--move:hover { background: rgba(212,168,67,0.1); }
+.adm-act-btn--done { color: #9B5DE5; border-color: rgba(155,93,229,0.3); }
+.adm-act-btn--done:hover { background: rgba(155,93,229,0.1); }
+.adm-act-btn--no   { color: #6b7280; border-color: rgba(107,114,128,0.3); }
+.adm-act-btn--no:hover { background: rgba(107,114,128,0.1); }
+
+/* ─── Deposit price input ─── */
+.adm-price-input {
+  width: 100px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: 3px;
+  color: #F2EDE4;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 14px;
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.adm-price-input:focus { border-color: rgba(212,168,67,0.55); }
+
+/* ─── Error ─── */
+.adm-error {
+  font-size: 12px; color: #f87171;
+  padding: 8px 10px;
+  background: rgba(248,113,113,0.07);
+  border: 1px solid rgba(248,113,113,0.2);
+  margin-top: 4px;
+}
+
+/* ─── Empty state ─── */
+.adm-empty {
+  padding: 48px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(242,237,228,0.3);
+}
+
+/* ─── Access denied ─── */
+.adm-denied {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 100vh;
+  gap: 12px; text-align: center; padding: 40px;
+}
+.adm-denied__icon { font-size: 36px; color: rgba(248,113,113,0.4); }
+.adm-denied__title { font-family: 'Baskerville', serif; font-size: 24px; }
+.adm-denied__text { font-size: 13px; color: rgba(242,237,228,0.45); max-width: 320px; }
+
+/* ─── Placeholder ─── */
+.adm-placeholder {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; text-align: center; max-width: 360px;
+}
+.adm-placeholder__icon { color: rgba(212,168,67,0.3); }
+.adm-placeholder__title { font-family: 'Baskerville', serif; font-size: 20px; }
+.adm-placeholder__text { font-size: 13px; color: rgba(242,237,228,0.38); line-height: 1.7; }
+
+/* ─── Modal ─── */
+.adm-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 20px;
+}
+.adm-modal {
+  width: 100%; max-width: 520px;
+  background: #0E0B1E;
+  border: 1px solid rgba(212,168,67,0.18);
+  border-radius: 4px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  overflow-y: auto; max-height: 90vh;
+}
+.adm-modal__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(212,168,67,0.1);
+}
+.adm-modal__title {
+  font-size: 10px; letter-spacing: 2px; color: #D4A843; text-transform: uppercase;
+}
+.adm-modal__close {
+  background: none; border: none; color: rgba(242,237,228,0.45);
+  font-size: 14px; cursor: pointer; padding: 0;
+}
+.adm-modal--sm { max-width: 380px; }
+.adm-confirm {
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.adm-confirm__msg {
+  margin: 0;
+  font-size: 13px; line-height: 1.5;
+  color: rgba(242,237,228,0.78);
+}
+.adm-confirm__actions {
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+.adm-modal__form {
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.adm-modal__res-info {
+  font-size: 14px; color: rgba(242,237,228,0.75);
+  padding: 8px 0; border-bottom: 1px solid rgba(212,168,67,0.08);
+}
+.adm-form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.adm-form-row .adm-form-field { flex: 1; min-width: 120px; }
+.adm-form-field { display: flex; flex-direction: column; gap: 5px; }
+.adm-form-lbl { font-size: 8px; letter-spacing: 2px; color: rgba(212,168,67,0.55); }
+.adm-form-input {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: 3px;
+  color: #F2EDE4;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 14px; padding: 8px 10px;
+  outline: none; transition: border-color 0.15s; width: 100%;
+}
+.adm-form-input:focus { border-color: rgba(155,93,229,0.55); }
+.adm-form-textarea { resize: vertical; }
+
+/* ─── Seat count toggle button ─── */
+.adm-seat-count {
+  background: transparent;
+  border: 1px solid rgba(212,168,67,0.2);
+  color: rgba(242,237,228,0.55);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 11px; padding: 3px 10px; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.adm-seat-count:hover { border-color: rgba(212,168,67,0.45); color: rgba(242,237,228,0.85); }
+
+/* ─── Seat expand row ─── */
+.adm-table__seats-row td { padding-top: 0 !important; padding-bottom: 14px !important; }
+.adm-seats-expand {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 8px 0;
+}
+.adm-seats-expand__hint {
+  font-size: 10px; color: rgba(242,237,228,0.22); letter-spacing: 0.3px;
+}
+
+/* ─── Seat buttons ─── */
+.adm-seats-grid {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.adm-seat-btn {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(242,237,228,0.15);
+  background: rgba(255,255,255,0.03);
+  color: rgba(242,237,228,0.28);
+  font-family: 'Avenir Next', sans-serif; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; justify-content: center;
+}
+.adm-seat-btn--active {
+  border-color: rgba(34,197,94,0.45);
+  background: rgba(34,197,94,0.08);
+  color: #22c55e;
+}
+.adm-seat-btn:hover { opacity: 0.75; }
+
+/* ─── Floor plan editor ─── */
+.adm-editor {
+  display: flex; flex-direction: column;
+  height: calc(100vh - 104px);
+}
+.adm-editor__toolbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(212,168,67,0.08);
+  flex-shrink: 0;
+}
+.adm-editor__hint {
+  font-size: 10px; color: rgba(242,237,228,0.28); letter-spacing: 0.3px;
+  margin-left: 4px;
+}
+.adm-editor__body {
+  display: flex; flex: 1; overflow: hidden;
+}
+.adm-editor__svg-wrap {
+  flex: 1; overflow: hidden;
+  background: #080616;
+}
+.adm-editor__svg { width: 100%; height: 100%; display: block; }
+
+.adm-editor__panel {
+  width: 260px; flex-shrink: 0;
+  border-left: 1px solid rgba(212,168,67,0.08);
+  background: #0E0B1E;
+  box-shadow: -16px 0 32px rgba(0,0,0,0.25);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.adm-editor__panel-empty {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: rgba(242,237,228,0.2);
+  text-align: center; padding: 20px; line-height: 1.6;
+}
+.adm-editor__panel-content {
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+  min-height: 100%;
+}
+.adm-editor__panel-head {
+  display: flex; align-items: baseline; gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(212,168,67,0.08);
+}
+.adm-editor__panel-zone {
+  font-size: 10px; color: rgba(212,168,67,0.5); letter-spacing: 1px;
+}
+.adm-editor__panel-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: rgba(242,237,228,0.55);
+}
+.adm-editor__deposit-row { display: flex; gap: 8px; }
+.adm-editor__deposit-row .adm-price-input { flex: 1; width: auto; min-width: 0; }
+.adm-editor__seats-title {
+  font-size: 8px; letter-spacing: 2px; color: rgba(212,168,67,0.5);
+  margin-top: 4px;
+}
+.adm-editor__del-btn {
+  margin-top: auto;
+  width: 100%;
+  color: rgba(248,113,113,0.65) !important;
+  border-color: rgba(248,113,113,0.2) !important;
+}
+.adm-editor__del-btn:hover {
+  color: #f87171 !important;
+  border-color: rgba(248,113,113,0.4) !important;
+  background: rgba(248,113,113,0.06) !important;
+}

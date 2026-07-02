@@ -1,0 +1,108 @@
+/* ─── Toast stack ─── */
+.fb-toast-stack {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 40px));
+}
+.fb-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #14101f;
+  border: 1px solid rgba(212,168,67,0.2);
+  border-left: 3px solid #D4A843;
+  color: #F2EDE4;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  cursor: pointer;
+  animation: fbToastIn .25s ease;
+}
+.fb-toast--error { border-left-color: #f87171; }
+.fb-toast__icon {
+  flex-shrink: 0;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 11px;
+  color: #0C0A18;
+  background: #D4A843;
+}
+.fb-toast--error .fb-toast__icon { background: #f87171; }
+.fb-toast__msg { flex: 1; word-break: break-word; }
+
+@keyframes fbToastIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ─── Confirm dialog ─── */
+.fb-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6,4,12,0.7);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  padding: 20px;
+  animation: fbFadeIn .15s ease;
+}
+@keyframes fbFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.fb-confirm {
+  width: 100%;
+  max-width: 380px;
+  background: #14101f;
+  border: 1px solid rgba(212,168,67,0.2);
+  padding: 28px 26px 24px;
+  font-family: 'Avenir Next', sans-serif;
+  color: #F2EDE4;
+}
+.fb-confirm__title {
+  font-family: 'Baskerville', serif;
+  font-size: 19px;
+  margin-bottom: 10px;
+}
+.fb-confirm__msg {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(242,237,228,0.65);
+  margin: 0 0 24px;
+}
+.fb-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.fb-btn {
+  padding: 10px 20px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+}
+.fb-btn--ghost {
+  background: transparent;
+  color: rgba(242,237,228,0.6);
+  border: 1px solid rgba(242,237,228,0.15);
+}
+.fb-btn--ghost:hover { color: #F2EDE4; border-color: rgba(242,237,228,0.3); }
+.fb-btn--primary { background: #D4A843; color: #0C0A18; }
+.fb-btn--primary:hover { background: #e0b855; }
+.fb-btn--danger { background: #f87171; color: #2a0a0a; }
+.fb-btn--danger:hover { background: #fa8a8a; }
+
+@media (max-width: 480px) {
+  .fb-toast-stack { left: 12px; right: 12px; top: 12px; max-width: none; }
+}
