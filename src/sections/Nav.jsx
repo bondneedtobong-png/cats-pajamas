@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import AuthService from '../auth/AuthService.js';
 import { pageImages } from '../data.js';
 
-// Telegram — единственный способ входа/регистрации на сайте (см. AuthPage).
+// Telegram — единственный способ входа/регистрации на сайте (см. AuthModal).
 // Уже вошедшему гостю показываем ссылку на профиль вместо повторного «войти».
-function TelegramNavLink({ loggedIn, onClick, tx }) {
+// Не залогинен — открывает вход поверх текущей страницы, а не уводит на
+// отдельный /auth (по прямому запросу пользователя).
+function TelegramNavLink({ loggedIn, onClick, onRequestAuth, tx }) {
   if (loggedIn) {
     return (
       <a href="/profile" className="nav__profile nav__shimmer" onClick={onClick} aria-label={tx.navProfile}>
@@ -17,12 +19,17 @@ function TelegramNavLink({ loggedIn, onClick, tx }) {
     );
   }
   return (
-    <a href="/auth?next=/profile" className="nav__tg nav__shimmer" onClick={onClick} aria-label={tx.navLoginTg}>
+    <button
+      type="button"
+      className="nav__tg nav__shimmer"
+      onClick={() => { onClick?.(); onRequestAuth(); }}
+      aria-label={tx.navLoginTg}
+    >
       <svg className="nav__tg-icon" viewBox="0 0 24 24" fill="currentColor">
         <path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l.002.001-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.228c.309-1.239-.473-1.8-1.282-1.434z" />
       </svg>
       <span className="nav__tg-label">{tx.navLoginTg}</span>
-    </a>
+    </button>
   );
 }
 
@@ -30,9 +37,12 @@ function TelegramNavLink({ loggedIn, onClick, tx }) {
 // that page directly (App.jsx owns activePage/onNavigate). Renders as a
 // vertical sidebar on the left from 900px up, and the usual burger + full
 // screen overlay below that.
-export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) {
+export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, onRequestAuth }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [loggedIn] = useState(() => AuthService.isAuthenticated());
+  // Not cached in state — read fresh on every render so it picks up a login
+  // that just happened in AuthModal (which re-renders this via App.jsx's
+  // authOpen state closing) without needing a page reload.
+  const loggedIn = AuthService.isAuthenticated();
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
@@ -79,7 +89,7 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) 
         </div>
 
         <div className="nav__actions">
-          <TelegramNavLink loggedIn={loggedIn} tx={tx} />
+          <TelegramNavLink loggedIn={loggedIn} onRequestAuth={onRequestAuth} tx={tx} />
           <button className="nav__lang nav__shimmer" onClick={onLangToggle}>{tx.langBtn}</button>
           <a href="/booking" className="nav__cta">{tx.heroCta}</a>
         </div>
@@ -101,7 +111,7 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) 
         <a href="#" className={mobileLinkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
         <a href="#" className={mobileLinkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
         <div className="nav__mobile-actions">
-          <TelegramNavLink loggedIn={loggedIn} onClick={close} tx={tx} />
+          <TelegramNavLink loggedIn={loggedIn} onClick={close} onRequestAuth={onRequestAuth} tx={tx} />
           <button className="nav__lang nav__shimmer" onClick={() => { onLangToggle(); close(); }}>{tx.langBtn}</button>
           <a href="/booking" className="nav__cta" onClick={close}>{tx.heroCta}</a>
         </div>

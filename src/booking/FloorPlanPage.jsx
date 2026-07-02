@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import BookingService from './BookingService.js';
 import AuthService from '../auth/AuthService.js';
+import AuthModal from '../auth/AuthModal.jsx';
 import FloorPlanSvg from './FloorPlanSvg.jsx';
 import DatePicker from './DatePicker.jsx';
 import { BOOKING_RULES } from './bookingRules.js';
@@ -130,7 +131,9 @@ function Sidebar({ tables, selectedTime, selectedTableId, onSelectTable }) {
 }
 
 // ─── Auth gate shown inside the panel when user isn't logged in ───
-function AuthGate({ tableId }) {
+// Opens the login as an overlay on top of the floor plan instead of
+// navigating to /auth — the guest never loses their selected table.
+function AuthGate({ tableId, onRequestAuth }) {
   return (
     <div className="bk-auth-gate">
       <div className="bk-auth-gate__icon">
@@ -144,15 +147,15 @@ function AuthGate({ tableId }) {
         <br />
         <span style={{ opacity: 0.45, fontSize: 11 }}>План зала открыт для всех — только бронь требует входа.</span>
       </p>
-      <Link to={`/auth?next=/booking`} className="bk-auth-gate__btn">
+      <button type="button" className="bk-auth-gate__btn" onClick={onRequestAuth}>
         Войти / Зарегистрироваться
-      </Link>
+      </button>
     </div>
   );
 }
 
 // ──────────────────────────── Panel ────────────────────────────
-function InfoPanel({ table, date, time, onClose, onBooked, currentUser }) {
+function InfoPanel({ table, date, time, onClose, onBooked, currentUser, onRequestAuth }) {
   const { toast } = useFeedback();
   const [step,        setStep]       = useState('booking'); // 'booking' | 'payment' | 'success'
   const [name,        setName]       = useState(currentUser?.name || '');
@@ -273,7 +276,7 @@ function InfoPanel({ table, date, time, onClose, onBooked, currentUser }) {
 
         {/* Auth gate — anon user sees lock, not form */}
         {step === 'booking' && status === 'vacant' && !currentUser && (
-          <AuthGate tableId={table.id} />
+          <AuthGate tableId={table.id} onRequestAuth={onRequestAuth} />
         )}
 
         {/* Booking form (vacant + authenticated) */}
@@ -414,6 +417,9 @@ export default function FloorPlanPage() {
   const [selId,       setSelId]       = useState(null);
   const [tick,        setTick]        = useState(0);
   const [currentUser, setCurrentUser] = useState(() => AuthService.getCurrentUser());
+  // Login opens as an overlay over the floor plan (not a navigate to
+  // /auth) so the guest keeps their selected table/date/time.
+  const [authOpen, setAuthOpen] = useState(false);
 
   // Sync auth state when returning from /auth
   useEffect(() => {
@@ -520,7 +526,7 @@ export default function FloorPlanPage() {
             {currentUser.name || (currentUser.phone ? '+' + currentUser.phone.slice(-4) : 'Профиль')}
           </Link>
         ) : (
-          <Link to="/auth?next=/booking" className="bk-login-btn">Войти</Link>
+          <button type="button" className="bk-login-btn" onClick={() => setAuthOpen(true)}>Войти</button>
         )}
       </header>
 
@@ -555,7 +561,16 @@ export default function FloorPlanPage() {
             onClose={() => setSelId(null)}
             onBooked={handleBooked}
             currentUser={currentUser}
+            onRequestAuth={() => setAuthOpen(true)}
           />
+
+          {authOpen && (
+            <AuthModal
+              subtitle="Чтобы забронировать стол, войдите или создайте аккаунт"
+              onClose={() => setAuthOpen(false)}
+              onSuccess={() => setCurrentUser(AuthService.getCurrentUser())}
+            />
+          )}
         </div>
       </div>
     </div>

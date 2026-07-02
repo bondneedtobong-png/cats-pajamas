@@ -213,3 +213,43 @@
   padding-top: 16px;
   border-top: 1px solid rgba(212,168,67,0.08);
 }
+
+/* ─── Modal variant — same card, opens over the current page instead of
+   navigating to /auth ─── */
+@keyframes authOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(4, 3, 10, 0.78);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  animation: authOverlayFadeIn 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) { .auth-modal-overlay { animation: none; } }
+.auth-card--modal {
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.auth-modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: 50%;
+  color: rgba(242,237,228,0.6);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, transform 0.15s;
+}
+.auth-modal__close:hover { color: #F2EDE4; border-color: rgba(212,168,67,0.45); transform: rotate(90deg); }

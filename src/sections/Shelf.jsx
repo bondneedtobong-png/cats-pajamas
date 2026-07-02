@@ -75,7 +75,7 @@ function formatReviewDate(dateStr, lang) {
   return `${month} ${d.getFullYear()}`;
 }
 
-export default function Shelf({ tx, lang }) {
+export default function Shelf({ tx, lang, onRequestAuth }) {
   const [reviews,     setReviews]     = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [reading,     setReading]     = useState(null);  // review being read
@@ -165,7 +165,7 @@ export default function Shelf({ tx, lang }) {
           {isLoggedIn ? (
             <button className="shelf__cta-btn" onClick={handleCtaClick}>{tx.shelfCtaLoggedIn}</button>
           ) : (
-            <a className="shelf__cta-btn" href="/auth?next=/">{tx.shelfCtaLoggedOut}</a>
+            <button className="shelf__cta-btn" onClick={onRequestAuth}>{tx.shelfCtaLoggedOut}</button>
           )}
         </div>
       </div>

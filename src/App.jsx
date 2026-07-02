@@ -14,6 +14,7 @@ import Footer   from './sections/Footer.jsx';
 import PageBackdrop from './sections/PageBackdrop.jsx';
 import FloorPlanPage from './booking/FloorPlanPage.jsx';
 import AuthPage      from './auth/AuthPage.jsx';
+import AuthModal      from './auth/AuthModal.jsx';
 import ProfilePage   from './profile/ProfilePage.jsx';
 import AppHubPage    from './app/AppHubPage.jsx';
 import AdminPage        from './admin/AdminPage.jsx';
@@ -59,6 +60,11 @@ function BookControls({ index, onPrev, onNext }) {
 function MainSite() {
   const [lang, setLang] = useState('ru');
   const [activeIndex, setActiveIndex] = useState(0);
+  // Login opens as an overlay on top of whatever page the guest is on
+  // (see AuthModal) instead of navigating away to /auth and losing their
+  // place — triggered from Nav's "Войти через Telegram" and Shelf's
+  // "leave a review" CTA.
+  const [authOpen, setAuthOpen] = useState(false);
 
   const tx = translations[lang];
   const toggleLang = () => setLang((l) => (l === 'ru' ? 'en' : 'ru'));
@@ -99,7 +105,7 @@ function MainSite() {
     <div className="app" data-theme="A">
       <PageBackdrop image={pageImages[activePage]} />
 
-      <Nav tx={tx} lang={lang} onLangToggle={toggleLang} activePage={activePage} onNavigate={goToPage} />
+      <Nav tx={tx} lang={lang} onLangToggle={toggleLang} activePage={activePage} onNavigate={goToPage} onRequestAuth={() => setAuthOpen(true)} />
 
       <div className="book">
         {PAGES.map((id, i) => {
@@ -112,7 +118,7 @@ function MainSite() {
               {id === 'about'    && <About tx={tx} />}
               {id === 'menu'     && <Menu tx={tx} />}
               {id === 'events'   && <Events tx={tx} lang={lang} />}
-              {id === 'gallery'  && <Shelf tx={tx} lang={lang} />}
+              {id === 'gallery'  && <Shelf tx={tx} lang={lang} onRequestAuth={() => setAuthOpen(true)} />}
               {id === 'team'     && <Team tx={tx} />}
               {id === 'booking'  && <Booking tx={tx} />}
               {id === 'contacts' && (
@@ -127,6 +133,8 @@ function MainSite() {
       </div>
 
       <BookControls index={activeIndex} onPrev={goPrev} onNext={goNext} />
+
+      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
     </div>
   );
 }
