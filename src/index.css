@@ -72,7 +72,8 @@ html { scroll-behavior: smooth; }
   --accent-dim: rgba(155,93,229,0.1);
   --glow:       rgba(155,93,229,0.65);
   --theme-name: "VIOLET NIGHT";
-  --nav-w:      236px; /* sidebar width — shared by .book/.book-controls offsets */
+  --nav-w:      300px; /* reserved sidebar column — shared by .book/.book-controls offsets */
+  --nav-gap:    20px;  /* margin around the floating nav panel within that column */
 }
 
 /* ── App shell ─────────────────────────────────────────── */
@@ -106,20 +107,17 @@ html { scroll-behavior: smooth; }
   width: 100%;
   height: 100vh;
   height: 100dvh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden; /* every page must fit the screen on its own — no scroll */
   backface-visibility: hidden;
-  /* Clearance so scrolled-to-the-end content never hides behind the fixed
-     page-count pill (.book-controls) sitting on top of every page. */
-  scroll-padding-bottom: 90px;
+  /* Clearance so content never renders behind the fixed page-count pill
+     (.book-controls) that sits on top of every page. */
   padding-bottom: 90px;
   box-sizing: border-box;
   transition: transform 1.05s cubic-bezier(.65,0,.35,1), opacity .6s ease;
   will-change: transform, opacity;
 }
 @media (max-width: 900px) {
-  .book__page { padding-bottom: 74px; scroll-padding-bottom: 74px; }
+  .book__page { padding-bottom: 74px; }
 }
 .book__page--active {
   transform: none;
@@ -142,67 +140,6 @@ html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   .book__page { transition: opacity .4s ease; }
   .book__page--before, .book__page--after { transform: none; }
-}
-
-/* Riffle sweep — plays once over a multi-page jump (nav click straight to a
-   distant chapter). The destination page is already there underneath; this
-   is a decorative flourish so the jump reads as "flipping fast through the
-   book", not a hard cut. */
-.book__riffle {
-  position: absolute;
-  inset: 0;
-  z-index: 40;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(90deg,
-      transparent 0, transparent 34px,
-      rgba(var(--gold-rgb),.16) 34px 37px,
-      transparent 37px 74px,
-      rgba(255,255,255,.05) 74px 77px
-    );
-  background-size: 260% 100%;
-  opacity: 0;
-  animation: riffleSweep .64s cubic-bezier(.3,.7,.35,1) forwards;
-}
-.book__riffle[data-dir="prev"] { animation-name: riffleSweepBack; }
-@keyframes riffleSweep {
-  0%   { opacity: 0;   background-position: 40% 0; }
-  12%  { opacity: .9; }
-  80%  { opacity: .4; }
-  100% { opacity: 0;   background-position: -140% 0; }
-}
-@keyframes riffleSweepBack {
-  0%   { opacity: 0;   background-position: -100% 0; }
-  12%  { opacity: .9; }
-  80%  { opacity: .4; }
-  100% { opacity: 0;   background-position: 100% 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .book__riffle { display: none; }
-}
-
-/* Fore-edge deckle — a permanent hint of stacked page edges along both
-   screen borders, so the "book" feeling reads even when nothing is
-   transitioning. Subtle, desktop-only (would just be clutter at phone
-   widths where every pixel of width matters). */
-.book::before, .book::after {
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0;
-  width: 10px;
-  z-index: 41;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    rgba(var(--gold-rgb), .22) 0 2px,
-    transparent 2px 13px
-  );
-  opacity: .55;
-}
-.book::before { left: 0; }
-.book::after  { right: 0; }
-@media (max-width: 1024px) {
-  .book::before, .book::after { display: none; }
 }
 
 /* ── Book flip controls (prev/next + page count) ──────────── */
@@ -292,14 +229,18 @@ html { scroll-behavior: smooth; }
 }
 .ornament__line { height: 1px; background: currentColor; }
 
-/* ── Page backdrop (photo + violet brand tint, every page) ─
+/* ── Page backdrop (photo + violet brand tint) ─────────────
+   One global layer behind nav + book, swapped per active page — not
+   per-section — so it also bleeds through the gap around the floating
+   sidebar instead of being clipped to just the content column.
    Recommended source images: landscape, ≥1920×1280px (min ~1600px on the
    short side), JPG ~70-80% quality. object-fit:cover crops to whatever
    viewport shows up, so keep the subject roughly centered with breathing
    room on all sides — no important detail near the edges. */
 .page-bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: 0;
   overflow: hidden;
   pointer-events: none;
 }
@@ -308,14 +249,15 @@ html { scroll-behavior: smooth; }
   inset: 0;
   background-size: cover;
   background-position: center;
-  opacity: .22;
+  opacity: .3;
 }
 .page-bg__tint {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 60% at 50% 40%, var(--bg) 15%, transparent 80%),
-    linear-gradient(160deg, rgba(var(--accent-rgb), .3), rgba(var(--accent-rgb), 0) 55%);
+    radial-gradient(ellipse 65% 55% at 50% 42%, var(--bg) 25%, transparent 78%),
+    linear-gradient(160deg, rgba(var(--accent-rgb), .32) 0%, transparent 55%),
+    linear-gradient(0deg, var(--bg) 0%, transparent 16%, transparent 84%, var(--bg) 100%);
 }
 
 /* ── Section label (eyebrow) ───────────────────────────── */
@@ -329,27 +271,47 @@ html { scroll-behavior: smooth; }
   text-align: center;
 }
 
-/* ── NAV — left sidebar (≥900px), burger overlay below that ─ */
+/* ── NAV — a floating "bookmark ribbon" (≥900px) ────────────
+   Inset from the screen edges (not flush) so the page backdrop shows
+   around it, and clipped into a ribbon tail at the bottom instead of a
+   plain rectangle — per client's sketch: "должна выглядеть как закладка
+   в книжке, а не тупо прямоугольное меню". */
 .nav {
   position: fixed;
-  top: 0; left: 0; bottom: 0;
-  width: var(--nav-w);
+  top: var(--nav-gap);
+  left: var(--nav-gap);
+  bottom: var(--nav-gap);
+  width: calc(var(--nav-w) - var(--nav-gap) * 2);
   z-index: 50;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 10px;
-  padding: 30px 22px 26px;
-  background: color-mix(in srgb, var(--bg2) 90%, transparent);
-  backdrop-filter: blur(14px);
-  border-right: 1px solid var(--border);
+  padding: 26px 20px 58px;
+  background: color-mix(in srgb, var(--bg2) 94%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,.65), 0 10px 26px rgba(0,0,0,.4);
+  /* Fixed-px notch depth (not %) — a percentage clip and a fixed-px bottom
+     padding drift apart at different nav heights, which let the CTA button
+     slide down into the clipped-away tail on tall screens. 36px matches
+     the 58px padding-bottom above with margin to spare. */
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 36px), 50% 100%, 0 calc(100% - 36px));
   overflow-y: auto;
+}
+/* On very short viewports the nav's own content can outgrow the panel and
+   needs its internal scroll — but the clip-path always cuts the same
+   strip off the bottom of the panel's viewport regardless of scroll
+   position, so anything scrolled to the bottom (like the CTA) would stay
+   stuck behind the clip. Drop the decorative notch there; a working
+   scrollable menu beats a ribbon shape. */
+@media (max-height: 640px) {
+  .nav { clip-path: none; padding-bottom: 22px; }
 }
 .nav__logo {
   display: flex;
   align-items: center;
   color: inherit;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 /* ── Cat logo (navbar) ─────────────────────────────────── */
 .nav__cat {
@@ -383,44 +345,57 @@ html { scroll-behavior: smooth; }
 /* Shared "shift + shimmer" hover treatment for every clickable nav item —
    a light sweep crosses the label and it nudges sideways, per explicit
    request ("при наводке на любую кнопку она должна смещаться,
-   переливаться"). Reused by .nav__link/.nav__lang/.nav__tg/.nav__profile. */
+   переливаться"). Reused by .nav__link/.nav__lang/.nav__tg/.nav__profile.
+   Lives on ::after (not the element's own background) so .nav__link can
+   still carry its own photo underneath. */
 .nav__shimmer {
+  position: relative;
+  overflow: hidden;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1), color .2s, border-color .2s, box-shadow .25s;
+}
+.nav__shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   background-image: linear-gradient(100deg, transparent 30%, rgba(var(--gold-rgb),.4) 48%, transparent 66%);
   background-size: 260% 100%;
   background-position: 150% 0;
-  transition: background-position .7s ease, transform .25s cubic-bezier(.34,1.56,.64,1), color .2s, border-color .2s, box-shadow .25s;
+  transition: background-position .7s ease;
 }
-.nav__shimmer:hover { background-position: -60% 0; transform: translateX(6px); }
+.nav__shimmer:hover { transform: translateX(6px); }
+.nav__shimmer:hover::after { background-position: -60% 0; }
 @media (prefers-reduced-motion: reduce) {
   .nav__shimmer { transition: color .2s, border-color .2s; }
   .nav__shimmer:hover { transform: none; }
 }
 
+/* Each link is its own "photo button" — big, with a placeholder backdrop
+   photo (see pageImages in data.js) dimmed by a left-to-right gradient so
+   the label stays legible. "Кнопки должны быть больше... у каждой кнопки
+   будет фотка на фоне." */
 .nav__link {
-  position: relative;
+  --link-img: none;
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
   font-family: 'Baskerville', serif;
-  font-size: 15px;
+  font-size: clamp(14px, 1.8vh, 17px);
   letter-spacing: 1.5px;
-  color: var(--text-dim);
+  color: var(--text);
   text-transform: uppercase;
-  padding: 9px 4px;
+  padding: clamp(12px, 2.4vh, 20px) 16px;
+  background-image:
+    linear-gradient(90deg, rgba(9,7,18,.88) 30%, rgba(9,7,18,.4) 100%),
+    var(--link-img);
+  background-size: cover;
+  background-position: center;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
 }
-.nav__link:hover { color: var(--text); }
-.nav__link--active { color: var(--gold); }
-/* Left tick — marks the active page in a vertical list (the old sliding
-   underline doesn't read as well stacked vertically). */
-.nav__link::before {
-  content: '';
-  position: absolute;
-  left: -14px; top: 50%;
-  width: 6px; height: 1px;
-  background: var(--gold);
-  transform: translateY(-50%) scaleX(0);
-  transform-origin: left;
-  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+.nav__link--active {
+  color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb), .5);
 }
-.nav__link:hover::before,
-.nav__link--active::before { transform: translateY(-50%) scaleX(1); }
 
 .nav__actions {
   display: flex;
@@ -434,6 +409,7 @@ html { scroll-behavior: smooth; }
 .nav__lang {
   background: transparent;
   border: 1px solid var(--border);
+  border-radius: 8px;
   color: var(--text-dim);
   font-family: 'Avenir Next', sans-serif;
   font-size: 10px;
@@ -451,12 +427,13 @@ html { scroll-behavior: smooth; }
   background: var(--accent);
   color: #fff;
   font-family: 'Avenir Next', sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
   text-align: center;
-  padding: 16px 18px;
+  border-radius: 10px;
+  padding: clamp(14px, 2.6vh, 22px) 18px;
   display: block;
   animation: navCtaGlow 3.2s ease-in-out infinite;
   transition: transform .2s, background .2s;
@@ -477,6 +454,7 @@ html { scroll-behavior: smooth; }
   gap: 7px;
   background: transparent;
   border: 1px solid var(--border);
+  border-radius: 8px;
   color: var(--text-dim);
   font-family: 'Avenir Next', sans-serif;
   font-size: 10px;
@@ -516,12 +494,14 @@ html { scroll-behavior: smooth; }
 /* ── HERO ──────────────────────────────────────────────── */
 .hero {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* height:100% (not 100vh) — .book__page already reserves its own
+     padding-bottom for .book-controls; a viewport-absolute min-height here
+     would ignore that reservation and overflow the page by that amount. */
+  height: 100%;
   /* Bottom padding clears the fixed .book-controls page-count pill that
-     sits on top of every page — hero is meant to be seen without scrolling,
-     so this has to be reserved up front rather than relying on scroll. */
-  padding: 90px 0 128px;
+     sits on top of every page — no page scrolls (.book__page is
+     overflow:hidden), so this has to be reserved up front. */
+  padding: 76px 0 100px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -643,7 +623,7 @@ html { scroll-behavior: smooth; }
   width: auto;
   height: auto;
   max-width: min(460px, 88vw);
-  max-height: 30vh;
+  max-height: 26vh;
   display: block;
 }
 .hero__tagline {
@@ -705,11 +685,15 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── ABOUT ─────────────────────────────────────────────── */
+/* Every value below is fluid (vh-based clamp) because the whole page has
+   to fit inside 100vh with zero scroll — see .book__page's overflow:hidden. */
 .about {
-  padding: 110px 6% 96px;
-  background: var(--bg2);
+  padding: clamp(64px, 11vh, 110px) 6% clamp(28px, 5vh, 60px);
   position: relative;
   overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 .about__dots {
   position: absolute; inset: 0;
@@ -718,28 +702,28 @@ html { scroll-behavior: smooth; }
   pointer-events: none;
   opacity: .55;
 }
-.about__inner { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+.about__inner { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
 .about__quote {
   font-family: 'Baskerville', serif;
-  font-size: 44px;
+  font-size: clamp(20px, 3.6vh, 44px);
   font-style: italic;
   font-weight: 300;
   color: var(--text);
   text-align: center;
-  margin: 0 0 38px;
-  line-height: 1.3;
+  margin: 0 0 clamp(14px, 2.6vh, 38px);
+  line-height: 1.25;
 }
 .about__text {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 15px;
-  line-height: 2;
+  font-size: clamp(12px, 1.7vh, 15px);
+  line-height: 1.55;
   color: var(--text-mid);
   text-align: center;
   max-width: 640px;
-  margin: 0 auto 72px;
+  margin: 0 auto clamp(18px, 3.4vh, 56px);
   font-weight: 300;
 }
-.about__para { margin: 0 0 1.15em; }
+.about__para { margin: 0 0 0.7em; }
 .about__para:last-child { margin-bottom: 0; }
 .about__stats {
   display: flex;
@@ -747,12 +731,12 @@ html { scroll-behavior: smooth; }
   align-items: center;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  padding: 44px 0;
+  padding: clamp(14px, 2.6vh, 44px) 0;
 }
 .about__stat { flex: 1; text-align: center; padding: 0 40px; }
 .about__stat-num {
   font-family: 'Baskerville', serif;
-  font-size: 52px;
+  font-size: clamp(28px, 4.6vh, 52px);
   font-weight: 900;
   color: var(--accent);
   line-height: 1;
@@ -765,17 +749,24 @@ html { scroll-behavior: smooth; }
   text-transform: uppercase;
   color: var(--text-dim);
 }
-.about__divider { width: 1px; height: 72px; background: var(--border); }
+.about__divider { width: 1px; height: clamp(36px, 6vh, 72px); background: var(--border); }
 
 /* ── MENU ──────────────────────────────────────────────── */
-.menu { padding: 110px 6% 96px; background: var(--bg); position: relative; overflow: hidden; }
-.menu__inner { max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; }
+.menu {
+  padding: clamp(64px, 11vh, 110px) 6% clamp(28px, 5vh, 60px);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.menu__inner { max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
 .menu__title {
   font-family: 'Baskerville', serif;
-  font-size: 54px;
+  font-size: clamp(26px, 4.4vh, 54px);
   font-weight: 900;
   text-align: center;
-  margin: 0 0 48px;
+  margin: 0 0 clamp(16px, 3vh, 48px);
   color: var(--text);
   line-height: 1;
 }
@@ -784,7 +775,7 @@ html { scroll-behavior: smooth; }
   font-size: 11px;
   color: var(--text-dim);
   text-align: center;
-  margin-top: 26px;
+  margin-top: clamp(10px, 2vh, 26px);
   font-weight: 300;
   font-style: italic;
 }
@@ -794,7 +785,7 @@ html { scroll-behavior: smooth; }
   position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 620px;
+  height: clamp(320px, 58vh, 620px);
   background: var(--bg2);
   border: 1px solid var(--border);
   overflow: hidden;
@@ -831,8 +822,9 @@ html { scroll-behavior: smooth; }
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 72px 72px 64px 56px;
+  padding: clamp(24px, 4vh, 72px) clamp(24px, 5vh, 72px) clamp(20px, 3.4vh, 64px) clamp(20px, 4vh, 56px);
   position: relative;
+  overflow: hidden;
 }
 .menu-carousel__cat {
   font-family: 'Avenir Next', sans-serif;
@@ -840,30 +832,30 @@ html { scroll-behavior: smooth; }
   letter-spacing: 4px;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: 20px;
+  margin-bottom: clamp(8px, 1.4vh, 20px);
   display: block;
 }
 .menu-carousel__name {
   font-family: 'Baskerville', serif;
-  font-size: 46px;
+  font-size: clamp(24px, 4.4vh, 46px);
   font-weight: 900;
   color: var(--text);
   line-height: .98;
-  margin: 0 0 14px;
+  margin: 0 0 clamp(6px, 1.2vh, 14px);
 }
 .menu-carousel__taste {
   font-family: 'Involve', serif;
   font-style: italic;
-  font-size: 17px;
+  font-size: clamp(13px, 1.8vh, 17px);
   color: var(--accent);
-  margin: 0 0 26px;
+  margin: 0 0 clamp(10px, 2vh, 26px);
 }
 .menu-carousel__ing {
   list-style: none;
-  padding: 0; margin: 0 0 28px;
+  padding: 0; margin: 0 0 clamp(10px, 2.2vh, 28px);
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: clamp(4px, 0.8vh, 9px);
 }
 .menu-carousel__ing li {
   display: flex;
@@ -883,18 +875,22 @@ html { scroll-behavior: smooth; }
 }
 .menu-carousel__story {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 14px;
-  line-height: 1.8;
+  font-size: clamp(12px, 1.5vh, 14px);
+  line-height: 1.45;
   color: var(--text-mid);
   font-weight: 300;
-  margin: 0 0 32px;
+  margin: 0 0 clamp(12px, 2.4vh, 32px);
   max-width: 440px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .menu-carousel__footer {
   display: flex;
   align-items: center;
   gap: 28px;
-  margin-bottom: 28px;
+  margin-bottom: clamp(10px, 2.2vh, 28px);
 }
 .menu-carousel__price {
   font-family: 'Baskerville', serif;
@@ -948,10 +944,12 @@ html { scroll-behavior: smooth; }
 
 /* ── EVENTS ────────────────────────────────────────────── */
 .events {
-  padding: 110px 6% 96px;
-  background: var(--bg);
+  padding: clamp(64px, 11vh, 110px) 6% clamp(28px, 5vh, 60px);
   position: relative;
   overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 .events__dots {
   position: absolute; inset: 0;
@@ -960,13 +958,13 @@ html { scroll-behavior: smooth; }
   pointer-events: none;
   opacity: .35;
 }
-.events__inner { max-width: 940px; margin: 0 auto; position: relative; z-index: 1; }
+.events__inner { max-width: 940px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
 .events__title {
   font-family: 'Baskerville', serif;
-  font-size: 54px;
+  font-size: clamp(26px, 4.4vh, 54px);
   font-weight: 900;
   text-align: center;
-  margin: 0 0 60px;
+  margin: 0 0 clamp(16px, 3vh, 60px);
   color: var(--text);
   line-height: 1;
 }
@@ -1045,9 +1043,11 @@ html { scroll-behavior: smooth; }
 /* ── SHELF OF MEMORIES (полка воспоминаний) ────────────── */
 .shelf {
   position: relative;
-  padding: 110px 6% 100px;
-  background: var(--bg2);
+  padding: clamp(64px, 11vh, 110px) 6% clamp(28px, 5vh, 60px);
   overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 /* Faint dot texture for depth, matches the old .events__dots treatment */
 .shelf__dots {
@@ -1057,24 +1057,24 @@ html { scroll-behavior: smooth; }
   pointer-events: none;
   opacity: .5;
 }
-.shelf__inner { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; }
-.shelf__head { text-align: center; margin-bottom: 12px; }
+.shelf__inner { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; width: 100%; }
+.shelf__head { text-align: center; margin-bottom: clamp(6px, 1.2vh, 12px); }
 .shelf__title {
   font-family: 'Baskerville', serif;
-  font-size: 54px;
+  font-size: clamp(26px, 4.4vh, 54px);
   font-weight: 900;
   color: var(--text);
   line-height: 1;
-  margin: 0 0 18px;
+  margin: 0 0 clamp(8px, 1.6vh, 18px);
 }
 .shelf__intro {
   font-family: 'Involve', serif;
   font-style: italic;
-  font-size: 16px;
+  font-size: clamp(13px, 1.6vh, 16px);
   color: var(--text-dim);
   max-width: 520px;
-  margin: 0 auto 56px;
-  line-height: 1.6;
+  margin: 0 auto clamp(16px, 3vh, 56px);
+  line-height: 1.4;
 }
 .shelf__note {
   font-family: 'Avenir Next', sans-serif;
@@ -1085,7 +1085,7 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── Wooden shelves ─────────────────────────────────────── */
-.shelf__unit { display: flex; flex-direction: column; gap: 46px; margin-bottom: 56px; }
+.shelf__unit { display: flex; flex-direction: column; gap: clamp(14px, 2.6vh, 46px); margin-bottom: clamp(16px, 3vh, 56px); }
 .shelf__band { position: relative; }
 .shelf__bottles {
   display: flex;
@@ -1094,7 +1094,7 @@ html { scroll-behavior: smooth; }
   justify-content: center;
   column-gap: 6px;
   row-gap: 0;
-  min-height: 116px;
+  min-height: clamp(64px, 9vh, 116px);
   padding: 0 6px;
 }
 .shelf__plank {
@@ -1117,7 +1117,7 @@ html { scroll-behavior: smooth; }
 /* ── Bottles ────────────────────────────────────────────── */
 .shelf-bottle {
   color: var(--gold);
-  width: clamp(34px, 4.4vw, 46px);
+  width: clamp(26px, min(4.4vw, 3.6vh), 46px);
   height: auto;
 }
 .shelf__bottle-btn {
@@ -1250,27 +1250,29 @@ html { scroll-behavior: smooth; }
 
 /* ── TEAM ──────────────────────────────────────────────── */
 .team {
-  padding: 110px 6% 96px;
-  background: var(--bg);
+  padding: clamp(64px, 11vh, 110px) 6% clamp(28px, 5vh, 60px);
   position: relative;
   overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
-.team__inner { max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; }
+.team__inner { max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
 .team__sub {
   font-family: 'Baskerville', serif;
-  font-size: 20px;
+  font-size: clamp(15px, 2.2vh, 20px);
   font-style: italic;
   color: var(--text-dim);
   text-align: center;
-  margin: 0 0 64px;
+  margin: 0 0 clamp(16px, 3.4vh, 64px);
   font-weight: 300;
 }
 .team__title {
   font-family: 'Baskerville', serif;
-  font-size: 54px;
+  font-size: clamp(26px, 4.4vh, 54px);
   font-weight: 900;
   text-align: center;
-  margin: 0 0 14px;
+  margin: 0 0 clamp(6px, 1.2vh, 14px);
   color: var(--text);
   line-height: 1;
 }
@@ -1290,13 +1292,13 @@ html { scroll-behavior: smooth; }
   align-items: center;
   text-align: center;
   max-width: 520px;
-  margin: 0 auto 56px;
+  margin: 0 auto clamp(16px, 3vh, 56px);
 }
 .team-carousel__avatar {
-  width: 220px; height: 220px;
+  width: clamp(96px, 14vh, 220px); height: clamp(96px, 14vh, 220px);
   border-radius: 50%;
   border: 2px solid var(--border);
-  margin-bottom: 32px;
+  margin-bottom: clamp(12px, 2.4vh, 32px);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -1316,7 +1318,7 @@ html { scroll-behavior: smooth; }
   animation: teamFadeIn .5s ease;
 }
 @keyframes teamFadeIn { from { opacity: 0; } to { opacity: 1; } }
-.team-carousel__nav { display: flex; align-items: center; gap: 18px; margin-top: 36px; }
+.team-carousel__nav { display: flex; align-items: center; gap: 18px; margin-top: clamp(12px, 2.4vh, 36px); }
 .team-carousel__arrow {
   width: 38px; height: 38px;
   border-radius: 50%;
@@ -1345,7 +1347,7 @@ html { scroll-behavior: smooth; }
 
 .team__name {
   font-family: 'Baskerville', serif;
-  font-size: 27px;
+  font-size: clamp(20px, 3vh, 27px);
   font-weight: 700;
   color: var(--text);
   margin: 0 0 8px;
@@ -1362,20 +1364,20 @@ html { scroll-behavior: smooth; }
   font-family: 'Avenir Next', sans-serif;
   font-size: 13px;
   color: var(--text-dim);
-  margin-bottom: 28px;
+  margin-bottom: clamp(10px, 2vh, 28px);
   font-weight: 300;
 }
 .team__divider {
   width: 40px;
   height: 1px;
   background: var(--border);
-  margin: 0 auto 24px;
+  margin: 0 auto clamp(10px, 1.8vh, 24px);
 }
 .team__quote {
   /* font-family: Jar Binks — set once in the typography-roles section below */
-  font-size: 28px;
+  font-size: clamp(18px, 2.6vh, 28px);
   color: var(--text-mid);
-  line-height: 1.5;
+  line-height: 1.4;
   font-weight: 300;
   max-width: 460px;
 }
@@ -1383,7 +1385,7 @@ html { scroll-behavior: smooth; }
 /* ── Join the team CTA + form ─────────────────────────────── */
 .team__join {
   text-align: center;
-  padding-top: 40px;
+  padding-top: clamp(14px, 2.6vh, 40px);
   border-top: 1px solid var(--border);
   max-width: 480px;
   margin: 0 auto;
@@ -1393,7 +1395,7 @@ html { scroll-behavior: smooth; }
   font-size: 13px;
   color: var(--text-dim);
   font-weight: 300;
-  margin: 0 0 18px;
+  margin: 0 0 clamp(8px, 1.6vh, 18px);
 }
 .team__join-btn {
   background: transparent;
@@ -1490,14 +1492,21 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── BOOKING ───────────────────────────────────────────── */
-.booking { padding: 110px 6% 96px; background: var(--bg); position: relative; overflow: hidden; }
-.booking__inner { max-width: 660px; margin: 0 auto; position: relative; z-index: 1; }
+.booking {
+  padding: clamp(64px, 11vh, 110px) 6% clamp(28px, 5vh, 60px);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.booking__inner { max-width: 660px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
 .booking__title {
   font-family: 'Baskerville', serif;
-  font-size: 54px;
+  font-size: clamp(26px, 4.4vh, 54px);
   font-weight: 900;
   text-align: center;
-  margin: 0 0 42px;
+  margin: 0 0 clamp(14px, 2.6vh, 42px);
   color: var(--text);
   line-height: 1;
 }
@@ -1538,40 +1547,44 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── CONTACTS ──────────────────────────────────────────── */
-.contacts { padding: 110px 6% 96px; background: var(--bg2); position: relative; overflow: hidden; }
+.contacts {
+  padding: clamp(36px, 8vh, 90px) 6% clamp(10px, 3vh, 40px);
+  position: relative;
+  overflow: hidden;
+}
 .contacts__inner { max-width: 980px; margin: 0 auto; position: relative; z-index: 1; }
 .contacts__title {
   font-family: 'Baskerville', serif;
-  font-size: 54px;
+  font-size: clamp(24px, 3.8vh, 46px);
   font-weight: 900;
   text-align: center;
-  margin: 0 0 72px;
+  margin: 0 0 clamp(16px, 2.8vh, 44px);
   color: var(--text);
   line-height: 1;
 }
-.contacts__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
-.contacts__info { display: flex; flex-direction: column; gap: 42px; }
+.contacts__grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 4vh, 80px); align-items: start; }
+.contacts__info { display: flex; flex-direction: column; gap: clamp(14px, 2.2vh, 42px); }
 .contacts__block-label {
   font-family: 'Avenir Next', sans-serif;
   font-size: 9px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: 14px;
+  margin-bottom: clamp(4px, 1vh, 14px);
 }
 .contacts__block-value {
   font-family: 'Baskerville', serif;
-  font-size: 22px;
+  font-size: clamp(16px, 2vh, 22px);
   font-style: italic;
   color: var(--text);
-  line-height: 1.5;
+  line-height: 1.4;
   font-weight: 300;
 }
-.contacts__hours { font-family: 'Baskerville', serif; font-size: 19px; font-style: italic; color: var(--text); line-height: 2.1; font-weight: 300; }
+.contacts__hours { font-family: 'Baskerville', serif; font-size: clamp(13px, 1.8vh, 19px); font-style: italic; color: var(--text); line-height: 1.35; font-weight: 300; }
 .contacts__hours-dim { color: var(--text-dim); font-size: 16px; }
 .contacts__phone {
   font-family: 'Baskerville', serif;
-  font-size: 26px;
+  font-size: clamp(19px, 2.6vh, 26px);
   color: var(--text);
   font-style: italic;
   transition: color .2s;
@@ -1653,7 +1666,7 @@ html { scroll-behavior: smooth; }
   animation: none;
 }
 .contacts__map {
-  min-height: 360px;
+  height: clamp(200px, 34vh, 360px);
   background: var(--bg);
   border: 1px solid var(--border);
   overflow: hidden;
@@ -1662,7 +1675,7 @@ html { scroll-behavior: smooth; }
   transition: border-color .2s;
 }
 .contacts__map:hover { border-color: rgba(var(--gold-rgb), .4); }
-.contacts__map iframe { flex: 1; min-height: 300px; }
+.contacts__map iframe { flex: 1; min-height: 0; }
 .contacts__map-link {
   display: flex;
   align-items: center;
@@ -1682,7 +1695,7 @@ html { scroll-behavior: smooth; }
 
 /* ── FOOTER ────────────────────────────────────────────── */
 .footer {
-  padding: 44px 6%;
+  padding: clamp(16px, 2.6vh, 32px) 6%;
   background: var(--bg3);
   border-top: 1px solid var(--border);
 }
@@ -1733,7 +1746,7 @@ html { scroll-behavior: smooth; }
 /* ── MOBILE ≤ 680px ─────────────────────────────────────── */
 @media (max-width: 900px) {
 
-  /* Nav — collapse the sidebar back into a slim top bar + burger overlay */
+  /* Nav — collapse the floating ribbon back into a slim top bar + burger */
   .nav {
     top: 0; left: 0; right: 0; bottom: auto;
     width: auto;
@@ -1741,8 +1754,9 @@ html { scroll-behavior: smooth; }
     align-items: center;
     justify-content: space-between;
     padding: 14px 5%;
-    border-right: none;
     border-bottom: 1px solid var(--border);
+    box-shadow: none;
+    clip-path: none;
   }
   .nav__logo { margin-bottom: 0; }
   .nav__links,
@@ -1818,9 +1832,9 @@ html { scroll-behavior: smooth; }
   .nav__mobile-actions .nav__lang { justify-content: center; }
 
   /* Hero */
-  .hero { padding: 78px 0 92px; }
+  .hero { padding: 68px 0 80px; }
   .hero__content { padding: 0 20px; }
-  .hero__logo-svg { max-width: min(280px, 80vw); max-height: 30vh; }
+  .hero__logo-svg { max-width: min(280px, 80vw); max-height: 24vh; }
   .hero__edition { font-size: 10px; letter-spacing: 4px; }
   .hero__tagline { font-size: 20px; }
   .hero__sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 22px; }
@@ -1828,24 +1842,12 @@ html { scroll-behavior: smooth; }
   .hero__neon { display: none; }
   .hero__next { margin-top: 18px; font-size: 9px; letter-spacing: 2px; }
 
-  /* Section paddings */
-  .about   { padding: 64px 5% 56px; }
-  .menu    { padding: 64px 4% 56px; }
-  .events  { padding: 64px 5% 56px; }
-  .team    { padding: 64px 5% 56px; }
-  .booking { padding: 64px 5% 56px; }
-  .contacts { padding: 64px 5% 56px; }
-
-  /* Section titles */
-  .menu__title,
-  .events__title,
-  .team__title,
-  .booking__title,
-  .contacts__title { font-size: 36px; margin-bottom: 32px; }
+  /* Section paddings/titles now come entirely from the vh-based clamp()
+     values on each section's base rule (see e.g. .about, .menu) — they
+     already scale correctly at any width, a fixed-px override here would
+     just fight them and risk breaking the "must fit, no scroll" rule. */
 
   /* About */
-  .about__quote { font-size: 30px; line-height: 1.4; }
-  .about__text  { font-size: 14px; margin-bottom: 44px; }
   .about__stats { padding: 28px 0; gap: 0; }
   .about__stat  { flex: 1; padding: 0 8px; }
   .about__stat-num { font-size: 32px; }
@@ -1887,13 +1889,19 @@ html { scroll-behavior: smooth; }
   /* Booking */
   .booking__cta { padding: 20px 40px; font-size: 12px; letter-spacing: 2px; }
 
-  /* Contacts */
-  .contacts__grid { grid-template-columns: 1fr; gap: 48px; }
-  .contacts__map  { min-height: 280px; }
+  /* Contacts — single column, so info+map stack instead of sitting
+     side by side; both need to shrink more aggressively to still fit. */
+  .contacts__grid { grid-template-columns: 1fr; gap: clamp(8px, 2vh, 28px); }
+  .contacts__info { gap: clamp(6px, 1.4vh, 20px); }
+  .contacts__map  { height: clamp(70px, 16vh, 220px); }
+  .contacts__social { padding: 10px 18px; }
+  .contacts__socials { margin-top: 0; }
 
   /* Footer */
-  .footer { padding: 32px 5%; }
-  .footer__inner { flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+  .footer { padding: clamp(10px, 2vh, 24px) 5%; }
+  .footer__inner { flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+  .footer__links { gap: 14px; }
+  .footer__link, .footer__copy { font-size: 9px; }
 }
 
 /* ── Brand typography roles (по гайду The Cat's Pajamas Club) ───────────── */
@@ -1954,4 +1962,13 @@ html { scroll-behavior: smooth; }
 .cookie-banner__accept:hover { background: #7c3aed; }
 @media (max-width: 600px) {
   .cookie-banner { flex-direction: column; text-align: center; padding: 16px; }
+}
+
+/* Very narrow phones (iPhone 5/SE-class, ≤380px) — the contacts page's
+   social row still wrapped to two lines even after the general mobile
+   pass, breaking the "fits in one screen" rule at extreme short heights.
+   Icon-only, same pattern as the sidebar's Telegram button. */
+@media (max-width: 380px) {
+  .contacts__social-label { display: none; }
+  .contacts__social { padding: 10px 12px; }
 }

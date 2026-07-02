@@ -1,5 +1,4 @@
 import { useReveal } from '../useReveal.js';
-import PageBackdrop from './PageBackdrop.jsx';
 
 export default function Booking({ tx }) {
   const r0 = useReveal(0);
@@ -9,7 +8,6 @@ export default function Booking({ tx }) {
 
   return (
     <section id="booking" className="booking">
-      <PageBackdrop image="/uploads/team/bar-evening.jpg" />
       <div className="booking__inner">
         <div ref={r0} className="reveal mb-10">
           <span className="sec-label">{tx.bookingLabel}</span>

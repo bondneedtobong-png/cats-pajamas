@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { translations } from './data.js';
+import { translations, pageImages } from './data.js';
 import Nav      from './sections/Nav.jsx';
 import Hero     from './sections/Hero.jsx';
 import About    from './sections/About.jsx';
@@ -11,6 +11,7 @@ import Team     from './sections/Team.jsx';
 import Booking  from './sections/Booking.jsx';
 import Contacts from './sections/Contacts.jsx';
 import Footer   from './sections/Footer.jsx';
+import PageBackdrop from './sections/PageBackdrop.jsx';
 import FloorPlanPage from './booking/FloorPlanPage.jsx';
 import AuthPage      from './auth/AuthPage.jsx';
 import ProfilePage   from './profile/ProfilePage.jsx';
@@ -58,24 +59,12 @@ function BookControls({ index, onPrev, onNext }) {
 function MainSite() {
   const [lang, setLang] = useState('ru');
   const [activeIndex, setActiveIndex] = useState(0);
-  // Jumping straight from the nav to a distant chapter (e.g. hero → contacts)
-  // still teleports instantly — but a quick "riffle" sweep plays over it, so
-  // a multi-page jump reads as flipping fast through the book, not a cut.
-  const [riffle, setRiffle] = useState(null);
-  const riffleSeq = useRef(0);
 
   const tx = translations[lang];
   const toggleLang = () => setLang((l) => (l === 'ru' ? 'en' : 'ru'));
 
   const jumpTo = useCallback((target) => {
-    setActiveIndex((cur) => {
-      const clamped = Math.max(0, Math.min(PAGES.length - 1, target));
-      if (Math.abs(clamped - cur) > 1) {
-        riffleSeq.current += 1;
-        setRiffle({ id: riffleSeq.current, dir: clamped > cur ? 'next' : 'prev' });
-      }
-      return clamped;
-    });
+    setActiveIndex(Math.max(0, Math.min(PAGES.length - 1, target)));
   }, []);
   const goToPage = useCallback((id) => {
     const i = PAGES.indexOf(id);
@@ -84,14 +73,8 @@ function MainSite() {
   const goNext = useCallback(() => jumpTo(activeIndex + 1), [jumpTo, activeIndex]);
   const goPrev = useCallback(() => jumpTo(activeIndex - 1), [jumpTo, activeIndex]);
 
-  useEffect(() => {
-    if (!riffle) return;
-    const t = setTimeout(() => setRiffle(null), 640);
-    return () => clearTimeout(t);
-  }, [riffle]);
-
-  // The book is a fixed viewport with no document scroll — only individual
-  // pages scroll internally if their content is taller than the screen.
+  // The book is a fixed viewport with no document scroll — each page fits
+  // the screen on its own (see per-section fluid sizing in index.css).
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -114,6 +97,8 @@ function MainSite() {
 
   return (
     <div className="app" data-theme="A">
+      <PageBackdrop image={pageImages[activePage]} />
+
       <Nav tx={tx} lang={lang} onLangToggle={toggleLang} activePage={activePage} onNavigate={goToPage} />
 
       <div className="book">
@@ -139,7 +124,6 @@ function MainSite() {
             </div>
           );
         })}
-        {riffle && <div key={riffle.id} className="book__riffle" data-dir={riffle.dir} />}
       </div>
 
       <BookControls index={activeIndex} onPrev={goPrev} onNext={goNext} />

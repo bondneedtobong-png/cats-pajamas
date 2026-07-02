@@ -1,5 +1,4 @@
 import { useReveal } from '../useReveal.js';
-import PageBackdrop from './PageBackdrop.jsx';
 
 const Ornament = ({ width = 48 }) => (
   <div className="ornament">
@@ -26,7 +25,6 @@ export default function About({ tx }) {
 
   return (
     <section id="about" className="about">
-      <PageBackdrop image="/uploads/team/bar-interior.jpg" />
       <div className="about__dots" />
       <div className="about__inner">
         <div ref={r0} className="reveal mb-18">

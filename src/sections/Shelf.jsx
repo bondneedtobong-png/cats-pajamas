@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useReveal } from '../useReveal.js';
 import AuthService from '../auth/AuthService.js';
 import ReviewsService from '../reviews/ReviewsService.js';
-import PageBackdrop from './PageBackdrop.jsx';
 
 // Тема "Воспоминания" в форум-группе @catspajam (id группы -1004486982537,
 // message_thread_id=2) — см. /GUIDE_TELEGRAM_REVIEWS.md.
@@ -115,7 +114,6 @@ export default function Shelf({ tx, lang }) {
 
   return (
     <section id="shelf" className="shelf">
-      <PageBackdrop image="/uploads/team/bar-hall.jpg" />
       <div className="shelf__dots" />
       <div className="shelf__inner">
         <div className="shelf__head">

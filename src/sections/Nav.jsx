@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import AuthService from '../auth/AuthService.js';
+import { pageImages } from '../data.js';
 
 // Telegram — единственный способ входа/регистрации на сайте (см. AuthPage).
 // Уже вошедшему гостю показываем ссылку на профиль вместо повторного «войти».
@@ -43,6 +44,9 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) 
 
   const linkCls = (id) => `nav__link nav__shimmer${activePage === id ? ' nav__link--active' : ''}`;
   const mobileLinkCls = (id) => `nav__mobile-link nav__shimmer${activePage === id ? ' nav__mobile-link--active' : ''}`;
+  // Small placeholder photo per page — reused from the global backdrop set
+  // until the client sources custom thumbnails per section.
+  const linkStyle = (id) => ({ '--link-img': `url(${pageImages[id]})` });
 
   return (
     <>
@@ -66,12 +70,12 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) 
         </a>
 
         <div className="nav__links">
-          <a href="#" className={linkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
-          <a href="#" className={linkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
-          <a href="#" className={linkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
-          <a href="#" className={linkCls('gallery')}  onClick={nav('gallery')}>{tx.navGallery}</a>
-          <a href="#" className={linkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
-          <a href="#" className={linkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
+          <a href="#" style={linkStyle('about')}    className={linkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
+          <a href="#" style={linkStyle('menu')}     className={linkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
+          <a href="#" style={linkStyle('events')}   className={linkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
+          <a href="#" style={linkStyle('gallery')}  className={linkCls('gallery')}  onClick={nav('gallery')}>{tx.navGallery}</a>
+          <a href="#" style={linkStyle('team')}     className={linkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
+          <a href="#" style={linkStyle('contacts')} className={linkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
         </div>
 
         <div className="nav__actions">

@@ -1,3 +1,18 @@
+// Backdrop photo per book page — shared by App.jsx (global page-bg layer)
+// and Nav.jsx (small per-link thumbnail). Placeholders from the existing
+// asset set; the client plans to source small custom photos per section
+// later — just swap the paths here when that happens.
+export const pageImages = {
+  hero:     '/uploads/team/cocktails.jpg',
+  about:    '/uploads/team/bar-interior.jpg',
+  menu:     '/uploads/team/clover-club.jpg',
+  events:   '/uploads/team/live-music.jpg',
+  gallery:  '/uploads/team/bar-hall.jpg',
+  team:     '/uploads/team/team-group.jpg',
+  booking:  '/uploads/team/bar-evening.jpg',
+  contacts: '/uploads/team/bar-atmosphere.jpg',
+};
+
 export const translations = {
   ru: {
     langBtn: 'EN',

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useReveal } from '../useReveal.js';
 import CocktailsService from '../menu/CocktailsService.js';
-import PageBackdrop from './PageBackdrop.jsx';
 
 // Empty glass shown when a cocktail has no photo yet — keeps the layout
 // intact instead of a broken <img>, and still gets the zoom-loop animation.
@@ -41,7 +40,6 @@ export default function Menu({ tx }) {
 
   return (
     <section id="menu" className="menu">
-      <PageBackdrop image="/uploads/team/clover-club.jpg" />
       <div className="menu__inner">
         <div ref={r0} className="reveal mb-10" style={{ textAlign: 'center' }}>
           <span className="sec-label">{tx.menuLabel}</span>
