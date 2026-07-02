@@ -60,7 +60,8 @@ export async function confirmRsvp(rsvpId, attended) {
   if (attended && existing.guest_id) {
     const { data: ev } = await supabase.from('events').select('awards_points').eq('id', existing.event_id).maybeSingle();
     if (ev?.awards_points) {
-      awardAttendancePoints(existing.guest_id).catch(e => console.error('[loyalty] award failed:', e.message));
+      awardAttendancePoints(existing.guest_id, { sourceId: rsvpId, reason: 'Явка на событие подтверждена' })
+        .catch(e => console.error('[loyalty] award failed:', e.message));
     }
   }
   return rowToRsvp(data);

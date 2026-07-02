@@ -252,6 +252,87 @@ create index if not exists wheel_spins_guest_idx    on public.wheel_spins (guest
 create index if not exists wheel_spins_date_idx     on public.wheel_spins (spin_date);
 create index if not exists wheel_spins_redeemed_idx on public.wheel_spins (redeemed);
 
+-- ─── Каталог наград лояльности (прямое списание баллов) ─────────────────────
+-- Полная история начислений/списаний — единый журнал для визитов, колеса и
+-- обменов на награды (source_type различает источник; source_id — id брони/
+-- события/спина/погашения, откуда пришло изменение, если применимо).
+create table if not exists public.loyalty_transactions (
+  id            text primary key,        -- 'lt_...'
+  user_id       text        not null references public.users (id) on delete cascade,
+  delta         integer     not null,     -- + начисление, - списание
+  reason        text        not null default '',
+  source_type   text        not null check (source_type in ('visit','wheel','redemption','manual')),
+  source_id     text,
+  balance_after integer     not null,
+  created_at    timestamptz not null default now()
+);
+create index if not exists loyalty_transactions_user_idx on public.loyalty_transactions (user_id, created_at);
+
+-- tier_required — ключ из TIERS в api/_lib/loyalty.js (kitten/jazzcat/oldpaw/boss),
+-- держать в синхроне вручную с check ниже, как и остальные enum-подобные колонки
+-- в этой схеме (нет отдельной таблицы уровней — TIERS только в коде).
+create table if not exists public.loyalty_rewards (
+  id                text primary key,        -- 'lr_...'
+  title             text        not null,
+  description       text                 default '',
+  cost_points       integer     not null,
+  tier_required     text                 check (tier_required is null or tier_required in ('kitten','jazzcat','oldpaw','boss')),
+  active            boolean     not null default true,
+  expires_after_days integer,
+  created_at        timestamptz not null default now()
+);
+
+-- code — короткий 6-символьный uppercase alphanumeric, показывается гостю
+-- (текстом + QR) и вводится/сканируется барменом для погашения.
+create table if not exists public.loyalty_redemptions (
+  id                   text primary key,        -- 'lrd_...'
+  code                 text        not null unique,
+  user_id              text        not null references public.users (id) on delete cascade,
+  reward_id            text        not null references public.loyalty_rewards (id) on delete restrict,
+  points_spent         integer     not null,
+  status               text        not null default 'issued' check (status in ('issued','redeemed','expired')),
+  created_at           timestamptz not null default now(),
+  redeemed_at          timestamptz,
+  redeemed_by_admin_id bigint
+);
+create unique index if not exists loyalty_redemptions_code_idx on public.loyalty_redemptions (code);
+create index if not exists loyalty_redemptions_user_idx   on public.loyalty_redemptions (user_id);
+create index if not exists loyalty_redemptions_status_idx on public.loyalty_redemptions (status);
+
+-- Атомарное списание баллов + создание погашения + запись в журнал — одной
+-- функцией, чтобы все три изменения были всё-или-ничего (supabase-js не даёт
+-- клиентских транзакций через несколько отдельных вызовов). WHERE-условие в
+-- UPDATE атомарно на уровне Postgres: если баллов уже не хватает (списали
+-- параллельно вторым кликом), RETURNING отдаст NULL и функция бросит
+-- исключение — вставки ниже не выполнятся, откатится вся функция целиком.
+create or replace function public.redeem_loyalty_reward(
+  p_user_id text, p_reward_id text, p_cost integer,
+  p_redemption_id text, p_code text, p_reason text
+)
+returns integer
+language plpgsql as $$
+declare
+  v_new_balance integer;
+begin
+  update public.users
+    set loyalty_points = loyalty_points - p_cost
+    where id = p_user_id and loyalty_points >= p_cost
+    returning loyalty_points into v_new_balance;
+
+  if v_new_balance is null then
+    raise exception 'INSUFFICIENT_POINTS';
+  end if;
+
+  insert into public.loyalty_redemptions (id, code, user_id, reward_id, points_spent, status)
+  values (p_redemption_id, p_code, p_user_id, p_reward_id, p_cost, 'issued');
+
+  insert into public.loyalty_transactions (id, user_id, delta, reason, source_type, source_id, balance_after)
+  values (p_redemption_id || '_tx', p_user_id, -p_cost, p_reason, 'redemption', p_redemption_id, v_new_balance);
+
+  return v_new_balance;
+end;
+$$;
+
 -- ─── RLS: всё закрыто, серверный service_role обходит политики ───────────────
 alter table public.users             enable row level security;
 alter table public.reservations      enable row level security;
@@ -265,6 +346,9 @@ alter table public.team_members      enable row level security;
 alter table public.team_applications enable row level security;
 alter table public.wheel_spins        enable row level security;
 alter table public.event_rsvps        enable row level security;
+alter table public.loyalty_transactions enable row level security;
+alter table public.loyalty_rewards      enable row level security;
+alter table public.loyalty_redemptions  enable row level security;
 -- Намеренно без policy: анонимный клиент ничего не видит, всё ходит через сервер.
 
 -- ─── Автообновление updated_at ──────────────────────────────────────────────

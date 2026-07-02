@@ -8,6 +8,7 @@ import EventsService from '../events/EventsService.js';
 import ReviewsService from '../reviews/ReviewsService.js';
 import TeamService from '../team/TeamService.js';
 import ApplicationsService from '../team/ApplicationsService.js';
+import LoyaltyService from '../loyalty/LoyaltyService.js';
 import { useFeedback } from '../ui/FeedbackProvider.jsx';
 import './admin.css';
 
@@ -1099,6 +1100,310 @@ function TabTeam() {
   );
 }
 
+// ─── Tab: ЛОЯЛЬНОСТЬ ──────────────────────────────────────────────
+const TIER_OPTIONS = [
+  ['',        'Любой'],
+  ['kitten',  'Котёнок'],
+  ['jazzcat', 'Кот джаза'],
+  ['oldpaw',  'Мурлыка-старожил'],
+  ['boss',    'Хозяин клуба'],
+];
+const TIER_LABEL_BY_KEY = Object.fromEntries(TIER_OPTIONS);
+
+function RewardModal({ initial, onSave, onClose }) {
+  const [title,            setTitle]            = useState(initial?.title || '');
+  const [description,      setDescription]      = useState(initial?.description || '');
+  const [costPoints,       setCostPoints]       = useState(initial?.costPoints ?? 50);
+  const [tierRequired,     setTierRequired]     = useState(initial?.tierRequired || '');
+  const [expiresAfterDays, setExpiresAfterDays] = useState(initial?.expiresAfterDays ?? '');
+  const [active,           setActive]           = useState(initial?.active !== false);
+  const [err,    setErr]    = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setErr('');
+    setSaving(true);
+    try {
+      await onSave({
+        title, description,
+        costPoints: parseInt(costPoints) || 0,
+        tierRequired: tierRequired || null,
+        expiresAfterDays: expiresAfterDays ? parseInt(expiresAfterDays) : null,
+        active,
+      });
+    } catch (ex) {
+      setErr(ex.message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="adm-modal-overlay" onClick={onClose}>
+      <div className="adm-modal" onClick={e => e.stopPropagation()}>
+        <div className="adm-modal__head">
+          <span className="adm-modal__title">{initial ? 'Редактировать награду' : 'Новая награда'}</span>
+          <button className="adm-modal__close" onClick={onClose}>✕</button>
+        </div>
+        <form className="adm-modal__form" onSubmit={handleSubmit}>
+          <div className="adm-form-field">
+            <label className="adm-form-lbl">НАЗВАНИЕ *</label>
+            <input className="adm-form-input" type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="Десерт в подарок" />
+          </div>
+          <div className="adm-form-field">
+            <label className="adm-form-lbl">ОПИСАНИЕ</label>
+            <textarea className="adm-form-input adm-form-textarea" rows={2} value={description} onChange={e => setDescription(e.target.value)} placeholder="Один десерт на выбор из меню" />
+          </div>
+          <div className="adm-form-row">
+            <div className="adm-form-field">
+              <label className="adm-form-lbl">СТОИМОСТЬ, БАЛЛОВ *</label>
+              <input className="adm-form-input" type="number" min="1" required value={costPoints} onChange={e => setCostPoints(e.target.value)} />
+            </div>
+            <div className="adm-form-field">
+              <label className="adm-form-lbl">МИНИМАЛЬНЫЙ УРОВЕНЬ</label>
+              <select className="adm-form-input" value={tierRequired} onChange={e => setTierRequired(e.target.value)}>
+                {TIER_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="adm-form-field">
+            <label className="adm-form-lbl">СГОРАЕТ ЧЕРЕЗ (ДНЕЙ, НЕОБЯЗАТЕЛЬНО)</label>
+            <input className="adm-form-input" type="number" min="1" value={expiresAfterDays} onChange={e => setExpiresAfterDays(e.target.value)} placeholder="Например 14" />
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'rgba(242,237,228,0.6)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
+            Активна (доступна гостям в каталоге)
+          </label>
+          {err && <div className="adm-error">{err}</div>}
+          <button className="adm-btn adm-btn--primary" type="submit" disabled={saving}>
+            {saving ? 'Сохраняем…' : 'Сохранить'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+const REDEMPTION_STATUS_LABELS = {
+  issued:   { text: 'Выпущено',  color: '#D4A843' },
+  redeemed: { text: 'Погашено',  color: '#22c55e' },
+  expired:  { text: 'Истекло',   color: '#6b7280' },
+};
+
+function TabLoyalty() {
+  const { toast } = useFeedback();
+  const [tick,      setTick]      = useState(0);
+  const [rewards,   setRewards]   = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editing,   setEditing]   = useState(null);
+  const [confirm,   setConfirm]   = useState(null);
+
+  const [rules,       setRules]       = useState(null);
+  const [rulesSaving, setRulesSaving] = useState(false);
+  const [rulesSaved,  setRulesSaved]  = useState(false);
+
+  const [redemptions,       setRedemptions]       = useState([]);
+  const [redemptionFilter,  setRedemptionFilter]  = useState('');
+
+  const [searchCode,   setSearchCode]   = useState('');
+  const [searchResult, setSearchResult] = useState(null);
+  const [searchErr,    setSearchErr]    = useState('');
+
+  useEffect(() => { LoyaltyService.getAllRewards().then(setRewards).catch(() => {}); }, [tick]);
+  useEffect(() => { LoyaltyService.getRules().then(setRules).catch(() => {}); }, []);
+  useEffect(() => {
+    LoyaltyService.getRedemptions(redemptionFilter || undefined).then(setRedemptions).catch(() => {});
+  }, [redemptionFilter, tick]);
+
+  async function handleSaveReward(data) {
+    if (editing) await LoyaltyService.updateReward(editing.id, data);
+    else await LoyaltyService.createReward(data);
+    setShowModal(false);
+    setEditing(null);
+    setTick(n => n + 1);
+  }
+
+  function handleDeleteReward(r) {
+    setConfirm({
+      title: 'Удалить награду',
+      message: `Удалить «${r.title}» без возможности восстановления?`,
+      confirmLabel: 'Удалить',
+      onConfirm: async () => {
+        await LoyaltyService.deleteReward(r.id);
+        setConfirm(null);
+        setTick(n => n + 1);
+      },
+    });
+  }
+
+  async function handleToggleActive(r) {
+    await LoyaltyService.updateReward(r.id, { active: !r.active });
+    setTick(n => n + 1);
+  }
+
+  function setTierPoints(tierKey, value) {
+    setRules(r => ({ ...r, attendancePoints: { ...r.attendancePoints, [tierKey]: parseInt(value) || 0 } }));
+  }
+
+  async function handleSaveRules() {
+    setRulesSaving(true);
+    try {
+      await LoyaltyService.setRules(rules);
+      setRulesSaved(true);
+      setTimeout(() => setRulesSaved(false), 2000);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setRulesSaving(false);
+    }
+  }
+
+  async function handleSearch(e) {
+    e.preventDefault();
+    setSearchErr('');
+    setSearchResult(null);
+    const code = searchCode.trim().toUpperCase();
+    if (!code) return;
+    try {
+      const result = await LoyaltyService.confirmRedemption(code);
+      setSearchResult(result);
+      setSearchCode('');
+      setTick(n => n + 1);
+    } catch (ex) {
+      setSearchErr(ex.message);
+    }
+  }
+
+  return (
+    <div className="adm-tab">
+      <p className="adm-tab__desc">
+        Награды каталога лояльности (видны гостям во вкладке «Уровень»), правила начисления баллов и погашение по коду.
+      </p>
+      <div className="adm-filters">
+        <div style={{ flex: 1 }} />
+        <button className="adm-btn adm-btn--primary" onClick={() => { setEditing(null); setShowModal(true); }}>
+          + Добавить награду
+        </button>
+      </div>
+
+      {rewards.length === 0 ? (
+        <div className="adm-empty">Наград пока нет</div>
+      ) : (
+        <div className="adm-table-wrap">
+          <table className="adm-table">
+            <thead>
+              <tr><th>Название</th><th>Баллы</th><th>Уровень</th><th>Сгорает</th><th>Активна</th><th></th></tr>
+            </thead>
+            <tbody>
+              {rewards.map(r => (
+                <tr key={r.id} className={!r.active ? 'adm-table__row--muted' : ''}>
+                  <td className="adm-table__name">{r.title}</td>
+                  <td>{r.costPoints} ★</td>
+                  <td>{r.tierRequired ? TIER_LABEL_BY_KEY[r.tierRequired] : '—'}</td>
+                  <td>{r.expiresAfterDays ? `${r.expiresAfterDays} дн.` : '—'}</td>
+                  <td>{r.active ? '✓ Да' : '— Нет'}</td>
+                  <td>
+                    <div className="adm-actions">
+                      <button className="adm-act-btn adm-act-btn--ok" onClick={() => { setEditing(r); setShowModal(true); }} title="Редактировать">✎</button>
+                      <button className="adm-act-btn adm-act-btn--move" onClick={() => handleToggleActive(r)} title={r.active ? 'Выключить' : 'Включить'}>{r.active ? '⏸' : '▶'}</button>
+                      <button className="adm-act-btn adm-act-btn--del" onClick={() => handleDeleteReward(r)} title="Удалить">✕</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="adm-tab__desc" style={{ marginTop: 32 }}>
+        Баллы за подтверждённый визит (бронь/событие) — по текущему уровню гостя.
+      </p>
+      {rules && (
+        <div className="adm-filters" style={{ flexWrap: 'wrap' }}>
+          {['kitten', 'jazzcat', 'oldpaw', 'boss'].map(key => (
+            <div className="adm-form-field" key={key} style={{ minWidth: 130 }}>
+              <label className="adm-form-lbl">{TIER_LABEL_BY_KEY[key]}</label>
+              <input className="adm-form-input" type="number" min="0"
+                value={rules.attendancePoints[key]}
+                onChange={e => setTierPoints(key, e.target.value)} />
+            </div>
+          ))}
+          <button className={`adm-btn ${rulesSaved ? 'adm-btn--saved' : 'adm-btn--primary'}`} onClick={handleSaveRules} disabled={rulesSaving} style={{ alignSelf: 'flex-end' }}>
+            {rulesSaved ? '✓ Сохранено' : rulesSaving ? 'Сохраняем…' : 'Сохранить правила'}
+          </button>
+        </div>
+      )}
+
+      <p className="adm-tab__desc" style={{ marginTop: 32 }}>
+        Погашение по коду вручную — если гость показал код, а сканировать через Telegram не хочется.
+      </p>
+      <form className="adm-filters" onSubmit={handleSearch}>
+        <input className="adm-select" style={{ textTransform: 'uppercase', fontFamily: 'monospace', width: 120 }}
+          type="text" maxLength={6} placeholder="КОД" value={searchCode} onChange={e => setSearchCode(e.target.value.toUpperCase())} />
+        <button className="adm-btn adm-btn--primary" type="submit">Погасить</button>
+      </form>
+      {searchErr && <div className="adm-error">{searchErr}</div>}
+      {searchResult && (
+        <div className="adm-error" style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)', color: '#22c55e' }}>
+          ✓ Погашено: «{searchResult.reward?.title}» — списано {searchResult.redemption.pointsSpent} баллов.
+        </div>
+      )}
+
+      <p className="adm-tab__desc" style={{ marginTop: 32 }}>Последние погашения.</p>
+      <div className="adm-filters">
+        <select className="adm-select" value={redemptionFilter} onChange={e => setRedemptionFilter(e.target.value)}>
+          <option value="">Все статусы</option>
+          <option value="issued">Выпущено</option>
+          <option value="redeemed">Погашено</option>
+          <option value="expired">Истекло</option>
+        </select>
+      </div>
+      {redemptions.length === 0 ? (
+        <div className="adm-empty">Погашений пока нет</div>
+      ) : (
+        <div className="adm-table-wrap">
+          <table className="adm-table">
+            <thead>
+              <tr><th>Дата</th><th>Код</th><th>Награда</th><th>Гость</th><th>Баллы</th><th>Статус</th></tr>
+            </thead>
+            <tbody>
+              {redemptions.map(r => {
+                const st = REDEMPTION_STATUS_LABELS[r.status] || { text: r.status, color: '#888' };
+                return (
+                  <tr key={r.id}>
+                    <td>{formatDate(r.createdAt.split('T')[0])}</td>
+                    <td style={{ fontFamily: 'monospace' }}>{r.code}</td>
+                    <td className="adm-table__name">{r.rewardTitle}</td>
+                    <td>{r.guestName}</td>
+                    <td>{r.pointsSpent}</td>
+                    <td>
+                      <span className="adm-badge" style={{ color: st.color, background: st.color + '18', borderColor: st.color + '44' }}>{st.text}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showModal && (
+        <RewardModal initial={editing} onSave={handleSaveReward} onClose={() => { setShowModal(false); setEditing(null); }} />
+      )}
+      {confirm && (
+        <ConfirmModal
+          title={confirm.title}
+          message={confirm.message}
+          confirmLabel={confirm.confirmLabel}
+          onConfirm={confirm.onConfirm}
+          onClose={() => setConfirm(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Floor plan editor ───────────────────────────────────────────
 const EDR_ZONES = ['Основной зал', 'VIP', 'Диваны'];
 const SNAP_GRID = 600;
@@ -1601,7 +1906,7 @@ export default function AdminPage() {
       </header>
 
       <div className="adm-tabs">
-        {[['reservations','БРОНИ'],['editor','РЕДАКТОР'],['menu','МЕНЮ'],['events','СОБЫТИЯ'],['reviews','ОТЗЫВЫ'],['team','КОМАНДА']].map(([key, label]) => (
+        {[['reservations','БРОНИ'],['editor','РЕДАКТОР'],['menu','МЕНЮ'],['events','СОБЫТИЯ'],['reviews','ОТЗЫВЫ'],['team','КОМАНДА'],['loyalty','ЛОЯЛЬНОСТЬ']].map(([key, label]) => (
           <button key={key}
             className={`adm-tab-btn${tab === key ? ' adm-tab-btn--active' : ''}`}
             onClick={() => setTab(key)}>
@@ -1617,6 +1922,7 @@ export default function AdminPage() {
         {tab === 'events'       && <TabEvents />}
         {tab === 'reviews'      && <TabReviews />}
         {tab === 'team'         && <TabTeam />}
+        {tab === 'loyalty'      && <TabLoyalty />}
       </main>
     </div>
   );

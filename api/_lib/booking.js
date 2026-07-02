@@ -261,7 +261,8 @@ export async function updateReservationStatus(id, newStatus) {
   // того, кто перевёл статус — сайт-админка, бот-админка или уведомление
   // персоналу с подтверждением явки.
   if (newStatus === 'completed' && existing.status !== 'completed' && existing.guest_id) {
-    awardAttendancePoints(existing.guest_id).catch(e => console.error('[loyalty] award failed:', e.message));
+    awardAttendancePoints(existing.guest_id, { sourceId: id, reason: 'Визит подтверждён (бронь)' })
+      .catch(e => console.error('[loyalty] award failed:', e.message));
   }
   return rowToRes(data);
 }

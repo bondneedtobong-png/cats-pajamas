@@ -8,6 +8,7 @@ import {
 } from './_lib/booking.js';
 import {
   getLoyaltyStatus, getTodaySpin, spinWheel, getUnredeemedPrizes, markPrizeRedeemed,
+  findRedemptionByCode, confirmRedemption,
 } from './_lib/loyalty.js';
 import { getEvents, createEvent } from './_lib/events.js';
 import { rsvpToEvent, confirmRsvp } from './_lib/eventRsvps.js';
@@ -137,6 +138,37 @@ function subGate() {
   };
 }
 
+// ─── погашение наград каталога лояльности (/start rdm_<code> и /redeem) ────
+// Только для TELEGRAM_ADMIN_IDS (как явно указано в задаче) — не для
+// TELEGRAM_STAFF_IDS, в отличие от подтверждения явки по броням/событиям.
+// Не-админ получает молчание, а не «нет доступа» — чужой код не должен даже
+// намекать постороннему, что он существует.
+async function showRedemptionCard(ctx, code) {
+  if (!isTelegramAdmin(ctx.from.id)) return;
+  if (!code) return ctx.reply('Использование: /redeem КОД');
+  try {
+    const { redemption, reward, guestName } = await findRedemptionByCode(code);
+    const lines = [
+      '🎁 *Погашение награды*',
+      '',
+      `Код: \`${redemption.code}\``,
+      `Награда: ${reward?.title || '—'}`,
+      `Гость: ${guestName}`,
+      `Списано баллов: ${redemption.pointsSpent}`,
+    ];
+    if (redemption.status !== 'issued') {
+      lines.push('', redemption.status === 'redeemed' ? '⚠️ Уже погашено' : '⚠️ Код истёк');
+      return ctx.reply(lines.join('\n'), { parse_mode: 'Markdown' });
+    }
+    const kb = new InlineKeyboard()
+      .text('✅ Погасить', `rdmok:${redemption.code}`).row()
+      .text('‹ Отмена', 'adminmenu');
+    return ctx.reply(lines.join('\n'), { reply_markup: kb, parse_mode: 'Markdown' });
+  } catch (e) {
+    return ctx.reply(`Код не найден: ${e.message}`);
+  }
+}
+
 // ─── bot (module-scoped, initialised once per cold start) ──────────────────────
 let _bot = null;
 let _inited = false;
@@ -193,6 +225,12 @@ export function buildBot() {
     const payload = (ctx.match || '').trim();
     if (payload.startsWith('login_')) ctx.session.loginToken = payload.slice('login_'.length);
 
+    // Deep-link из QR/кода погашения награды (t.me/<bot>?start=rdm_<code>, кнопка
+    // «Скопировать код»/QR на сайте не даёт такой ссылки напрямую — это на случай,
+    // если бармен откроет код через диплинк, а не команду /redeem). Админская
+    // утилита, не часть обычного онбординга гостя — не проверяем подписку.
+    if (payload.startsWith('rdm_')) return showRedemptionCard(ctx, payload.slice('rdm_'.length));
+
     const subbed = await isSubscribed(ctx.api, ctx.from.id);
     if (!subbed) {
       const g = subGate();
@@ -218,6 +256,21 @@ export function buildBot() {
     if (!isTelegramAdmin(ctx.from.id)) return;
     resetSession(ctx);
     return ctx.reply('🛠 *Админ-панель*', { reply_markup: adminMenu(), parse_mode: 'Markdown' });
+  });
+
+  // Ручной ввод кода погашения — запасной путь на случай, если сканить QR не
+  // хочется (тот же showRedemptionCard, что и /start rdm_<code>).
+  bot.command('redeem', (ctx) => showRedemptionCard(ctx, (ctx.match || '').trim().toUpperCase()));
+
+  bot.callbackQuery(/^rdmok:(.+)$/, async (ctx) => {
+    if (!isTelegramAdmin(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    try {
+      const { reward } = await confirmRedemption(ctx.match[1], ctx.from.id);
+      await ctx.answerCallbackQuery({ text: 'Погашено!' });
+      return ctx.editMessageText(`✅ Погашено: ${reward?.title || ctx.match[1]}`);
+    } catch (e) {
+      await ctx.answerCallbackQuery({ text: e.message, show_alert: true });
+    }
   });
 
   // Персистентная клавиатура «🏠 Меню» — открывает привычное inline-меню новым
