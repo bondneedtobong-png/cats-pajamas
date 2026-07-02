@@ -83,6 +83,168 @@ html { scroll-behavior: smooth; }
   transition: background .5s ease, color .3s ease;
 }
 
+/* ── The Book: page-flip navigation ───────────────────────
+   Every section is a fixed full-screen "page" stacked in the same spot.
+   The active page sits flat; the rest are rotated away edge-on around a
+   vertical hinge (left edge for pages already turned, right edge for pages
+   still ahead) — the classic book/menu page-turn, not a fade or a slide. */
+.book {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  perspective: 2600px;
+  background: var(--bg);
+}
+.book__page {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  backface-visibility: hidden;
+  /* Clearance so scrolled-to-the-end content never hides behind the fixed
+     page-count pill (.book-controls) sitting on top of every page. */
+  scroll-padding-bottom: 90px;
+  padding-bottom: 90px;
+  box-sizing: border-box;
+  transition: transform 1.05s cubic-bezier(.65,0,.35,1), opacity .6s ease;
+  will-change: transform, opacity;
+}
+@media (max-width: 900px) {
+  .book__page { padding-bottom: 74px; scroll-padding-bottom: 74px; }
+}
+.book__page--active {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+  transition: transform 1.05s cubic-bezier(.65,0,.35,1), opacity .8s ease .2s;
+}
+.book__page--before {
+  transform: rotateY(-114deg) translateZ(-60px);
+  transform-origin: left center;
+  opacity: 0;
+  pointer-events: none;
+}
+.book__page--after {
+  transform: rotateY(114deg) translateZ(-60px);
+  transform-origin: right center;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .book__page { transition: opacity .4s ease; }
+  .book__page--before, .book__page--after { transform: none; }
+}
+
+/* Riffle sweep — plays once over a multi-page jump (nav click straight to a
+   distant chapter). The destination page is already there underneath; this
+   is a decorative flourish so the jump reads as "flipping fast through the
+   book", not a hard cut. */
+.book__riffle {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0, transparent 34px,
+      rgba(var(--gold-rgb),.16) 34px 37px,
+      transparent 37px 74px,
+      rgba(255,255,255,.05) 74px 77px
+    );
+  background-size: 260% 100%;
+  opacity: 0;
+  animation: riffleSweep .64s cubic-bezier(.3,.7,.35,1) forwards;
+}
+.book__riffle[data-dir="prev"] { animation-name: riffleSweepBack; }
+@keyframes riffleSweep {
+  0%   { opacity: 0;   background-position: 40% 0; }
+  12%  { opacity: .9; }
+  80%  { opacity: .4; }
+  100% { opacity: 0;   background-position: -140% 0; }
+}
+@keyframes riffleSweepBack {
+  0%   { opacity: 0;   background-position: -100% 0; }
+  12%  { opacity: .9; }
+  80%  { opacity: .4; }
+  100% { opacity: 0;   background-position: 100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .book__riffle { display: none; }
+}
+
+/* Fore-edge deckle — a permanent hint of stacked page edges along both
+   screen borders, so the "book" feeling reads even when nothing is
+   transitioning. Subtle, desktop-only (would just be clutter at phone
+   widths where every pixel of width matters). */
+.book::before, .book::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 10px;
+  z-index: 41;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(var(--gold-rgb), .22) 0 2px,
+    transparent 2px 13px
+  );
+  opacity: .55;
+}
+.book::before { left: 0; }
+.book::after  { right: 0; }
+@media (max-width: 1024px) {
+  .book::before, .book::after { display: none; }
+}
+
+/* ── Book flip controls (prev/next + page count) ──────────── */
+.book-controls {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.book-controls__arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .2s, color .2s, opacity .2s;
+}
+.book-controls__arrow:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+.book-controls__arrow:disabled { opacity: .25; cursor: default; }
+.book-controls__count {
+  font-family: 'Baskerville', serif;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  min-width: 58px;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .book-controls { bottom: 14px; gap: 12px; }
+  .book-controls__arrow { width: 30px; height: 30px; font-size: 16px; }
+}
+
 /* ── Animations ────────────────────────────────────────── */
 @keyframes curtainLeft  { from { transform: translateX(0); }    to { transform: translateX(-100%); } }
 @keyframes curtainRight { from { transform: translateX(0); }    to { transform: translateX(100%);  } }
@@ -284,12 +446,15 @@ html { scroll-behavior: smooth; }
 /* ── HERO ──────────────────────────────────────────────── */
 .hero {
   position: relative;
-  height: 100vh;
-  min-height: 640px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* Bottom padding clears the fixed .book-controls page-count pill that
+     sits on top of every page — hero is meant to be seen without scrolling,
+     so this has to be reserved up front rather than relying on scroll. */
+  padding: 90px 0 128px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   background: var(--bg);
 }
 .hero__bg {
@@ -301,12 +466,15 @@ html { scroll-behavior: smooth; }
   background-size: cover;
   background-position: center 30%;
   opacity: 0;
+  filter: grayscale(.25) contrast(1.1) brightness(.72) sepia(.12);
   will-change: opacity, transform;
   animation: heroSlide 24s linear infinite;
 }
-.hero__bg-slide--1 { background-image: url('/uploads/team/bar-atmosphere.jpg'); animation-delay: 0s;   }
-.hero__bg-slide--2 { background-image: url('/uploads/team/bar-interior.jpg');   animation-delay: -8s;  }
-.hero__bg-slide--3 { background-image: url('/uploads/team/bar-hall.jpg');       animation-delay: -16s; }
+/* Menu-cover stock, not an interior snapshot — product shots of the drinks
+   themselves read closer to "the cover of a drinks list" than a room photo. */
+.hero__bg-slide--1 { background-image: url('/uploads/team/cocktails.jpg');    animation-delay: 0s;   }
+.hero__bg-slide--2 { background-image: url('/uploads/team/clover-club.jpg');  animation-delay: -8s;  }
+.hero__bg-slide--3 { background-image: url('/uploads/team/bar-evening.jpg'); animation-delay: -16s; }
 @keyframes heroSlide {
   0%   { opacity: 0;   transform: scale(1.00); }
   5%   { opacity: .26; transform: scale(1.01); }
@@ -354,6 +522,39 @@ html { scroll-behavior: smooth; }
   animation: curtainRight 1.3s .15s cubic-bezier(.77,0,.175,1) forwards;
   will-change: transform;
 }
+/* Cover frame — a thin double rule inset from the edge + a corner mark in
+   each corner, like the board of a bound bar menu. */
+.hero__frame {
+  position: absolute;
+  inset: 18px;
+  z-index: 4;
+  pointer-events: none;
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 0 6px transparent, inset 0 0 0 7px var(--border);
+}
+.hero__corner {
+  position: absolute;
+  color: var(--gold);
+  opacity: .55;
+}
+.hero__corner--tl { top: -1px; left: -1px; }
+.hero__corner--tr { top: -1px; right: -1px; transform: scaleX(-1); }
+.hero__corner--bl { bottom: -1px; left: -1px; transform: scaleY(-1); }
+.hero__corner--br { bottom: -1px; right: -1px; transform: scale(-1, -1); }
+@media (max-width: 900px) {
+  .hero__frame { inset: 10px; }
+  .hero__corner { width: 22px; height: 22px; }
+}
+
+.hero__edition {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 11px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 14px;
+}
+
 .hero__content {
   position: relative;
   z-index: 5;
@@ -365,13 +566,14 @@ html { scroll-behavior: smooth; }
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 34px;
+  margin-bottom: 22px;
   animation: logoGlow 4s ease-in-out 2.8s infinite;
 }
 .hero__logo-svg {
-  width: 460px;
-  max-width: 88vw;
+  width: auto;
   height: auto;
+  max-width: min(460px, 88vw);
+  max-height: 30vh;
   display: block;
 }
 .hero__tagline {
@@ -388,7 +590,7 @@ html { scroll-behavior: smooth; }
   font-size: 11px;
   letter-spacing: 5px;
   color: var(--text-dim);
-  margin: 0 0 44px;
+  margin: 0 0 34px;
   text-transform: uppercase;
 }
 .hero__btn {
@@ -403,18 +605,33 @@ html { scroll-behavior: smooth; }
   transition: background .25s, color .25s;
 }
 .hero__btn:hover { background: var(--gold); color: var(--bg); }
-.hero__scroll {
-  position: absolute;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  animation: heroUp 1s 3.2s both;
+/* "Open the menu" — replaces the old scroll cue now that the page turns
+   instead of scrolling; nudges the guest toward the flip interaction. Sits
+   in normal flow right after the CTA (see Hero.jsx) so it can never drift
+   into other fixed UI regardless of viewport height. */
+.hero__next {
+  margin: 28px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  animation: heroUp 1s 3.2s both, heroNextFloat 2.2s 4s ease-in-out infinite;
+  transition: color .2s;
 }
-.hero__scroll-line {
-  width: 1px;
-  height: 52px;
-  background: linear-gradient(to bottom, var(--gold), transparent);
-  animation: scrollPulse 2s 3.6s ease-in-out infinite;
+.hero__next:hover { color: var(--gold); }
+@keyframes heroNextFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero__next { animation: heroUp 1s 3.2s both; }
 }
 
 /* ── ABOUT ─────────────────────────────────────────────── */
@@ -434,13 +651,13 @@ html { scroll-behavior: smooth; }
 .about__inner { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
 .about__quote {
   font-family: 'Baskerville', serif;
-  font-size: 38px;
+  font-size: 44px;
   font-style: italic;
   font-weight: 300;
   color: var(--text);
   text-align: center;
   margin: 0 0 38px;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 .about__text {
   font-family: 'Avenir Next', sans-serif;
@@ -1084,11 +1301,11 @@ html { scroll-behavior: smooth; }
 }
 .team__quote {
   /* font-family: Jar Binks — set once in the typography-roles section below */
-  font-size: 18px;
+  font-size: 28px;
   color: var(--text-mid);
-  line-height: 1.65;
+  line-height: 1.5;
   font-weight: 300;
-  max-width: 420px;
+  max-width: 460px;
 }
 
 /* ── Join the team CTA + form ─────────────────────────────── */
@@ -1442,7 +1659,7 @@ html { scroll-behavior: smooth; }
 .nav__mobile { display: none; }
 
 /* ── MOBILE ≤ 680px ─────────────────────────────────────── */
-@media (max-width: 680px) {
+@media (max-width: 900px) {
 
   /* Nav */
   .nav { padding: 14px 5%; }
@@ -1515,12 +1732,15 @@ html { scroll-behavior: smooth; }
   }
 
   /* Hero */
+  .hero { padding: 78px 0 92px; }
   .hero__content { padding: 0 20px; }
-  .hero__logo-svg { width: 280px; max-width: 80vw; }
+  .hero__logo-svg { max-width: min(280px, 80vw); max-height: 30vh; }
+  .hero__edition { font-size: 10px; letter-spacing: 4px; }
   .hero__tagline { font-size: 20px; }
-  .hero__sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 28px; }
+  .hero__sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 22px; }
   .hero__btn { font-size: 10px; letter-spacing: 2px; padding: 14px 32px; }
   .hero__neon { display: none; }
+  .hero__next { margin-top: 18px; font-size: 9px; letter-spacing: 2px; }
 
   /* Section paddings */
   .about   { padding: 64px 5% 56px; }
@@ -1538,7 +1758,7 @@ html { scroll-behavior: smooth; }
   .contacts__title { font-size: 36px; margin-bottom: 32px; }
 
   /* About */
-  .about__quote { font-size: 24px; line-height: 1.35; }
+  .about__quote { font-size: 30px; line-height: 1.4; }
   .about__text  { font-size: 14px; margin-bottom: 44px; }
   .about__stats { padding: 28px 0; gap: 0; }
   .about__stat  { flex: 1; padding: 0 8px; }
@@ -1575,6 +1795,7 @@ html { scroll-behavior: smooth; }
   .team-carousel__avatar { width: 160px; height: 160px; }
   .team__title { font-size: 36px; margin-bottom: 10px; }
   .team__sub   { font-size: 16px; margin-bottom: 40px; }
+  .team__quote { font-size: 22px; max-width: none; }
   .team-modal  { padding: 32px 24px; }
 
   /* Booking */

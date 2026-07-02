@@ -1,14 +1,16 @@
 export const translations = {
   ru: {
     langBtn: 'EN',
-    navAbout: 'О нас', navMenu: 'Меню', navEvents: 'События',
-    navTeam: 'Команда', navContacts: 'Контакты',
+    navAbout: 'Легенда', navMenu: 'Напитки', navEvents: 'Афиша',
+    navTeam: 'Бармены', navContacts: 'Как найти',
     navLoginTg: 'Войти через Telegram', navProfile: 'Профиль',
+    heroEdition: 'Барная карта',
     heroCta: 'Забронировать стол',
     heroTagline: 'Место, где джаз не заканчивается',
     heroSub: 'Самара · Коктейли · Живая музыка',
+    heroNext: 'Открыть карту',
 
-    aboutLabel: 'О баре',
+    aboutLabel: 'Глава I · Легенда бара',
     aboutQuote: '«Здесь джаз звучит даже в тишине»',
     // TODO: финальный текст и реальные факты (год открытия, точные часы) — уточнить у клиента
     aboutText: [
@@ -18,21 +20,21 @@ export const translations = {
     ],
     statsYears: 'Лет', statsBartenders: 'Барменов', statsCocktails: 'Коктейлей',
 
-    menuLabel: 'Меню', menuTitle: 'Коктейли',
+    menuLabel: 'Глава II · Карта напитков', menuTitle: 'Коктейльная карта',
     menuClassics: 'Классика', menuSignature: 'Авторский',
     menuCta: 'Забронировать столик',
     menuLoading: 'Загружаем меню…',
     menuEmpty: 'Меню скоро пополнится.',
     menuNote: '* Полное меню доступно в баре',
 
-    eventsLabel: 'Программа', eventsTitle: 'События',
+    eventsLabel: 'Глава III · Вечерняя афиша', eventsTitle: 'Джазовая программа',
     eventsLoading: 'Загружаем события…',
     eventsEmpty: 'Ближайших событий пока нет — загляните позже.',
 
-    galleryLabel: 'Каждый гость — своя бутылка', galleryTitle: 'Полка воспоминаний',
+    galleryLabel: 'Глава IV · Каждый гость — своя бутылка', galleryTitle: 'Полка воспоминаний',
     galleryIntro: 'Каждый отзыв гостя становится бутылкой на нашей полке. Загляните — вдруг узнаете чей-то вечер.',
 
-    teamLabel: 'Команда', teamTitle: 'Мастера за стойкой',
+    teamLabel: 'Глава V · За барной стойкой', teamTitle: 'Мастера за стойкой',
     teamSub: 'Каждый из наших барменов — это история, прожитая в коктейлях.',
     teamLoading: 'Загружаем команду…',
     teamEmpty: 'Скоро здесь появится команда.',
@@ -54,11 +56,11 @@ export const translations = {
     shelfModalClose: 'Закрыть',
     shelfReadClose: 'Закрыть',
 
-    bookingLabel: 'Бронирование', bookingTitle: 'Забронировать',
+    bookingLabel: 'Последняя страница', bookingTitle: 'Займите свой столик',
     depositNote: 'Бронирование подтверждается депозитом 2 000 ₽ — полностью засчитывается в счёт ваших заказов в баре.',
     phoneLabel: 'Телефон',
 
-    contactsLabel: 'Контакты', contactsTitle: 'Контакты',
+    contactsLabel: 'Глава VI · Как нас найти', contactsTitle: 'Найти бар',
     addressLabel: 'Адрес', address: 'г. Самара, ул. Куйбышева, 100',
     hoursLabel: 'Часы работы',
     daysWeek: 'Пн – Чт, Вс', daysWend: 'Пт – Сб',
@@ -69,14 +71,16 @@ export const translations = {
   },
   en: {
     langBtn: 'RU',
-    navAbout: 'About', navMenu: 'Menu', navEvents: 'Events',
-    navTeam: 'Team', navContacts: 'Contact',
+    navAbout: 'Legend', navMenu: 'Drinks', navEvents: 'Bill',
+    navTeam: 'Bartenders', navContacts: 'Find Us',
     navLoginTg: 'Log in with Telegram', navProfile: 'Profile',
+    heroEdition: 'The Bar Menu',
     heroCta: 'Reserve a Table',
     heroTagline: 'Where the Jazz Never Stops',
     heroSub: 'Samara · Cocktails · Live Music',
+    heroNext: 'Open the Menu',
 
-    aboutLabel: 'About',
+    aboutLabel: 'Chapter I · The Legend',
     aboutQuote: '"Where jazz plays even in the silence"',
     // TODO: final copy and real facts (opening year, exact hours) — confirm with client
     aboutText: [
@@ -88,21 +92,21 @@ export const translations = {
 
     // NB: cocktail content itself is RU-only (owner's decision) — these are
     // just the surrounding UI labels for the EN toggle.
-    menuLabel: 'Menu', menuTitle: 'Cocktails',
+    menuLabel: 'Chapter II · The Drinks List', menuTitle: 'The Cocktail List',
     menuClassics: 'Classic', menuSignature: 'Signature',
     menuCta: 'Reserve a Table',
     menuLoading: 'Loading the menu…',
     menuEmpty: 'The menu is coming soon.',
     menuNote: '* Full menu available at the bar',
 
-    eventsLabel: 'Program', eventsTitle: 'Events',
+    eventsLabel: 'Chapter III · Evening Bill', eventsTitle: 'The Jazz Program',
     eventsLoading: 'Loading events…',
     eventsEmpty: 'No upcoming events yet — check back soon.',
 
-    galleryLabel: 'Every guest, their own bottle', galleryTitle: 'Shelf of Memories',
+    galleryLabel: 'Chapter IV · Every Guest, Their Own Bottle', galleryTitle: 'Shelf of Memories',
     galleryIntro: 'Every guest review becomes a bottle on our shelf. Take a look — you might recognize someone\'s evening.',
 
-    teamLabel: 'Team', teamTitle: 'Masters Behind the Bar',
+    teamLabel: 'Chapter V · Behind the Bar', teamTitle: 'Masters Behind the Bar',
     teamSub: 'Each of our bartenders is a story lived through cocktails.',
     teamLoading: 'Loading the team…',
     teamEmpty: 'The team page is coming soon.',
@@ -124,11 +128,11 @@ export const translations = {
     shelfModalClose: 'Close',
     shelfReadClose: 'Close',
 
-    bookingLabel: 'Reservations', bookingTitle: 'Reserve',
+    bookingLabel: 'The Final Page', bookingTitle: 'Claim Your Table',
     depositNote: 'Reservations are confirmed with a 2,000 ₽ deposit — fully applied toward your order at the bar.',
     phoneLabel: 'Phone',
 
-    contactsLabel: 'Contact', contactsTitle: 'Contact',
+    contactsLabel: 'Chapter VI · Find Us', contactsTitle: 'Find The Bar',
     addressLabel: 'Address', address: 'Samara, Kuybysheva St, 100',
     hoursLabel: 'Hours',
     daysWeek: 'Mon – Thu, Sun', daysWend: 'Fri – Sat',

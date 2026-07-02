@@ -16,7 +16,15 @@ const Ornament = ({ width = 72 }) => (
   </div>
 );
 
-export default function Hero({ tx }) {
+// Small corner flourish — the printed-cover detail on a real menu booklet.
+const CornerMark = ({ className }) => (
+  <svg className={className} viewBox="0 0 40 40" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <path d="M2 16V4a2 2 0 0 1 2-2h12" />
+    <circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export default function Hero({ tx, onNext }) {
   const [curtainDone, setCurtainDone] = useState(false);
 
   useEffect(() => {
@@ -26,8 +34,9 @@ export default function Hero({ tx }) {
 
   return (
     <section id="hero" className="hero">
-      {/* Background slideshow — CSS-only Ken Burns (zoom) + crossfade.
-          TODO: заменить на финальные фото бара от клиента при наличии. */}
+      {/* Background — bar photography treated as cover stock, not a photo
+          hero: heavier vignette/desaturation so it reads as texture behind
+          printed type rather than a snapshot. */}
       <div className="hero__bg">
         <div className="hero__bg-slide hero__bg-slide--1" />
         <div className="hero__bg-slide hero__bg-slide--2" />
@@ -45,8 +54,18 @@ export default function Hero({ tx }) {
         </div>
       )}
 
+      {/* Cover frame — a double rule inset from the screen edge, like the
+          board of a bound menu, with a corner mark in each corner. */}
+      <div className="hero__frame" aria-hidden="true">
+        <CornerMark className="hero__corner hero__corner--tl" />
+        <CornerMark className="hero__corner hero__corner--tr" />
+        <CornerMark className="hero__corner hero__corner--bl" />
+        <CornerMark className="hero__corner hero__corner--br" />
+      </div>
+
       <div className="hero__content">
-        <div style={{ marginBottom: 36 }}><Ornament /></div>
+        <p className="hero__edition">{tx.heroEdition}</p>
+        <div style={{ marginBottom: 20 }}><Ornament /></div>
 
         <div className="hero__logo">
           <img
@@ -56,15 +75,22 @@ export default function Hero({ tx }) {
           />
         </div>
 
-        <div style={{ marginBottom: 30 }}><Ornament /></div>
+        <div style={{ marginBottom: 20 }}><Ornament /></div>
 
         <p className="hero__tagline">{tx.heroTagline}</p>
         <p className="hero__sub">{tx.heroSub}</p>
         <a href="/booking" className="hero__btn">{tx.heroCta}</a>
-      </div>
 
-      <div className="hero__scroll">
-        <div className="hero__scroll-line" />
+        {/* In normal flow right after the CTA — a fixed/absolute overlay here
+            would drift into the button whenever the flex-centered content
+            above it runs long on a short viewport, so this stays anchored
+            to the content instead of the screen edge. */}
+        <button className="hero__next" onClick={onNext} aria-label={tx.heroNext}>
+          <span>{tx.heroNext}</span>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </div>
     </section>
   );

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import AuthService from '../auth/AuthService.js';
 
-const SECTION_IDS = ['about', 'menu', 'events', 'team', 'contacts'];
-
 // Telegram — единственный способ входа/регистрации на сайте (см. AuthPage).
 // Уже вошедшему гостю показываем ссылку на профиль вместо повторного «войти».
 function TelegramNavLink({ loggedIn, onClick, tx }) {
@@ -27,38 +25,13 @@ function TelegramNavLink({ loggedIn, onClick, tx }) {
   );
 }
 
-export default function Nav({ tx, lang, onLangToggle }) {
-  const [solid, setSolid] = useState(false);
+// Page-flip nav — clicking a link no longer scrolls, it turns the book to
+// that page directly (App.jsx owns activePage/onNavigate).
+export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [active, setActive] = useState('');
   const [loggedIn] = useState(() => AuthService.isAuthenticated());
 
-  useEffect(() => {
-    const onScroll = () => setSolid(window.scrollY > window.innerHeight * 0.82);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // Highlight the nav link for whichever section currently owns the top of
-  // the viewport — turns the smooth-scroll into a lively "you are here" cue.
-  useEffect(() => {
-    const sections = SECTION_IDS
-      .map(id => document.getElementById(id))
-      .filter(Boolean);
-    if (!sections.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter(e => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActive(visible.target.id);
-      },
-      { rootMargin: '-45% 0px -50% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] },
-    );
-    sections.forEach(s => observer.observe(s));
-    return () => observer.disconnect();
-  }, []);
+  const solid = activePage !== 'hero';
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
@@ -66,13 +39,15 @@ export default function Nav({ tx, lang, onLangToggle }) {
   }, [menuOpen]);
 
   const close = () => setMenuOpen(false);
+  const nav = (id) => (e) => { e.preventDefault(); onNavigate(id); close(); };
 
-  const linkCls = (id) => `nav__link${active === id ? ' nav__link--active' : ''}`;
+  const linkCls = (id) => `nav__link${activePage === id ? ' nav__link--active' : ''}`;
+  const mobileLinkCls = (id) => `nav__mobile-link${activePage === id ? ' nav__mobile-link--active' : ''}`;
 
   return (
     <>
       <nav className={`nav${solid ? ' nav--solid' : ''}`}>
-        <a href="#hero" className="nav__logo" onClick={close} aria-label="The Cat's Pajamas Club">
+        <a href="#" className="nav__logo" onClick={nav('hero')} aria-label="The Cat's Pajamas Club">
           <svg className="nav__cat" viewBox="0 0 64 64" width="38" height="38" fill="none"
                stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
             {/* ears (animate on hover) */}
@@ -91,11 +66,11 @@ export default function Nav({ tx, lang, onLangToggle }) {
         </a>
 
         <div className="nav__links">
-          <a href="#about"    className={linkCls('about')}>{tx.navAbout}</a>
-          <a href="#menu"     className={linkCls('menu')}>{tx.navMenu}</a>
-          <a href="#events"   className={linkCls('events')}>{tx.navEvents}</a>
-          <a href="#team"     className={linkCls('team')}>{tx.navTeam}</a>
-          <a href="#contacts" className={linkCls('contacts')}>{tx.navContacts}</a>
+          <a href="#" className={linkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
+          <a href="#" className={linkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
+          <a href="#" className={linkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
+          <a href="#" className={linkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
+          <a href="#" className={linkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
         </div>
 
         <div className="nav__actions">
@@ -114,11 +89,11 @@ export default function Nav({ tx, lang, onLangToggle }) {
       </nav>
 
       <div className={`nav__mobile${menuOpen ? ' nav__mobile--open' : ''}`}>
-        <a href="#about"    className={`nav__mobile-link${active === 'about'    ? ' nav__mobile-link--active' : ''}`} onClick={close}>{tx.navAbout}</a>
-        <a href="#menu"     className={`nav__mobile-link${active === 'menu'     ? ' nav__mobile-link--active' : ''}`} onClick={close}>{tx.navMenu}</a>
-        <a href="#events"   className={`nav__mobile-link${active === 'events'   ? ' nav__mobile-link--active' : ''}`} onClick={close}>{tx.navEvents}</a>
-        <a href="#team"     className={`nav__mobile-link${active === 'team'     ? ' nav__mobile-link--active' : ''}`} onClick={close}>{tx.navTeam}</a>
-        <a href="#contacts" className={`nav__mobile-link${active === 'contacts' ? ' nav__mobile-link--active' : ''}`} onClick={close}>{tx.navContacts}</a>
+        <a href="#" className={mobileLinkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
+        <a href="#" className={mobileLinkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
+        <a href="#" className={mobileLinkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
+        <a href="#" className={mobileLinkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
+        <a href="#" className={mobileLinkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
         <div className="nav__mobile-actions">
           <button className="nav__lang" onClick={() => { onLangToggle(); close(); }}>{tx.langBtn}</button>
           <TelegramNavLink loggedIn={loggedIn} onClick={close} tx={tx} />
