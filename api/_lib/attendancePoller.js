@@ -1,4 +1,3 @@
-import { getReservations, markAttendancePromptSent } from './booking.js';
 import { getEvents, markEventAttendancePromptSent } from './events.js';
 import { getPendingRsvps } from './eventRsvps.js';
 import { notifyStaff } from './staffNotify.js';
@@ -15,32 +14,11 @@ function fmtDate(iso) {
   return `${d}.${m}.${y}`;
 }
 
-export async function checkPendingBookings() {
-  const now = new Date();
-  const confirmed = await getReservations({ status: 'confirmed' });
-  for (const r of confirmed) {
-    if (r.attendancePromptSentAt) continue;
-    const endsAt = new Date(`${r.date}T${r.timeTo}:00`);
-    if (endsAt > now) continue; // время брони ещё не прошло
-
-    try {
-      await notifyStaff(
-        `🪑 *Проверка визита*\n\nСтол ${r.tableId} · ${fmtDate(r.date)} ${r.timeFrom}–${r.timeTo}\n`
-        + `${r.guestName}${r.guestPhone ? ' · ' + r.guestPhone : ''}\n\nГость пришёл?`,
-        {
-          threadId: process.env.TELEGRAM_STAFF_BOOKINGS_THREAD_ID,
-          replyMarkup: { inline_keyboard: [[
-            { text: '✅ Гость был', callback_data: `attyes:${r.id}` },
-            { text: '❌ Не пришёл', callback_data: `attno:${r.id}` },
-          ]] },
-        },
-      );
-      await markAttendancePromptSent(r.id);
-    } catch (e) {
-      console.error('[attendancePoller] booking', r.id, 'failed:', e.message);
-    }
-  }
-}
+// «Проверка визита» для БРОНЕЙ (бывшая checkPendingBookings) удалена в
+// бронировании v2: подтверждение прихода/ухода гостей теперь делает бармен
+// через флоу заявок (stok:/stno:) и раздел «Столы сейчас» + автоматика
+// seated в time_from (autoSeatDueReservations в booking.js) — иначе бармена
+// спрашивали бы дважды. Для СОБЫТИЙ (RSVP) поллер остаётся как был.
 
 export async function checkPendingEventRsvps() {
   const now = new Date();

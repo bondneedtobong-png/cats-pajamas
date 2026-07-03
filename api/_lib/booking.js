@@ -1,42 +1,54 @@
 import { supabase } from './supabase.js';
 import { TABLES, activeSeats } from '../../src/booking/tablesConfig.js';
 import { BOOKING_RULES } from '../../src/booking/bookingRules.js';
+import {
+  timeToMin, minToTime, reservationInstant, barEveningDate,
+} from '../../src/booking/barTime.js';
 import { awardAttendancePoints } from './loyalty.js';
-import { notifyStaff } from './staffNotify.js';
+import { notifyStaff, editStaffMessage } from './staffNotify.js';
+import { notifyGuestTg } from './telegramNotify.js';
+
+export { timeToMin, minToTime };
 
 const SRC_LABEL = { web: 'сайт', telegram_bot: 'Telegram', phone_manual: 'звонок' };
 
-// Server-side mirror of src/booking/BookingService.js, backed by Supabase.
-// Same business logic, channel-agnostic (web + telegram + admin call the same fns).
+// Бронирование v2 (HANDOFF_BOOKING_V2.md): бронь «по факту» — гость выбирает
+// только время прихода, стол занят до реального ухода гостей (освобождает
+// бармен). Каждую гостевую заявку подтверждает бармен: pending → confirmed →
+// seated → completed (баллы) / no_show; cancelled — отмена/отклонение.
+// Логика общая для сайта, бота и админки — не дублировать в каналах.
 
 const TABLE_CONFIG_KEY = 'table_config';
 
-// Guests who open the deposit-payment step but never finish (closed tab, changed
-// mind) would otherwise leave the table looking "reserved" forever — nobody else
-// checks in DB directly, they only see it through getReservations(). So the
-// self-healing check lives there: every read that turns up a 'pending' row past
-// this window auto-cancels it, freeing the table for the next guest.
-const PENDING_PAYMENT_TIMEOUT_MS = 10 * 60 * 1000;
+export const ACTIVE_STATUSES = ['pending', 'confirmed', 'seated'];
+const FINAL_STATUSES = ['cancelled', 'completed', 'no_show'];
 
-async function expireStalePending(rows) {
-  const cutoff = Date.now() - PENDING_PAYMENT_TIMEOUT_MS;
-  const stale = rows.filter(r => r.status === 'pending' && new Date(r.createdAt).getTime() < cutoff);
-  if (!stale.length) return;
-  const cancelledAt = new Date().toISOString();
-  const reason = 'Истёк срок оплаты депозита';
-  await supabase.from('reservations').update({
-    status: 'cancelled', cancelled_at: cancelledAt, cancellation_reason: reason,
-  }).in('id', stale.map(r => r.id));
-  for (const r of stale) { r.status = 'cancelled'; r.cancelledAt = cancelledAt; r.cancellationReason = reason; }
+// Гостевая заявка без ответа бармена 6 часов — чистим как мусор. Это НЕ
+// «авто-отмена вместо бармена» (та запрещена владельцем), а уборка заявок,
+// которые уже никому не нужны. Второй случай — время прихода давно прошло
+// (грейс 45 мин: гость мог прийти «на сейчас», бармен ещё успевает подтвердить).
+const PENDING_CONFIRM_TIMEOUT_MS = 6 * 60 * 60 * 1000;
+const PENDING_PAST_ARRIVAL_GRACE_MS = 45 * 60 * 1000;
+
+// Бронь «на сейчас» разрешаем задним числом до 30 минут — гость уже в пути.
+const PAST_ARRIVAL_GRACE_MS = 30 * 60 * 1000;
+
+// В форме нет time_to (бронь по факту), но колонка живёт: история и старый
+// бот-флоу её читают/пишут. Для новых броней пишем условные +3 часа.
+const LEGACY_TIME_TO_MIN = 180;
+
+const STAFF_BOOKINGS_THREAD = () => process.env.TELEGRAM_STAFF_BOOKINGS_THREAD_ID;
+
+function generateId(prefix = 'r') { return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
+
+// Пользовательский ввод внутри Markdown-сообщений: незакрытый '_' или '*' в
+// имени гостя валит parse у Telegram, и уведомление молча не доходит.
+function mdEscape(s) { return String(s || '').replace(/([_*[\]`])/g, '\\$1'); }
+
+function fmtDateRu(iso) {
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}`;
 }
-
-// ─── time utils ──────────────────────────────────────────────────────────────
-export function timeToMin(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
-export function minToTime(m) {
-  return String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-}
-
-function generateId() { return 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
 
 // ─── row <-> reservation mapping ─────────────────────────────────────────────
 function rowToRes(r) {
@@ -62,6 +74,8 @@ function rowToRes(r) {
     updatedAt: r.updated_at,
     cancelledAt: r.cancelled_at || null,
     attendancePromptSentAt: r.attendance_prompt_sent_at || null,
+    staffMessageId: r.staff_message_id || null,
+    staffReminderCount: r.staff_reminder_count || 0,
   };
 }
 
@@ -95,6 +109,59 @@ export async function getTablesMerged() {
   return [...base, ...(cfg.__custom || [])];
 }
 
+// ─── стафф-сообщения по заявкам ──────────────────────────────────────────────
+function tableStaffLabel(table, tableId) {
+  if (!table) return `Стол ${tableId}`;
+  const num = table.num ?? table.id;
+  return `Стол №${num}${table.zone ? ' · ' + table.zone : ''}`;
+}
+
+/** Текст заявки в стафф-тему «Брони» — единый билдер, чтобы правки сообщения
+ *  (отмена гостем, протухание, подтверждение) пересобирали тот же текст. */
+export function staffBookingText(r, table) {
+  const lines = [
+    '🪑 *Заявка на бронь*',
+    '',
+    tableStaffLabel(table, r.tableId),
+    `📅 ${fmtDateRu(r.date)} · приход к ${r.timeFrom}`,
+    `👥 ${r.guestsCount} ${r.guestsCount === 1 ? 'гость' : 'гостей'}`,
+    `👤 ${mdEscape(r.guestName)}${r.guestPhone ? ' · ' + mdEscape(r.guestPhone) : ''}`,
+  ];
+  if (r.note) lines.push(`💬 ${mdEscape(r.note)}`);
+  lines.push(`Источник: ${SRC_LABEL[r.source] || r.source}`);
+  return lines.join('\n');
+}
+
+export function staffConfirmKeyboard(reservationId) {
+  return { inline_keyboard: [[
+    { text: '✅ Подтвердить', callback_data: `stok:${reservationId}` },
+    { text: '❌ Отклонить', callback_data: `stno:${reservationId}` },
+  ]] };
+}
+
+async function sendStaffBookingRequest(res, table) {
+  const messageId = await notifyStaff(staffBookingText(res, table), {
+    threadId: STAFF_BOOKINGS_THREAD(),
+    replyMarkup: staffConfirmKeyboard(res.id),
+  });
+  if (messageId) {
+    await supabase.from('reservations').update({ staff_message_id: messageId }).eq('id', res.id);
+  }
+}
+
+// Правка стафф-сообщения, когда заявка умерла не от кнопки в нём самом
+// (отмена гостем, авто-протухание) — снимаем кнопки, дописываем итог.
+function editStaffBookingMessage(r, table, suffix) {
+  if (!r.staffMessageId) return Promise.resolve();
+  return editStaffMessage(r.staffMessageId, staffBookingText(r, table) + '\n\n' + suffix);
+}
+
+async function findUserTelegramId(guestId) {
+  if (!guestId) return null;
+  const { data } = await supabase.from('users').select('telegram_id').eq('id', guestId).maybeSingle();
+  return data?.telegram_id || null;
+}
+
 // ─── reservations ─────────────────────────────────────────────────────────────
 export async function getReservations(filters = {}) {
   let q = supabase.from('reservations').select('*');
@@ -110,57 +177,138 @@ export async function getReservations(filters = {}) {
   return rows;
 }
 
-export async function getTableStatus(tableId, date, time) {
-  const active = (await getReservations({ tableId, date }))
-    .filter(r => r.status !== 'cancelled' && r.status !== 'no_show');
-  const t = timeToMin(time);
-  for (const r of active) {
-    const start = timeToMin(r.timeFrom);
-    const end = timeToMin(r.timeTo);
-    if (t >= start && t < end) return { status: 'occupied', reservation: r };
-    if (start > t && start - t <= 90) return { status: 'reserved', reservation: r };
+// Self-healing на каждом чтении (никто не смотрит в БД напрямую — только через
+// getReservations): протухшие pending отменяются прямо тут, чтобы стол не
+// выглядел «недоступным» вечно.
+async function expireStalePending(rows) {
+  const now = Date.now();
+  const stale = rows.filter(r => r.status === 'pending' && (
+    now - new Date(r.createdAt).getTime() > PENDING_CONFIRM_TIMEOUT_MS ||
+    reservationInstant(r.date, r.timeFrom).getTime() < now - PENDING_PAST_ARRIVAL_GRACE_MS
+  ));
+  if (!stale.length) return;
+  const cancelledAt = new Date().toISOString();
+  const reason = 'Не подтверждена вовремя';
+  await supabase.from('reservations').update({
+    status: 'cancelled', cancelled_at: cancelledAt, cancellation_reason: reason,
+  }).in('id', stale.map(r => r.id));
+  for (const r of stale) {
+    r.status = 'cancelled'; r.cancelledAt = cancelledAt; r.cancellationReason = reason;
+    editStaffBookingMessage(r, null, '⌛️ Отменена автоматически — не подтверждена вовремя.').catch(() => {});
   }
-  return { status: 'vacant', reservation: null };
 }
 
-// Status for ALL tables at once — single reservations query (avoids N round-trips).
-async function statusMapForDate(date, time) {
-  const all = (await getReservations({ date }))
-    .filter(r => r.status !== 'cancelled' && r.status !== 'no_show');
-  const t = timeToMin(time);
+// ─── walk-in занятость (table_occupancy) ─────────────────────────────────────
+function rowToOcc(o) {
+  return {
+    id: o.id, tableId: o.table_id, source: o.source,
+    reservationId: o.reservation_id || null,
+    occupiedSince: o.occupied_since, freedAt: o.freed_at || null,
+  };
+}
+
+export async function getOpenOccupancies() {
+  const { data, error } = await supabase.from('table_occupancy').select('*').is('freed_at', null);
+  if (error) throw new Error(error.message);
+  return (data || []).map(rowToOcc);
+}
+
+/** Бармен отметил стол занятым (walk-in) или система — по seated-брони.
+ *  Идемпотентно: уже открытая занятость → false, не ошибка. */
+export async function setTableOccupied(tableId, { source = 'walk_in', reservationId = null } = {}) {
+  const { error } = await supabase.from('table_occupancy').insert({
+    id: generateId('occ'), table_id: tableId, source, reservation_id: reservationId,
+    occupied_since: new Date().toISOString(),
+  });
+  if (error) {
+    if (error.code === '23505') return false; // уже занят — двойной тап/гонка поллера
+    throw new Error(error.message);
+  }
+  return true;
+}
+
+/** Бармен освобождает walk-in стол. Занятость по брони так не закрыть —
+ *  для неё «Гости ушли»/«Не пришли» (completed/no_show закрывают её сами). */
+export async function freeTableOccupancy(tableId) {
+  const { data, error } = await supabase.from('table_occupancy')
+    .select('*').eq('table_id', tableId).is('freed_at', null).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return false;
+  if (data.source === 'reservation') {
+    throw new Error('Стол занят по брони — отметьте «Гости ушли» или «Не пришли»');
+  }
+  await supabase.from('table_occupancy').update({ freed_at: new Date().toISOString() }).eq('id', data.id);
+  return true;
+}
+
+async function closeOccupancyForReservation(reservationId) {
+  await supabase.from('table_occupancy')
+    .update({ freed_at: new Date().toISOString() })
+    .eq('reservation_id', reservationId).is('freed_at', null);
+}
+
+// ─── статусы столов на плане (вычисляемые) ──────────────────────────────────
+// vacant   — свободен;
+// reserved — есть активная заявка/бронь на этот вечер («Бронь к 20:00»);
+// occupied — занят по факту: seated-бронь ИЛИ walk-in отметка бармена.
+// Правило одного вечера гарантирует максимум одну активную бронь на стол+дату.
+async function statusMapForDate(date) {
+  const evening = date || barEveningDate();
+  const [reservations, occupancies] = await Promise.all([
+    getReservations({ date: evening }),
+    // walk-in занятость — состояние «сейчас», к будущим датам не относится
+    evening === barEveningDate() ? getOpenOccupancies() : Promise.resolve([]),
+  ]);
   const map = {};
-  for (const r of all) {
-    if (map[r.tableId]?.status === 'occupied') continue;
-    const start = timeToMin(r.timeFrom), end = timeToMin(r.timeTo);
-    if (t >= start && t < end) map[r.tableId] = { status: 'occupied', reservation: r };
-    else if (start > t && start - t <= 90 && !map[r.tableId]) map[r.tableId] = { status: 'reserved', reservation: r };
+  for (const o of occupancies) {
+    map[o.tableId] = { status: 'occupied', occupancy: o, reservation: null };
+  }
+  for (const r of reservations) {
+    if (!ACTIVE_STATUSES.includes(r.status)) continue;
+    const cur = map[r.tableId];
+    if (r.status === 'seated') {
+      map[r.tableId] = { status: 'occupied', occupancy: cur?.occupancy || null, reservation: r };
+    } else if (cur) {
+      // стол уже занят walk-in'ом, но бронь на вечер существует — статус
+      // «занят», бронь прикладываем для админки/бармена
+      if (!cur.reservation) cur.reservation = r;
+    } else {
+      map[r.tableId] = { status: 'reserved', occupancy: null, reservation: r };
+    }
   }
   return map;
 }
 
-export async function getTablesWithStatus(date, time) {
-  const [tables, smap] = await Promise.all([getTablesMerged(), statusMapForDate(date, time)]);
+// Публичная версия — без персональных данных гостя. time (второй аргумент)
+// оставлен для совместимости вызовов, в модели v2 не используется: статус
+// считается на весь вечер.
+export async function getTablesWithStatus(date) {
+  const evening = date || barEveningDate();
+  const [tables, smap] = await Promise.all([getTablesMerged(), statusMapForDate(evening)]);
   return tables.map(tbl => {
-    const s = smap[tbl.id] || { status: 'vacant', reservation: null };
+    const s = smap[tbl.id] || { status: 'vacant', reservation: null, occupancy: null };
     const publicRes = s.reservation ? {
-      id: s.reservation.id, timeFrom: s.reservation.timeFrom,
-      timeTo: s.reservation.timeTo, guestsCount: s.reservation.guestsCount,
+      timeFrom: s.reservation.timeFrom, guestsCount: s.reservation.guestsCount,
     } : null;
     return { ...tbl, activeSeatsCount: activeSeats(tbl), status: s.status, reservation: publicRes };
   });
 }
 
-export async function getTablesWithStatusAdmin(date, time) {
-  const [tables, smap] = await Promise.all([getTablesMerged(), statusMapForDate(date, time)]);
+export async function getTablesWithStatusAdmin(date) {
+  const evening = date || barEveningDate();
+  const [tables, smap] = await Promise.all([getTablesMerged(), statusMapForDate(evening)]);
   return tables.map(tbl => {
-    const s = smap[tbl.id] || { status: 'vacant', reservation: null };
-    return { ...tbl, activeSeatsCount: activeSeats(tbl), status: s.status, reservation: s.reservation };
+    const s = smap[tbl.id] || { status: 'vacant', reservation: null, occupancy: null };
+    return {
+      ...tbl, activeSeatsCount: activeSeats(tbl),
+      status: s.status, reservation: s.reservation, occupancy: s.occupancy,
+    };
   });
 }
 
 export async function createReservation(p) {
   const {
-    tableId, date, timeFrom, timeTo, guestsCount,
+    tableId, date, timeFrom, guestsCount = 2,
     guestName, guestPhone = '', note = '',
     source = 'web', guestId = null, createdByAdminId = null,
   } = p;
@@ -168,25 +316,51 @@ export async function createReservation(p) {
   if (!guestName?.trim()) throw new Error('Имя гостя обязательно');
   if (!tableId) throw new Error('Стол не выбран');
   if (!date) throw new Error('Дата обязательна');
-  if (!timeFrom || !timeTo) throw new Error('Время обязательно');
+  if (!timeFrom) throw new Error('Время прихода обязательно');
 
-  const check = await getTableStatus(tableId, date, timeFrom);
-  if (check.status !== 'vacant') throw new Error(`Стол ${tableId} уже занят на это время`);
+  const timeTo = p.timeTo || minToTime(timeToMin(timeFrom) + LEGACY_TIME_TO_MIN);
+
+  if (reservationInstant(date, timeFrom).getTime() < Date.now() - PAST_ARRIVAL_GRACE_MS) {
+    throw new Error('Это время уже прошло — выберите другое');
+  }
 
   const table = (await getTablesMerged()).find(t => t.id === tableId);
-  const depositPrice = table?.depositPrice ?? 0;
+  if (!table) throw new Error('Такого стола нет на плане');
 
+  // Правило одного вечера: активная бронь (pending/confirmed/seated) на дату
+  // блокирует стол целиком — «по факту» значит, что конец брони неизвестен.
+  const dayReservations = (await getReservations({ date }))
+    .filter(r => ACTIVE_STATUSES.includes(r.status));
+  if (dayReservations.some(r => r.tableId === tableId)) {
+    throw new Error('Этот стол уже занят в выбранный вечер — выберите другой');
+  }
+  // Walk-in занятость блокирует бронь только на текущий вечер
+  if (date === barEveningDate()) {
+    const occ = await getOpenOccupancies();
+    if (occ.some(o => o.tableId === tableId)) {
+      throw new Error('Этот стол сейчас занят гостями — выберите другой');
+    }
+  }
+  // Антиспам: не больше 2 активных заявок/броней на гостя на дату (§7.5 ТЗ)
+  if (guestId) {
+    const mine = dayReservations.filter(r => r.guestId === guestId && ['pending', 'confirmed'].includes(r.status));
+    if (mine.length >= 2) {
+      throw new Error('У вас уже есть две активные брони на этот вечер — отмените одну из них, чтобы создать новую');
+    }
+  }
+
+  const depositPrice = table?.depositPrice ?? 0;
   const now = new Date().toISOString();
-  // Only the site's own payment step (InfoPanel → handlePay) can move a booking
-  // out of 'pending' — phone/bot bookings have no such step, so they'd be stuck
-  // forever if we put them in 'pending' too. Scope this to source==='web' only.
-  const awaitingPayment = source === 'web' && depositPrice > 0;
+  // Каждую гостевую заявку подтверждает бармен (решение владельца) → 'pending'.
+  // Бронь, созданную персоналом руками (админка/телефон), персонал подтверждает
+  // самим фактом создания → сразу 'confirmed'.
+  const staffCreated = Boolean(createdByAdminId) || source === 'phone_manual';
   const row = {
     id: generateId(),
     table_id: tableId,
     guest_id: guestId,
     source,
-    status: awaitingPayment ? 'pending' : 'confirmed',
+    status: staffCreated ? 'confirmed' : 'pending',
     date,
     time_from: timeFrom,
     time_to: timeTo,
@@ -202,19 +376,30 @@ export async function createReservation(p) {
   };
   const { data, error } = await supabase.from('reservations').insert(row).select().single();
   if (error) {
-    // Гонка: два запроса прошли проверку getTableStatus почти одновременно
-    // (двойной клик «Подтвердить», два гостя жмут в одну секунду) — второй
-    // теперь ловит нарушение уникального индекса вместо создания дубля.
-    if (error.code === '23505') throw new Error(`Стол ${tableId} уже занят на это время`);
+    // Гонка: два гостя прошли проверку почти одновременно — второй ловит
+    // нарушение уникального индекса (table_id, date) вместо создания дубля.
+    if (error.code === '23505') throw new Error('Этот стол уже занят в выбранный вечер — выберите другой');
     throw new Error(error.message);
   }
   const res = rowToRes(data);
-  notifyStaff(
-    `🪑 *Новая бронь*\n\nСтол ${res.tableId} · ${res.date} ${res.timeFrom}–${res.timeTo}\n`
-    + `${res.guestName}${res.guestPhone ? ' · ' + res.guestPhone : ''} · ${res.guestsCount} гостей\n`
-    + `Источник: ${SRC_LABEL[res.source] || res.source}`,
-    { threadId: process.env.TELEGRAM_STAFF_BOOKINGS_THREAD_ID },
-  ).catch(() => {}); // best-effort — сбой уведомления не должен ронять создание брони
+
+  if (staffCreated) {
+    notifyStaff(
+      staffBookingText(res, table) + '\n\n✅ Создана персоналом — уже подтверждена.',
+      { threadId: STAFF_BOOKINGS_THREAD() },
+    ).catch(() => {});
+  } else {
+    // Заявка с кнопками подтверждения — best-effort: сбой уведомления не
+    // должен ронять создание брони (стафф-чат может быть не настроен).
+    sendStaffBookingRequest(res, table).catch(e => console.error('[booking] staff notify failed:', e.message));
+    if (source === 'web') {
+      // Мгновенное ЛС гостю от бота (сайт свой экран показывает сам)
+      findUserTelegramId(guestId).then(tgId => tgId && notifyGuestTg(tgId,
+        `📨 *Заявка отправлена!*\n\n${tableStaffLabel(table, tableId)}\n📅 ${fmtDateRu(date)} · к ${timeFrom}\n\n`
+        + 'Бронь подтверждает бармен — обычно это занимает несколько минут. Уведомление придёт сюда же 🎷',
+      )).catch(() => {});
+    }
+  }
   return res;
 }
 
@@ -226,8 +411,7 @@ export async function cancelReservation(id, reason = '') {
 
   let depositStatus = r.depositStatus;
   if (r.depositStatus === 'paid_mock' && r.date && r.timeFrom) {
-    const bookingTime = new Date(`${r.date}T${r.timeFrom}:00`);
-    const hoursUntil = (bookingTime - new Date()) / 3600000;
+    const hoursUntil = (reservationInstant(r.date, r.timeFrom) - new Date()) / 3600000;
     depositStatus = hoursUntil >= BOOKING_RULES.freeCancellationHours ? 'refunded' : 'partially_retained';
   }
   const { data, error } = await supabase.from('reservations').update({
@@ -235,19 +419,21 @@ export async function cancelReservation(id, reason = '') {
     cancellation_reason: reason, deposit_status: depositStatus,
   }).eq('id', id).select().single();
   if (error) throw new Error(error.message);
-  return rowToRes(data);
+  const res = rowToRes(data);
+
+  closeOccupancyForReservation(id).catch(() => {});
+  // Стафф-сообщение с кнопками больше не актуально — правим его (best-effort)
+  editStaffBookingMessage(res, null, `🚫 ${reason || 'Отменена'}.`).catch(() => {});
+  return res;
 }
 
 export async function updateReservationStatus(id, newStatus) {
-  const { data: existing } = await supabase.from('reservations').select('status, guest_id').eq('id', id).maybeSingle();
+  const { data: existing } = await supabase.from('reservations').select('status, guest_id, table_id').eq('id', id).maybeSingle();
   if (!existing) throw new Error('Бронь не найдена');
-  // Гость мог отменить бронь, пока у админа на экране (сайт или бот, не
-  // обновляется в реальном времени) всё ещё висит старый статус — защита от
-  // случайного «Завершить»/«Подтвердить» на уже отменённой/завершённой брони
-  // (например, начисления баллов за отменённый визит) (BACKLOG.md #20).
-  // 'no_show' тоже финальный статус — тот же guard защищает от повторного
-  // нажатия кнопки «Гость был?»/«Не пришёл» в уведомлении персоналу.
-  if (['cancelled', 'completed', 'no_show'].includes(existing.status)) {
+  // Гость мог отменить бронь, пока у бармена на экране висит старый статус —
+  // guard от «Подтвердить»/«Завершить» на брони в финальном статусе (в т.ч.
+  // от повторного начисления баллов). Финальные: cancelled/completed/no_show.
+  if (FINAL_STATUSES.includes(existing.status)) {
     throw new Error('Бронь уже в финальном статусе — обновите список');
   }
 
@@ -256,10 +442,17 @@ export async function updateReservationStatus(id, newStatus) {
   const { data, error } = await supabase.from('reservations').update(patch).eq('id', id).select().single();
   if (error) throw new Error('Бронь не найдена');
 
-  // Баллы лояльности (по текущему уровню гостя) — за реальный визит,
-  // начисляются один раз при переходе в 'completed'. Работает независимо от
-  // того, кто перевёл статус — сайт-админка, бот-админка или уведомление
-  // персоналу с подтверждением явки.
+  // seated → стол занят по факту (строка occupancy); финал → занятость закрыта
+  if (newStatus === 'seated') {
+    await setTableOccupied(existing.table_id, { source: 'reservation', reservationId: id })
+      .catch(e => console.error('[booking] occupancy open failed:', e.message));
+  } else if (FINAL_STATUSES.includes(newStatus)) {
+    closeOccupancyForReservation(id).catch(() => {});
+  }
+
+  // Баллы лояльности — за реальный визит, ровно один раз: переход в 'completed'
+  // (гард финальных статусов выше не даёт начислить повторно). Walk-in столы
+  // броней не имеют и сюда не попадают — баллов не дают.
   if (newStatus === 'completed' && existing.status !== 'completed' && existing.guest_id) {
     awardAttendancePoints(existing.guest_id, { sourceId: id, reason: 'Визит подтверждён (бронь)' })
       .catch(e => console.error('[loyalty] award failed:', e.message));
@@ -267,8 +460,68 @@ export async function updateReservationStatus(id, newStatus) {
   return rowToRes(data);
 }
 
+// ─── поллер (5-минутный цикл в bot-start.js) ─────────────────────────────────
+
+/** Автоматика прихода: в time_from подтверждённой брони стол сам переходит в
+ *  seated/occupied. Опоздания не автоматим — «Не пришли» решает бармен. */
+export async function autoSeatDueReservations() {
+  const evening = barEveningDate();
+  const confirmed = await getReservations({ status: 'confirmed' });
+  const now = Date.now();
+  for (const r of confirmed) {
+    // только текущий вечер: старые confirmed из прошлых дней не должны
+    // внезапно «сесть» и занять сегодняшний план
+    if (r.date !== evening) continue;
+    if (reservationInstant(r.date, r.timeFrom).getTime() > now) continue;
+    try {
+      await updateReservationStatus(r.id, 'seated');
+    } catch (e) {
+      console.error('[autoSeat]', r.id, 'failed:', e.message);
+    }
+  }
+}
+
+const REMIND_FIRST_MS = 15 * 60 * 1000;
+const REMIND_SECOND_MS = 45 * 60 * 1000;
+
+function staffMentions() {
+  const ids = (process.env.TELEGRAM_STAFF_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+  return ids.map(id => `[🔔](tg://user?id=${id})`).join('');
+}
+
+/** Напоминания персоналу о висящих заявках: 15 минут → «⏳ Ждёт 15 мин»,
+ *  ещё через 30 — второе с упоминанием TELEGRAM_STAFF_IDS. Дальше не спамим. */
+export async function remindStalePendingBookings() {
+  const pending = await getReservations({ status: 'pending' });
+  const now = Date.now();
+  const tables = await getTablesMerged();
+  for (const r of pending) {
+    if (r.status !== 'pending') continue; // только что протух в expireStalePending
+    const age = now - new Date(r.createdAt).getTime();
+    let header = null;
+    if (r.staffReminderCount === 0 && age >= REMIND_FIRST_MS) {
+      header = '⏳ *Заявка ждёт 15 минут*';
+    } else if (r.staffReminderCount === 1 && age >= REMIND_SECOND_MS) {
+      header = `⏳ *Заявка ждёт уже 45 минут!* ${staffMentions()}`;
+    }
+    if (!header) continue;
+    try {
+      const table = tables.find(t => t.id === r.tableId);
+      await notifyStaff(header + '\n\n' + staffBookingText(r, table), {
+        threadId: STAFF_BOOKINGS_THREAD(),
+        replyMarkup: staffConfirmKeyboard(r.id),
+      });
+      await supabase.from('reservations')
+        .update({ staff_reminder_count: r.staffReminderCount + 1 }).eq('id', r.id);
+    } catch (e) {
+      console.error('[remindPending]', r.id, 'failed:', e.message);
+    }
+  }
+}
+
 // Ставится поллером (attendancePoller.js) сразу после отправки «Гость был?» в
 // группу персонала — не начисление баллов и не смена статуса, просто дедуп-метка.
+// В v2 бронь-часть поллера отключена, метка осталась для событий/истории.
 export async function markAttendancePromptSent(id) {
   await supabase.from('reservations').update({ attendance_prompt_sent_at: new Date().toISOString() }).eq('id', id);
 }
@@ -290,10 +543,6 @@ export async function payDeposit(reservationId) {
   const { data: existing, error: e1 } = await supabase.from('reservations').select('*').eq('id', reservationId).single();
   if (e1 || !existing) throw new Error('Бронь не найдена');
   const r = rowToRes(existing);
-  // Guest could be sitting on the payment screen past PENDING_PAYMENT_TIMEOUT_MS —
-  // the row may already have been auto-cancelled by expireStalePending() via some
-  // other read in the meantime. Reject rather than silently reviving a stale hold
-  // that may have since been re-booked by someone else.
   if (r.status === 'cancelled') throw new Error('Время на оплату истекло, бронь отменена — выберите стол заново');
   if (r.depositStatus === 'paid_mock') throw new Error('Депозит уже оплачен');
   if (!r.depositPrice || r.depositPrice <= 0) throw new Error('Депозит не требуется');

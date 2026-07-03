@@ -63,17 +63,51 @@ create index if not exists reservations_status_idx   on public.reservations (sta
 -- Быстрый поиск конфликтов по столу+дате
 create index if not exists reservations_table_date_idx on public.reservations (table_id, date);
 
--- Защита от гонки при двойном клике «Подтвердить» (BACKLOG.md #20): два почти
--- одновременных запроса могут оба увидеть стол свободным (проверка в
--- createReservation делается ДО вставки, классический TOCTOU) и оба создать
--- бронь. Этот индекс — последний рубеж на уровне БД: не даёт вставить вторую
--- активную (pending/confirmed) бронь на тот же стол+дату+время начала.
--- Не ловит частично пересекающиеся, но разные time_from — это отдельная,
--- более сложная задача (exclusion constraint на диапазоны), не то, о чём
--- просит бэклог (там речь именно про повторный клик на ТОТ ЖЕ запрос).
+-- ─── Бронирование v2 («бронь по факту», см. HANDOFF_BOOKING_V2.md) ──────────
+-- Новый статус 'seated' — гости за столом (автоматом в time_from или бармен
+-- вручную «пришли»). CHECK пересоздаётся, т.к. таблица уже существует в бою.
+alter table public.reservations drop constraint if exists reservations_status_check;
+alter table public.reservations add constraint reservations_status_check
+  check (status in ('pending','confirmed','seated','completed','no_show','cancelled'));
+
+-- Правило одного вечера: конца брони в модели больше нет («по факту» =
+-- неизвестно, когда стол освободится), поэтому один стол — максимум одна
+-- активная бронь на дату. Последний рубеж против гонки двойного сабмита
+-- (проверка в createReservation — классический TOCTOU) и заодно закрытие
+-- документированной дыры старого индекса с пересекающимися интервалами.
+-- ВНИМАНИЕ при накатке в бою: если в таблице уже есть две активные брони на
+-- один стол+дату, создание индекса упадёт — сначала завершите/отмените дубли.
+drop index if exists reservations_no_double_book_idx;
 create unique index if not exists reservations_no_double_book_idx
-  on public.reservations (table_id, date, time_from)
-  where status in ('pending', 'confirmed');
+  on public.reservations (table_id, date)
+  where status in ('pending', 'confirmed', 'seated');
+
+-- id сообщения-заявки в стафф-теме «Брони» — чтобы отредактировать его, когда
+-- бронь отменяет гость или её чистит авто-протухание (кнопки подтверждения
+-- в устаревшем сообщении не должны выглядеть живыми).
+alter table public.reservations add column if not exists staff_message_id bigint;
+-- Счётчик напоминаний персоналу о висящей pending-заявке (15 мин → 45 мин,
+-- дальше не спамим) — состояние поллера в bot-start.js.
+alter table public.reservations add column if not exists staff_reminder_count integer not null default 0;
+
+-- Walk-in занятость столов: бармен отмечает стол занятым/свободным без брони;
+-- занятость по seated-брони тоже фиксируется здесь строкой source='reservation'
+-- (НЕ фейковыми бронями). Открытая занятость = freed_at is null. План зала при
+-- рендере мёржит: occupancy > confirmed-брони > vacant.
+create table if not exists public.table_occupancy (
+  id             text primary key,        -- 'occ_...'
+  table_id       text        not null,
+  source         text        not null default 'walk_in'
+                   check (source in ('walk_in','reservation')),
+  reservation_id text        references public.reservations (id) on delete set null,
+  occupied_since timestamptz not null default now(),
+  freed_at       timestamptz
+);
+-- Не больше одной открытой занятости на стол (двойной тап бармена, гонка
+-- поллера и кнопки) — уровень БД, не только проверка в коде.
+create unique index if not exists table_occupancy_open_idx
+  on public.table_occupancy (table_id) where freed_at is null;
+create index if not exists table_occupancy_table_idx on public.table_occupancy (table_id);
 
 -- Уведомления персоналу с подтверждением явки (см. api/_lib/attendancePoller.js):
 -- метка, что напоминание «Гость был?» уже отправлено в группу персонала — не
@@ -349,6 +383,7 @@ alter table public.event_rsvps        enable row level security;
 alter table public.loyalty_transactions enable row level security;
 alter table public.loyalty_rewards      enable row level security;
 alter table public.loyalty_redemptions  enable row level security;
+alter table public.table_occupancy      enable row level security;
 -- Намеренно без policy: анонимный клиент ничего не видит, всё ходит через сервер.
 
 -- ─── Автообновление updated_at ──────────────────────────────────────────────

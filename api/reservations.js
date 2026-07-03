@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 
     return badRequest(res, 'Метод не поддерживается');
   } catch (e) {
-    if (/обязательн|занят|не найдена|не требуется|уже оплачен|выбран/.test(e.message)) return badRequest(res, e.message);
+    if (/обязательн|занят|не найдена|не требуется|уже оплачен|выбран|уже прошло|уже есть|нет на плане|уже отменена|финальном статусе/.test(e.message)) return badRequest(res, e.message);
     return serverError(res, e);
   }
 }
