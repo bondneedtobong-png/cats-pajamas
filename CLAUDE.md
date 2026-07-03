@@ -95,10 +95,13 @@ Telegram-бот на grammY, Supabase. Лендинг устроен как «к
 
 ## Деплой
 
-Два деплоя одновременно: Vercel (`cats-pajamas-club.vercel.app`) и VPS
-(`https://cats-pajamas.ru`). На VPS — `bash deploy.sh` **строго с локальной
-машины** (скрипт сам ходит по SSH; запущенный на сервере, падает с обманчивой
-ошибкой). Не деплоить без явной просьбы.
+**Единственный прод — VPS (`https://cats-pajamas.ru`)**: сайт (nginx + dist),
+API (`pm2: cats-api`), бот long polling (`pm2: cats-bot`), self-hosted Supabase
+(docker, `/opt/supabase/docker`). Vercel-проект и его облачная Supabase
+**отключены 2026-07-03** (бэкап облачной БД — `../cloud-supabase-backup-2026-07-03.json`);
+ссылок на vercel.app в коде больше нет. Деплой: `bash deploy.sh` **строго с
+локальной машины** (скрипт сам ходит по SSH; запущенный на сервере, падает с
+обманчивой ошибкой). Не деплоить без явной просьбы.
 
 ## Definition of Done
 

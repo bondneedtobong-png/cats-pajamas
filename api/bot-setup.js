@@ -10,7 +10,7 @@
 
 const TOKEN   = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
 const SECRET  = process.env.TELEGRAM_WEBHOOK_SECRET;
-const SITE    = process.env.PUBLIC_SITE_URL || 'https://cats-pajamas-club.vercel.app';
+const SITE    = process.env.PUBLIC_SITE_URL || 'https://cats-pajamas.ru';
 
 async function tg(method, body) {
   const r = await fetch(`https://api.telegram.org/bot${TOKEN}/${method}`, {

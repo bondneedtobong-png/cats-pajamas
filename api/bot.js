@@ -27,7 +27,7 @@ const TOKEN   = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
 const CHANNEL = process.env.TELEGRAM_CHANNEL;           // @catspajajam
 const SECRET  = process.env.TELEGRAM_WEBHOOK_SECRET;
 const CHANNEL_URL = CHANNEL ? `https://t.me/${CHANNEL.replace(/^@/, '')}` : '';
-const SITE_URL = process.env.PUBLIC_SITE_URL || 'https://cats-pajamas-club.vercel.app';
+const SITE_URL = process.env.PUBLIC_SITE_URL || 'https://cats-pajamas.ru';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 // Дата вечера (бар работает за полночь, зона Самары — см. barTime.js), не
