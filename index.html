@@ -2,7 +2,10 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- viewport-fit=cover: без него env(safe-area-inset-*) в CSS всегда 0
+       на iPhone с чёлкой/полоской — а на них и держатся отступы шапки,
+       контролов книги и нижнего края страниц. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>The Cat's Pajamas Club — джаз-бар в Самаре</title>
   <meta name="description" content="Джаз-бар в Самаре. Авторские коктейли, живая музыка, незабываемая атмосфера. Ул. Куйбышева, 100.">
   <link rel="canonical" href="https://cats-pajamas.ru/">

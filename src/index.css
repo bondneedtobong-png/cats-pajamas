@@ -122,7 +122,22 @@ html { scroll-behavior: smooth; }
      promotes the layer lazily when a transform/opacity change starts. */
 }
 @media (max-width: 900px) {
-  .book__page { padding-bottom: 74px; }
+  .book__page {
+    /* Телефонный вьюпорт ~660px и «дышит» (адресная строка появляется и
+       прячется), поэтому десктопное «каждая страница без скролла» здесь
+       невыполнимо: overflow:hidden молча резал контент сверху и снизу
+       (подтверждено вживую). На мобиле страница скроллится внутри себя;
+       перелистывание книги от этого не страдает — transform страницы
+       с внутренним скроллом не конфликтует. */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain; /* скролл внутри страницы не дёргает pull-to-refresh */
+    /* Просвет под фикс-шапку (top-bar ~56px + чёлка) и под .book-controls +
+       home-индикатор снизу. env() работает только при viewport-fit=cover
+       в meta (index.html). */
+    padding-top: calc(64px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  }
 }
 .book__page--active {
   transform: none;
@@ -202,7 +217,8 @@ html { scroll-behavior: smooth; }
   text-align: center;
 }
 @media (max-width: 900px) {
-  .book-controls { bottom: 14px; gap: 12px; }
+  /* + safe-area: на iPhone home-индикатор перекрывал пилюлю с 01/08 */
+  .book-controls { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); gap: 12px; }
   .book-controls__arrow { width: 30px; height: 30px; font-size: 16px; }
 }
 
@@ -1773,6 +1789,9 @@ html { scroll-behavior: smooth; }
     align-items: center;
     justify-content: space-between;
     padding: 14px 5%;
+    /* Шапка сама закрывает зону чёлки своим фоном — контент под неё
+       не подлезает (см. padding-top у .book__page). */
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
     border-bottom: 1px solid var(--border);
     box-shadow: none;
     clip-path: none;
@@ -1818,7 +1837,7 @@ html { scroll-behavior: smooth; }
     justify-content: flex-start;
     gap: 22px;
     position: fixed;
-    top: 56px;
+    top: calc(56px + env(safe-area-inset-top, 0px));
     left: 0; right: 0; bottom: 0;
     background: var(--bg);
     z-index: 99;
