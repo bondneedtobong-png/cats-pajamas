@@ -37,23 +37,26 @@ export default function Team({ tx }) {
         {!loading && !current && <p className="team__note">{tx.teamEmpty}</p>}
 
         {!loading && current && (
-          <div className="team-carousel">
-            <div className="team-carousel__avatar" key={current.id}>
-              <img src={current.photoUrl} alt={current.name} loading="lazy" />
-            </div>
-            <div className="team__name">{current.name}</div>
-            {current.role && <div className="team__role">{current.role}</div>}
-            {current.spec && <div className="team__spec">{current.spec}</div>}
-            {current.quote && (
-              <>
-                <div className="team__divider" />
-                <div className="team__quote">{current.quote}</div>
-              </>
+          <div className="team-carousel-row">
+            {members.length > 1 && (
+              <button className="team-carousel__arrow--side" onClick={() => go(-1)} aria-label="Предыдущий">‹</button>
             )}
 
-            {members.length > 1 && (
-              <div className="team-carousel__nav">
-                <button className="team-carousel__arrow" onClick={() => go(-1)} aria-label="Предыдущий">‹</button>
+            <div className="team-carousel">
+              <div className="team-carousel__avatar" key={current.id}>
+                <img src={current.photoUrl} alt={current.name} loading="lazy" />
+              </div>
+              <div className="team__name">{current.name}</div>
+              {current.role && <div className="team__role">{current.role}</div>}
+              {current.spec && <div className="team__spec">{current.spec}</div>}
+              {current.quote && (
+                <>
+                  <div className="team__divider" />
+                  <div className="team__quote">{current.quote}</div>
+                </>
+              )}
+
+              {members.length > 1 && (
                 <div className="team-carousel__dots">
                   {members.map((m, i) => (
                     <button
@@ -64,8 +67,11 @@ export default function Team({ tx }) {
                     />
                   ))}
                 </div>
-                <button className="team-carousel__arrow" onClick={() => go(1)} aria-label="Следующий">›</button>
-              </div>
+              )}
+            </div>
+
+            {members.length > 1 && (
+              <button className="team-carousel__arrow--side" onClick={() => go(1)} aria-label="Следующий">›</button>
             )}
           </div>
         )}

@@ -32,13 +32,12 @@ function isValidPhone(value) {
 }
 
 // ─────────────────────────── Sidebar ───────────────────────────
+// Guest-facing — no occupancy stats/dashboard numbers here, those are for
+// staff. Just "what's happening at the tables right now", so a guest can
+// see the room isn't fully booked without having to click around.
 function Sidebar({ tables, selectedTime, selectedTableId, onSelectTable }) {
   const seated   = tables.filter(t => t.status === 'occupied'  && t.reservation);
   const upcoming = tables.filter(t => t.status === 'reserved'  && t.reservation);
-  const vacant   = tables.filter(t => t.status === 'vacant').length;
-  const occupied = tables.filter(t => t.status === 'occupied').length;
-  const reserved = tables.filter(t => t.status === 'reserved').length;
-  const vacantSeats = tables.filter(t => t.status === 'vacant').reduce((s, t) => s + t.activeSeatsCount, 0);
   const noReservations = seated.length === 0 && upcoming.length === 0;
 
   function ResItem({ tbl, accent }) {
@@ -72,31 +71,6 @@ function Sidebar({ tables, selectedTime, selectedTableId, onSelectTable }) {
 
   return (
     <aside className="bk-sidebar">
-      {/* Legend + stats */}
-      <div className="bk-legend">
-        <div className="bk-legend__row">
-          {[['#22c55e','СВОБОДЕН'],['#D4A843','СКОРО'],['#9B5DE5','ЗАНЯТ']].map(([c, l]) => (
-            <div key={l} className="bk-legend__item">
-              <div className="bk-legend__dot" style={{ background: c }} />
-              <span className="bk-legend__lbl">{l}</span>
-            </div>
-          ))}
-        </div>
-        <div className="bk-stats">
-          {[
-            [vacant,      '#22c55e', 'СВОБ'],
-            [occupied,    '#9B5DE5', 'ЗАНЯТ'],
-            [reserved,    '#D4A843', 'СКОРО'],
-            [vacantSeats, '#F2EDE4', 'МЕСТ'],
-          ].map(([n, c, l]) => (
-            <div key={l} className="bk-stats__cell">
-              <div className="bk-stats__num" style={{ color: c }}>{n}</div>
-              <div className="bk-stats__lbl">{l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Reservation list */}
       <div className="bk-res-list">
         {seated.length > 0 && (
@@ -131,6 +105,22 @@ function Sidebar({ tables, selectedTime, selectedTableId, onSelectTable }) {
 }
 
 // ─── Auth gate shown inside the panel when user isn't logged in ───
+// ── Status legend — a compact hint beside the floor plan, not a boxed
+// dashboard panel (moved out of the sidebar, which used to pair it with
+// the staff-only occupancy stats). ──
+function Legend() {
+  return (
+    <div className="bk-legend-hint">
+      {[['#22c55e','Свободен'],['#D4A843','Скоро'],['#9B5DE5','Занят']].map(([c, l]) => (
+        <span key={l} className="bk-legend-hint__item">
+          <span className="bk-legend-hint__dot" style={{ background: c }} />
+          {l}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // Opens the login as an overlay on top of the floor plan instead of
 // navigating to /auth — the guest never loses their selected table.
 function AuthGate({ tableId, onRequestAuth }) {
@@ -512,20 +502,13 @@ export default function FloorPlanPage() {
           <button className="bk-party__btn" onClick={() => setParty(n => Math.min(12, n + 1))}>+</button>
         </div>
 
-        <button className="bk-new-btn" onClick={openFirstVacant}>+ Новая бронь</button>
+        <button className="bk-new-btn" onClick={openFirstVacant}>Забронировать столик</button>
 
-        {/* User indicator */}
-        {currentUser?.role === 'admin' && (
-          <Link to="/admin" className="bk-admin-btn">ADMIN</Link>
-        )}
-        {currentUser ? (
-          <Link to="/profile" className="bk-user-btn">
-            <svg viewBox="0 0 20 20" width="13" height="13" fill="currentColor">
-              <path d="M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 8a7 7 0 0 1 14 0H3z"/>
-            </svg>
-            {currentUser.name || (currentUser.phone ? '+' + currentUser.phone.slice(-4) : 'Профиль')}
-          </Link>
-        ) : (
+        {/* Guest-facing header — no staff/account indicator here at all
+            (previously showed the logged-in account name + an ADMIN badge,
+            which read as an internal tool rather than a guest widget).
+            Only a login prompt for guests who aren't signed in yet. */}
+        {!currentUser && (
           <button type="button" className="bk-login-btn" onClick={() => setAuthOpen(true)}>Войти</button>
         )}
       </header>
@@ -546,6 +529,8 @@ export default function FloorPlanPage() {
             onSelect={id => setSelId(id)}
             onDeselect={() => setSelId(null)}
           />
+
+          <Legend />
 
           {!selId && (
             <div className="bk-hint">

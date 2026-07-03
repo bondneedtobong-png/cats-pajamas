@@ -736,41 +736,16 @@ html { scroll-behavior: smooth; }
 }
 .about__text {
   font-family: 'Avenir Next', sans-serif;
-  font-size: clamp(12px, 1.7vh, 15px);
+  font-size: clamp(14px, 2vh, 18px);
   line-height: 1.55;
   color: var(--text-mid);
   text-align: center;
   max-width: 640px;
-  margin: 0 auto clamp(18px, 3.4vh, 56px);
+  margin: 0 auto;
   font-weight: 300;
 }
 .about__para { margin: 0 0 0.7em; }
 .about__para:last-child { margin-bottom: 0; }
-.about__stats {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: clamp(14px, 2.6vh, 44px) 0;
-}
-.about__stat { flex: 1; text-align: center; padding: 0 40px; }
-.about__stat-num {
-  font-family: 'Baskerville', serif;
-  font-size: clamp(28px, 4.6vh, 52px);
-  font-weight: 900;
-  color: var(--accent);
-  line-height: 1;
-  margin-bottom: 10px;
-}
-.about__stat-label {
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 10px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-.about__divider { width: 1px; height: clamp(36px, 6vh, 72px); background: var(--border); }
 
 /* ── MENU ──────────────────────────────────────────────── */
 .menu {
@@ -1271,7 +1246,7 @@ html { scroll-behavior: smooth; }
 
 /* ── TEAM ──────────────────────────────────────────────── */
 .team {
-  padding: clamp(64px, 11vh, 110px) 6% clamp(28px, 5vh, 60px);
+  padding: clamp(32px, 8vh, 90px) 6% clamp(16px, 4vh, 48px);
   position: relative;
   overflow: hidden;
   height: 100%;
@@ -1285,7 +1260,7 @@ html { scroll-behavior: smooth; }
   font-style: italic;
   color: var(--text-dim);
   text-align: center;
-  margin: 0 0 clamp(16px, 3.4vh, 64px);
+  margin: 0 0 clamp(6px, 2vh, 40px);
   font-weight: 300;
 }
 .team__title {
@@ -1306,20 +1281,29 @@ html { scroll-behavior: smooth; }
   margin: 0 0 32px;
 }
 
-/* ── Team carousel (one member in view + arrows) ─────────── */
+/* ── Team carousel (one member in view + side arrows) ─────────── */
+/* Arrows sit outside the card (left/right, vertically centered on it) so
+   the card itself — photo, name, quote — stays the sole focal point;
+   the dots below are a plain slide indicator, no controls next to them. */
+.team-carousel-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2.4vw, 32px);
+  margin: 0 auto;
+}
 .team-carousel {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 520px;
-  margin: 0 auto clamp(16px, 3vh, 56px);
+  max-width: 560px;
 }
 .team-carousel__avatar {
-  width: clamp(96px, 14vh, 220px); height: clamp(96px, 14vh, 220px);
+  width: clamp(150px, 22vh, 340px); height: clamp(150px, 22vh, 340px);
   border-radius: 50%;
   border: 2px solid var(--border);
-  margin-bottom: clamp(12px, 2.4vh, 32px);
+  margin-bottom: clamp(10px, 3.2vh, 40px);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -1339,22 +1323,26 @@ html { scroll-behavior: smooth; }
   animation: teamFadeIn .5s ease;
 }
 @keyframes teamFadeIn { from { opacity: 0; } to { opacity: 1; } }
-.team-carousel__nav { display: flex; align-items: center; gap: 18px; margin-top: clamp(12px, 2.4vh, 36px); }
-.team-carousel__arrow {
-  width: 38px; height: 38px;
+.team-carousel__arrow--side {
+  width: 44px; height: 44px;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
-  font-size: 19px;
+  font-size: 21px;
   line-height: 1;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
-  transition: border-color .2s, color .2s;
+  transition: border-color .2s, color .2s, transform .2s;
   flex-shrink: 0;
 }
-.team-carousel__arrow:hover { border-color: var(--gold); color: var(--gold); }
-.team-carousel__dots { display: flex; gap: 8px; }
+.team-carousel__arrow--side:hover { border-color: var(--gold); color: var(--gold); transform: scale(1.08); }
+.team-carousel__dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: clamp(8px, 2.6vh, 36px);
+}
 .team-carousel__dot {
   width: 7px; height: 7px;
   border-radius: 50%;
@@ -1371,7 +1359,7 @@ html { scroll-behavior: smooth; }
   font-size: clamp(20px, 3vh, 27px);
   font-weight: 700;
   color: var(--text);
-  margin: 0 0 8px;
+  margin: 0 0 clamp(4px, 1.3vh, 14px);
 }
 .team__role {
   font-family: 'Avenir Next', sans-serif;
@@ -1379,44 +1367,44 @@ html { scroll-behavior: smooth; }
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: 8px;
+  margin-bottom: clamp(4px, 1.3vh, 14px);
 }
 .team__spec {
   font-family: 'Avenir Next', sans-serif;
   font-size: 13px;
   color: var(--text-dim);
-  margin-bottom: clamp(10px, 2vh, 28px);
+  margin-bottom: clamp(6px, 2.4vh, 32px);
   font-weight: 300;
 }
 .team__divider {
   width: 40px;
   height: 1px;
   background: var(--border);
-  margin: 0 auto clamp(10px, 1.8vh, 24px);
+  margin: 0 auto clamp(6px, 2.2vh, 28px);
 }
 .team__quote {
   /* font-family: Jar Binks — set once in the typography-roles section below */
-  font-size: clamp(18px, 2.6vh, 28px);
+  font-size: clamp(25px, 3.6vh, 39px);
   color: var(--text-mid);
   line-height: 1.4;
   font-weight: 300;
-  max-width: 460px;
+  max-width: 540px;
 }
 
 /* ── Join the team CTA + form ─────────────────────────────── */
 .team__join {
   text-align: center;
-  padding-top: clamp(14px, 2.6vh, 40px);
+  padding-top: clamp(6px, 1.8vh, 28px);
   border-top: 1px solid var(--border);
   max-width: 480px;
-  margin: 0 auto;
+  margin: clamp(8px, 2.8vh, 40px) auto 0;
 }
 .team__join-text {
   font-family: 'Avenir Next', sans-serif;
   font-size: 13px;
   color: var(--text-dim);
   font-weight: 300;
-  margin: 0 0 clamp(8px, 1.6vh, 18px);
+  margin: 0 0 clamp(4px, 1.2vh, 14px);
 }
 .team__join-btn {
   background: transparent;
@@ -1875,12 +1863,6 @@ html { scroll-behavior: smooth; }
      already scale correctly at any width, a fixed-px override here would
      just fight them and risk breaking the "must fit, no scroll" rule. */
 
-  /* About */
-  .about__stats { padding: 28px 0; gap: 0; }
-  .about__stat  { flex: 1; padding: 0 8px; }
-  .about__stat-num { font-size: 32px; }
-  .about__divider  { display: none; }
-
   /* Menu carousel */
   .menu-carousel { grid-template-columns: 1fr; min-height: 0; }
   .menu-carousel__image { min-height: 260px; }
@@ -1907,11 +1889,15 @@ html { scroll-behavior: smooth; }
   .atmosphere__review-card { padding: 32px 24px; }
   .atmosphere__review-text { font-size: 16px; }
 
-  /* Team */
-  .team-carousel__avatar { width: 160px; height: 160px; }
+  /* Team — avatar/quote sizing is left to the base clamp() (floors at
+     150px/25px, already well above the pre-redesign 96px/18px baseline)
+     instead of a fixed override, so it keeps shrinking gracefully on
+     short portrait phones rather than blowing the 100vh no-scroll budget. */
   .team__title { font-size: 36px; margin-bottom: 10px; }
   .team__sub   { font-size: 16px; margin-bottom: 40px; }
-  .team__quote { font-size: 22px; max-width: none; }
+  .team__quote { max-width: none; }
+  .team-carousel-row { gap: 6px; }
+  .team-carousel__arrow--side { width: 36px; height: 36px; font-size: 18px; }
   .team-modal  { padding: 32px 24px; }
 
   /* Booking */
@@ -1930,6 +1916,60 @@ html { scroll-behavior: smooth; }
   .footer__inner { flex-direction: column; align-items: center; text-align: center; gap: 6px; }
   .footer__links { gap: 14px; }
   .footer__link, .footer__copy { font-size: 9px; }
+}
+
+/* Short-viewport-height safety net for the Team card — catches both a
+   short-and-wide desktop window and a landscape phone (where the
+   max-width:900px block above doesn't apply). The bigger avatar/quote
+   already floor out gracefully via clamp(), but the fixed gaps around
+   them still need trimming here to keep the whole page inside 100vh
+   with zero scroll. Placed after the width block so it wins the cascade
+   for the couple of properties (.team__sub) both touch. */
+@media (max-height: 1000px) {
+  .team { padding-top: 16px; padding-bottom: 10px; }
+  .team .mb-10 { margin-bottom: 6px; }
+  .team__title { margin-bottom: 6px; }
+  .team-carousel__avatar { margin-bottom: 4px; }
+  .team__name, .team__role { margin-bottom: 4px; }
+  .team__spec { margin-bottom: 4px; }
+  .team__divider { margin-bottom: 4px; }
+  .team-carousel__dots { margin-top: 4px; }
+  .team__join { margin-top: 4px; padding-top: 4px; }
+  .team__join-text { margin-bottom: 4px; }
+  .team__sub { margin-bottom: 10px; }
+}
+/* Extreme case — landscape phone (e.g. 844×390). The avatar's 1.5-2x
+   growth target has to give way here: at this aspect ratio there simply
+   isn't room for a 150px circle plus name/role/quote/CTA without
+   scrolling, and "never scrolls" is the harder rule. Still bigger than
+   the pre-redesign 96px baseline. */
+@media (max-height: 460px) {
+  .team { padding-top: 8px; padding-bottom: 4px; }
+  .team__sub { display: none; }
+  .team__title { margin-bottom: 4px; font-size: 30px; }
+  .team-carousel__avatar { width: 88px; height: 88px; margin-bottom: 4px; }
+  .team__role, .team__divider { margin-bottom: 2px; }
+  .team__quote { font-size: 17px; }
+  .team-carousel__dots { margin-top: 2px; }
+  .team__join { margin-top: 2px; padding-top: 2px; }
+  .team__join-btn { padding: 7px 20px; }
+}
+
+/* About — the bigger body-text (+15-20% per the redesign brief) wraps to
+   more lines on narrow screens, so short viewports need the same kind of
+   margin trim as the Team card above to stay inside 100vh. */
+@media (max-height: 1000px) {
+  .about { padding-top: 40px; padding-bottom: 24px; }
+  .about .mb-18 { margin-bottom: 10px; }
+  .about .mb-50 { margin-bottom: 22px; }
+  .about__quote { margin-bottom: 12px; }
+}
+@media (max-height: 460px) {
+  .about { padding-top: 12px; padding-bottom: 8px; }
+  .about .mb-18 { margin-bottom: 4px; }
+  .about .mb-50 { margin-bottom: 8px; }
+  .about__quote { font-size: 15px; margin-bottom: 6px; }
+  .about__text { font-size: 11px; line-height: 1.4; }
 }
 
 /* ── Brand typography roles (по гайду The Cat's Pajamas Club) ───────────── */

@@ -33,7 +33,6 @@ export const translations = {
       'Наша карта — больше полусотни авторских и классических коктейлей: от выверенной классики до сезонных миксов, которые бармены придумывают сами. Здесь напиток — это точка зрения, а не просто рецепт, а джаз на сцене превращает обычный вечер в историю.',
       'Мы открыты каждый день до глубокой ночи: с воскресенья по четверг — до 02:00, в пятницу и субботу — до 04:00. Приходите послушать живой джаз, попробовать коктейль с характером и остаться до последнего аккорда.',
     ],
-    statsYears: 'Лет', statsBartenders: 'Барменов', statsCocktails: 'Коктейлей',
 
     menuLabel: 'Глава II · Карта напитков', menuTitle: 'Коктейльная карта',
     menuClassics: 'Классика', menuSignature: 'Авторский',
@@ -103,7 +102,6 @@ export const translations = {
       'Our menu holds over fifty signature and classic cocktails — from precise classics to seasonal mixes our bartenders invent themselves. Here a drink is a point of view, not just a recipe, and the jazz on stage turns an ordinary evening into a story.',
       'We\'re open every night until late: Sunday through Thursday until 2 AM, Friday and Saturday until 4 AM. Come for live jazz, a cocktail with character, and stay until the last chord.',
     ],
-    statsYears: 'Years', statsBartenders: 'Bartenders', statsCocktails: 'Cocktails',
 
     // NB: cocktail content itself is RU-only (owner's decision) — these are
     // just the surrounding UI labels for the EN toggle.

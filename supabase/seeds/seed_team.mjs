@@ -13,13 +13,13 @@ const { createTeamMember, getTeamMembers } = await import('../../api/_lib/team.j
 // Recovered from the old static teamData (data.js) — 6 real bartenders w/ photos+quotes.
 const seed = [
   { name: 'Шамусар',  role: 'Старший бартендер', spec: 'Более 20 лет за стойкой',
-    quote: '«Коктейль — это точная наука с душой импровизации»', photoUrl: '/uploads/team/shamusar.jpg' },
+    quote: '«Коктейль представляет собой точную науку с душой импровизации»', photoUrl: '/uploads/team/shamusar.jpg' },
   { name: 'Алексей',  role: 'Винный эксперт', spec: 'Вино, аперитивы и дижестивы',
-    quote: '«Каждый напиток — это история урожая и земли»', photoUrl: '/uploads/team/aleksey.jpg' },
+    quote: '«Каждый напиток хранит историю урожая и земли»', photoUrl: '/uploads/team/aleksey.jpg' },
   { name: 'Владислав', role: 'Бармен', spec: 'Классика и авторские рецептуры',
-    quote: '«Стиль не в галстуке — в том, что ты наливаешь»', photoUrl: '/uploads/team/vladislav.jpg' },
+    quote: '«Стиль не в галстуке, а в том, что ты наливаешь»', photoUrl: '/uploads/team/vladislav.jpg' },
   { name: 'Денис', role: 'Бармен', spec: 'Тропические и фруктовые коктейли',
-    quote: '«Хороший коктейль — это момент, который хочется повторить»', photoUrl: '/uploads/team/denis.jpg' },
+    quote: '«Хороший коктейль дарит момент, который хочется повторить»', photoUrl: '/uploads/team/denis.jpg' },
   { name: 'Дмитрий', role: 'Бармен', spec: 'Авторские рецептуры',
     quote: '«Ночь становится историей после первого глотка»', photoUrl: '/uploads/team/dmitriy.jpg' },
   { name: 'Егор', role: 'Бармен', spec: 'Джин и виски-коктейли',

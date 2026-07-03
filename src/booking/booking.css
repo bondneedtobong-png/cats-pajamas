@@ -14,8 +14,8 @@
 
 /* ─── Header ─── */
 .bk-header {
-  height: 52px;
-  min-height: 52px;
+  height: 64px;
+  min-height: 64px;
   flex-shrink: 0;
   background: #0E0B1E;
   border-bottom: 1px solid rgba(212,168,67,0.1);
@@ -191,21 +191,27 @@
 .bk-timeslots::-webkit-scrollbar { height: 2px; }
 .bk-timeslots::-webkit-scrollbar-thumb { background: rgba(155,93,229,0.35); }
 .bk-ts {
+  /* Bigger + more visible on purpose — this is the guest's first and main
+     choice on the page, it shouldn't read as a minor filter control. */
   flex-shrink: 0;
-  padding: 4px 9px;
-  border: 1px solid rgba(212,168,67,0.12);
+  padding: 9px 15px;
+  border: 1px solid rgba(212,168,67,0.18);
   background: transparent;
-  color: rgba(242,237,228,0.38);
-  font-size: 11px;
+  color: rgba(242,237,228,0.55);
+  font-size: 13px;
+  font-weight: 500;
   font-family: 'Avenir Next', sans-serif;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s;
 }
+.bk-ts:hover { border-color: rgba(155,93,229,0.5); color: #F2EDE4; }
 .bk-ts--active {
   border-color: #9B5DE5;
-  background: rgba(155,93,229,0.18);
-  color: #9B5DE5;
+  background: rgba(155,93,229,0.22);
+  color: #F2EDE4;
+  font-weight: 700;
+  transform: translateY(-1px);
 }
 
 /* Party size */
@@ -426,6 +432,44 @@
   overflow: hidden;
   min-width: 0;
   background: #090718;
+}
+
+/* Status legend — a quiet corner hint now, not a bordered dashboard panel
+   in the sidebar (see Legend() in FloorPlanPage.jsx). */
+.bk-legend-hint {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  display: flex;
+  gap: 14px;
+  padding: 7px 12px;
+  background: rgba(9,7,23,0.55);
+  backdrop-filter: blur(4px);
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: 5;
+}
+.bk-legend-hint__item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  color: rgba(242,237,228,0.55);
+  white-space: nowrap;
+}
+.bk-legend-hint__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+@media (max-width: 680px) {
+  /* Stays at the top on mobile too (not bottom) — .bk-hint ("Нажмите на
+     стол...") is centered along the bottom edge and the two would
+     otherwise overlap at narrow widths. */
+  .bk-legend-hint { gap: 8px; padding: 6px 9px; }
+  .bk-legend-hint__item { font-size: 9px; }
 }
 
 .bk-hint {
@@ -905,15 +949,16 @@ select option { background: #110E22; color: #F2EDE4; }
 }
 
 /* ─── Mobile / tablet (<768px) ─── */
-@media (max-width: 768px) {
-  .bk-root { height: 100dvh; }
-
-  /* Header wraps; time slots drop to their own full-width row */
+/* Header wraps to its own row for the time slots before the body itself
+   needs to go full-mobile — the bigger .bk-ts buttons (see above) need
+   more room than before, so this now kicks in well above the 768px
+   breakpoint where the floor plan + sidebar still sit side by side. */
+@media (max-width: 1100px) {
   .bk-header {
     height: auto;
-    min-height: 52px;
+    min-height: 64px;
     flex-wrap: wrap;
-    padding: 8px 12px;
+    padding: 10px 16px;
     row-gap: 8px;
   }
   .bk-header__title,
@@ -923,9 +968,15 @@ select option { background: #110E22; color: #F2EDE4; }
     flex: 0 0 100%;
     width: 100%;
   }
+}
+
+@media (max-width: 768px) {
+  .bk-root { height: 100dvh; }
+
+  .bk-header { min-height: 52px; padding: 8px 12px; }
   .bk-datepicker__trigger { min-width: 84px; }
   .bk-datepicker__pop { left: auto; right: 0; }
-  .bk-new-btn { padding: 7px 11px; }
+  .bk-new-btn { padding: 9px 14px; font-size: 8px; }
 
   /* Body stacks: floor plan on top, sidebar as a bottom sheet */
   .bk-body { flex-direction: column; }

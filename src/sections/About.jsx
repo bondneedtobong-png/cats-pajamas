@@ -21,7 +21,6 @@ export default function About({ tx }) {
   const r1 = useReveal(100);
   const r2 = useReveal(200);
   const r3 = useReveal(300);
-  const r4 = useReveal(0);
 
   return (
     <section id="about" className="about">
@@ -38,24 +37,6 @@ export default function About({ tx }) {
           {(Array.isArray(tx.aboutText) ? tx.aboutText : [tx.aboutText]).map((p, i) => (
             <p key={i} className="about__para">{p}</p>
           ))}
-        </div>
-
-        <div ref={r4} className="reveal about__stats">
-          <div className="about__stat">
-            <div className="about__stat-num">5+</div>
-            <div className="about__stat-label">{tx.statsYears}</div>
-          </div>
-          <div className="about__divider" />
-          <div className="about__stat">
-            <div className="about__stat-num">12</div>
-            <div className="about__stat-label">{tx.statsBartenders}</div>
-          </div>
-          <div className="about__divider" />
-          <div className="about__stat">
-            {/* TODO: реальные цифры от клиента */}
-            <div className="about__stat-num">50+</div>
-            <div className="about__stat-label">{tx.statsCocktails}</div>
-          </div>
         </div>
       </div>
     </section>

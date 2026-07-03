@@ -79,15 +79,19 @@ function TableShape({ tbl, selectedTableId, onSelect }) {
   // Pulsing ring draws attention to tables that are about to be occupied.
   const pulseCls = status === 'reserved' ? 'fp-pulse-ring' : undefined;
 
-  // Bar stools are small — render a compact stool with just the id, no big labels.
+  // Bar seats — drawn as small round stools (same circle language as the
+  // round tables, just smaller) instead of a row of rounded rectangles,
+  // and labelled the same way as every other table (id + status/guest)
+  // so they read as seating, not as a strip of staff toggle buttons.
   if (tbl.type === 'bar') {
-    const bx = tbl.bx, by = tbl.by;
-    const m = 200;
+    const bcx = tbl.bx + BAR_STOOL_W / 2, bcy = tbl.by + BAR_STOOL_H / 2;
+    const br  = Math.min(BAR_STOOL_W, BAR_STOOL_H) / 2;
     return (
       <g key={tbl.id} className="fp-table" style={{ cursor: 'pointer' }} onClick={handleClick}>
-        <rect className={pulseCls} x={bx - m} y={by - m} width={BAR_STOOL_W + 2 * m} height={BAR_STOOL_H + 2 * m} rx={320} fill="none" stroke={SC[status]} strokeWidth={14} opacity={0.18} style={noPtr} />
-        <rect x={bx} y={by} width={BAR_STOOL_W} height={BAR_STOOL_H} rx={215} fill={fill} stroke={stroke} strokeWidth={isSel ? 46 : 26} />
-        <text x={bx + BAR_STOOL_W / 2} y={by + BAR_STOOL_H / 2 + 95} textAnchor="middle" fill="rgba(242,237,228,0.85)" fontSize={260} fontFamily="Avenir Next,sans-serif" fontWeight={700} style={noSel}>{tbl.id}</text>
+        <circle className={pulseCls} cx={bcx} cy={bcy} r={br + 180} fill="none" stroke={SC[status]} strokeWidth={14} opacity={0.18} style={noPtr} />
+        <circle cx={bcx} cy={bcy} r={br} fill={fill} stroke={stroke} strokeWidth={isSel ? 46 : 26} />
+        <text x={bcx} y={bcy - 110} textAnchor="middle" fill="rgba(242,237,228,0.9)" fontSize={280} fontFamily="Avenir Next,sans-serif" fontWeight={700} style={noSel}>{tbl.id}</text>
+        <text x={bcx} y={bcy + 170} textAnchor="middle" fill={SC[status]} fontSize={200} fontFamily="Avenir Next,sans-serif" style={noSel}>{nameStr}</text>
       </g>
     );
   }
