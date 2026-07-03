@@ -18,7 +18,10 @@ const SRC_LABEL = { web: 'сайт', telegram_bot: 'Telegram', phone_manual: 'з
 // seated → completed (баллы) / no_show; cancelled — отмена/отклонение.
 // Логика общая для сайта, бота и админки — не дублировать в каналах.
 
-const TABLE_CONFIG_KEY = 'table_config';
+// v2: ключ поднят вместе с новым планом зала — старые оверрайды позиций из
+// админ-редактора (app_config['table_config']) сняты под координаты старого
+// плана и к плану v2 неприменимы. Депозиты и так везде 0.
+const TABLE_CONFIG_KEY = 'table_config_v2';
 
 export const ACTIVE_STATUSES = ['pending', 'confirmed', 'seated'];
 const FINAL_STATUSES = ['cancelled', 'completed', 'no_show'];

@@ -394,11 +394,89 @@
 .bk-res-empty__icon { color: rgba(242,237,228,0.1); font-size: 32px; margin-bottom: 8px; }
 .bk-res-empty__text { font-size: 11px; color: rgba(242,237,228,0.22); font-style: italic; }
 
-/* ─── Floor plan SVG interactions ─── */
-.fp-table { transition: filter 0.18s ease; }
-.fp-table:hover { filter: brightness(1.28); }
+/* ─── Floor plan v2 (FloorPlanSvg.jsx) ───
+   Статусные токены столов: внутри темы ([data-theme]) reserved/occupied тянут
+   --gold/--accent и следуют за ней; на standalone /booking (.bk-root, темы нет)
+   работает fallback с теми же значениями. --st-vacant — единственный «зелёный»
+   проекта, определён только здесь. */
+[data-theme],
+.bk-root {
+  --st-vacant:   #3ECF8E;
+  --st-reserved: var(--gold, #D4A843);
+  --st-occupied: var(--accent, #9B5DE5);
+  --fp-ink:      var(--text, #F2EDE4);
+}
+
+/* Hover — только opacity (правило web-polish: без transition на filter) */
+.fp-table { cursor: pointer; opacity: 0.92; transition: opacity 0.18s ease; }
+.fp-table:hover { opacity: 1; }
+
+.fp-t--vacant   { --tbl: var(--st-vacant); }
+.fp-t--reserved { --tbl: var(--st-reserved); }
+.fp-t--occupied { --tbl: var(--st-occupied); }
+
+.fp-t-shape {
+  fill: color-mix(in srgb, var(--tbl) 10%, transparent);
+  stroke: var(--tbl);
+  stroke-width: 60;
+}
+.fp-t--sel { opacity: 1; }
+.fp-t--sel .fp-t-shape {
+  stroke: var(--fp-ink);
+  fill: color-mix(in srgb, var(--tbl) 22%, transparent);
+}
+.fp-t-num {
+  fill: color-mix(in srgb, var(--fp-ink) 40%, transparent);
+  font-family: 'Avenir Next', sans-serif;
+}
+.fp-t-status {
+  fill: var(--tbl);
+  font-family: 'Avenir Next', sans-serif;
+  font-weight: 600;
+}
+.fp-chair rect {
+  fill: color-mix(in srgb, var(--st-reserved) 6%, transparent);
+  stroke: color-mix(in srgb, var(--st-reserved) 24%, transparent);
+  stroke-width: 34;
+}
+
+/* Декор: дуга-стена, приставные банкетки и пуфы лаунжа */
+.fp-decor path,
+.fp-decor rect,
+.fp-decor ellipse {
+  fill: none;
+  stroke: color-mix(in srgb, var(--fp-ink) 16%, transparent);
+  stroke-width: 44;
+}
+
+/* Барная стойка — glow-акцент «не бронируется, просто приходите».
+   Анимируется ТОЛЬКО opacity готового glow-слоя (web-polish). */
+.fp-bar-body {
+  fill: color-mix(in srgb, var(--st-reserved) 5%, transparent);
+  stroke: color-mix(in srgb, var(--st-reserved) 55%, transparent);
+  stroke-width: 46;
+}
+.fp-bar-glow__outer { fill: none; stroke: var(--st-reserved); stroke-width: 340; opacity: 0.06; }
+.fp-bar-glow__inner { fill: none; stroke: var(--st-reserved); stroke-width: 140; opacity: 0.14; }
+.fp-bar-glow { animation: fp-bar-glow 5s ease-in-out infinite; }
+@keyframes fp-bar-glow {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+.fp-bar-title {
+  fill: color-mix(in srgb, var(--st-reserved) 60%, transparent);
+  font-family: 'Baskerville', serif;
+}
+.fp-bar-note {
+  fill: color-mix(in srgb, var(--st-reserved) 85%, transparent);
+  font-family: 'Involve', 'Avenir Next', sans-serif;
+  font-style: italic;
+}
 
 .fp-pulse-ring {
+  fill: none;
+  stroke: var(--tbl);
+  stroke-width: 24;
   transform-box: fill-box;
   transform-origin: center;
   animation: fp-pulse 2.2s ease-in-out infinite;
@@ -407,8 +485,28 @@
   0%, 100% { opacity: 0.12; transform: scale(0.97); }
   50%      { opacity: 0.40; transform: scale(1.03); }
 }
+
+/* Infinite-анимации плана обязаны стоять на паузе на неактивных страницах
+   книги (правило CLAUDE.md); вне книги (/booking, Mini App) книги нет —
+   селектор не матчится, анимации живут. */
+.book__page:not(.book__page--active) .fp-pulse-ring,
+.book__page:not(.book__page--active) .fp-bar-glow {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fp-pulse-ring { animation: none; }
+  .fp-bar-glow { animation: none; opacity: 0.7; }
+}
+
+/* На телефоне план ужимается до ~375px — подписи в world-units становятся
+   ~6px и нечитаемы. Поднимаем кегль (CSS с px в SVG = world units и
+   перебивает fontSize-атрибут). Лёгкий выход текста за узкий диван (~5px
+   экрана) — осознанный компромисс в пользу читаемости. */
+@media (max-width: 600px) {
+  .fp-t-status { font-size: 640px; }
+  .fp-t-num { font-size: 520px; }
+  .fp-bar-note { font-size: 560px; }
 }
 
 /* ─── Sidebar seat dots ─── */

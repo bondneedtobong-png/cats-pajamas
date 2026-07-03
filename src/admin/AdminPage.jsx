@@ -1533,8 +1533,9 @@ function EditorPanel({ table: t, onSeatToggle, onRemove, onSaveDeposit }) {
   );
 }
 
-const VB_FULL = { x: 0, y: 0, w: 29700, h: 21000 };
-const VB_ASPECT = 21000 / 29700;
+// План v2: квадратный viewBox 30000×30000 (см. src/booking/tablesConfig.js)
+const VB_FULL = { x: 0, y: 0, w: 30000, h: 30000 };
+const VB_ASPECT = 30000 / 30000;
 const VB_MIN_W = 7400;
 
 function FloorEditor() {
@@ -1732,18 +1733,20 @@ function FloorEditor() {
                 <feDropShadow dx="0" dy="0" stdDeviation="90" floodColor="#D4A843" floodOpacity="0.45" />
               </filter>
             </defs>
-            <rect width={29700} height={21000} fill="#080616" />
-            <rect width={29700} height={21000} fill="url(#edr-g)" style={noPtr2} />
-            <rect width={29700} height={21000} fill="url(#edr-g-major)" style={noPtr2} />
-            <rect x={200} y={200} width={29300} height={20600} fill="none" stroke="rgba(212,168,67,0.08)" strokeWidth={60} style={noPtr2} />
-            <polygon points="8368,200 23152,200 23152,3843 8368,3879"
-              fill="rgba(155,93,229,0.04)" stroke="rgba(212,168,67,0.10)" strokeWidth={36} style={noPtr2} />
-            <text x={15760} y={2350} textAnchor="middle" fill="rgba(212,168,67,0.12)"
+            {/* Фон-обстановка плана v2 (та же геометрия, что в FloorPlanSvg) */}
+            <rect width={30000} height={30000} fill="#080616" />
+            <rect width={30000} height={30000} fill="url(#edr-g)" style={noPtr2} />
+            <rect width={30000} height={30000} fill="url(#edr-g-major)" style={noPtr2} />
+            <rect x={7980} y={0} width={13200} height={4093} rx={200}
+              fill="rgba(212,168,67,0.04)" stroke="rgba(212,168,67,0.16)" strokeWidth={40} style={noPtr2} />
+            <text x={14580} y={2350} textAnchor="middle" fill="rgba(212,168,67,0.14)"
               fontSize={750} fontFamily="Avenir Next,sans-serif" letterSpacing={180} style={noSel2}>БАР</text>
-            <rect x={328} y={4493} width={700} height={3500} rx={200}
-              fill="rgba(155,93,229,0.04)" stroke="rgba(155,93,229,0.10)" strokeWidth={18} style={noPtr2} />
-            <rect x={254} y={11118} width={700} height={3500} rx={200}
-              fill="rgba(155,93,229,0.04)" stroke="rgba(155,93,229,0.10)" strokeWidth={18} style={noPtr2} />
+            <path d="M27322.13 2749.55c-6992.43,3818.13 -18287.38,3819.15 -25228,2.29"
+              fill="none" stroke="rgba(242,237,228,0.10)" strokeWidth={44} style={noPtr2} />
+            <rect x={244} y={7206} width={1156} height={7330} rx={200}
+              fill="rgba(155,93,229,0.04)" stroke="rgba(155,93,229,0.10)" strokeWidth={30} style={noPtr2} />
+            <rect x={290} y={15919} width={1156} height={7330} rx={200}
+              fill="rgba(155,93,229,0.04)" stroke="rgba(155,93,229,0.10)" strokeWidth={30} style={noPtr2} />
 
             {tables.map(tbl => {
               const isSel = tbl.id === selectedId;

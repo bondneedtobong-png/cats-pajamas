@@ -108,10 +108,12 @@ function Sidebar({ tables, selectedTime, selectedTableId, onSelectTable }) {
 // ── Status legend — a compact hint beside the floor plan, not a boxed
 // dashboard panel (moved out of the sidebar, which used to pair it with
 // the staff-only occupancy stats). ──
+// Легенда — ОБЯЗАТЕЛЬНО цвет + текст (половина людей не считывает
+// только-цветовые метки). «Бронь к времени» видна на самом столе.
 function Legend() {
   return (
     <div className="bk-legend-hint">
-      {[['#22c55e','Свободен'],['#D4A843','Скоро'],['#9B5DE5','Занят']].map(([c, l]) => (
+      {[['var(--st-vacant)', 'Свободен'], ['var(--st-reserved)', 'Бронь'], ['var(--st-occupied)', 'Занят']].map(([c, l]) => (
         <span key={l} className="bk-legend-hint__item">
           <span className="bk-legend-hint__dot" style={{ background: c }} />
           {l}
