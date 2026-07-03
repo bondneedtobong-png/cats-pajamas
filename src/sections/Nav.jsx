@@ -91,7 +91,8 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
         <div className="nav__actions">
           <TelegramNavLink loggedIn={loggedIn} onRequestAuth={onRequestAuth} tx={tx} />
           <button className="nav__lang nav__shimmer" onClick={onLangToggle}>{tx.langBtn}</button>
-          <a href="/booking" className="nav__cta">{tx.heroCta}</a>
+          {/* Бронь живёт на главной (страница книги), не на /booking */}
+          <button type="button" className="nav__cta" onClick={nav('booking')}>{tx.heroCta}</button>
         </div>
 
         <button
@@ -113,7 +114,7 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
         <div className="nav__mobile-actions">
           <TelegramNavLink loggedIn={loggedIn} onClick={close} onRequestAuth={onRequestAuth} tx={tx} />
           <button className="nav__lang nav__shimmer" onClick={() => { onLangToggle(); close(); }}>{tx.langBtn}</button>
-          <a href="/booking" className="nav__cta" onClick={close}>{tx.heroCta}</a>
+          <button type="button" className="nav__cta" onClick={nav('booking')}>{tx.heroCta}</button>
         </div>
       </div>
     </>

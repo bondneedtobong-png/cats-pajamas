@@ -18,11 +18,12 @@ const SOURCE_LABELS = {
   telegram_bot:  { text: 'Telegram',color: '#0088cc' },
 };
 const STATUS_LABELS = {
-  pending:   { text: 'Ожидает',   color: '#D4A843' },
-  confirmed: { text: 'Активна',   color: '#22c55e' },
-  cancelled: { text: 'Отменена',  color: '#6b7280' },
-  completed: { text: 'Завершена', color: '#9B5DE5' },
-  no_show:   { text: 'Неявка',    color: '#f87171' },
+  pending:   { text: 'Ждёт бармена', color: '#D4A843' },
+  confirmed: { text: 'Подтверждена', color: '#22c55e' },
+  seated:    { text: 'За столом',    color: '#9B5DE5' },
+  cancelled: { text: 'Отменена',     color: '#6b7280' },
+  completed: { text: 'Завершена',    color: '#7c6bd8' },
+  no_show:   { text: 'Неявка',       color: '#f87171' },
 };
 
 function todayIso() { return new Date().toISOString().split('T')[0]; }
@@ -248,8 +249,9 @@ function TabReservations({ adminId }) {
         </select>
         <select className="adm-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
           <option value="">Все статусы</option>
-          <option value="confirmed">Активна</option>
-          <option value="pending">Ожидает</option>
+          <option value="pending">Ждёт бармена</option>
+          <option value="confirmed">Подтверждена</option>
+          <option value="seated">За столом</option>
           <option value="cancelled">Отменена</option>
           <option value="completed">Завершена</option>
           <option value="no_show">Неявка</option>
@@ -275,7 +277,7 @@ function TabReservations({ adminId }) {
               {reservations.map(r => {
                 const src = SOURCE_LABELS[r.source] || { text: r.source, color: '#888' };
                 const st  = STATUS_LABELS[r.status] || { text: r.status, color: '#888' };
-                const isActive = r.status === 'confirmed' || r.status === 'pending';
+                const isActive = ['confirmed', 'pending', 'seated'].includes(r.status);
                 return (
                   <tr key={r.id} className={r.status === 'cancelled' ? 'adm-table__row--muted' : ''}>
                     <td>{formatDate(r.date)}</td>
@@ -302,9 +304,12 @@ function TabReservations({ adminId }) {
                           </>
                         )}
                         {r.status === 'confirmed' && (
+                          <button className="adm-act-btn adm-act-btn--ok" onClick={() => handleStatus(r.id, 'seated')} title="Гости пришли">🪑</button>
+                        )}
+                        {(r.status === 'confirmed' || r.status === 'seated') && (
                           <>
-                            <button className="adm-act-btn adm-act-btn--done" onClick={() => handleStatus(r.id, 'completed')} title="Завершить">●</button>
-                            <button className="adm-act-btn adm-act-btn--no" onClick={() => handleStatus(r.id, 'no_show')} title="Неявка">✗</button>
+                            <button className="adm-act-btn adm-act-btn--done" onClick={() => handleStatus(r.id, 'completed')} title="Гости ушли — завершить (начислит баллы)">●</button>
+                            <button className="adm-act-btn adm-act-btn--no" onClick={() => handleStatus(r.id, 'no_show')} title="Не пришли">✗</button>
                           </>
                         )}
                       </div>

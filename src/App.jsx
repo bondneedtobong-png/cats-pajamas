@@ -114,13 +114,14 @@ function MainSite() {
           const z = 10 - Math.min(Math.abs(diff), 9);
           return (
             <div key={id} className={`book__page book__page--${state}`} style={{ zIndex: z }}>
-              {id === 'hero'     && <Hero tx={tx} onNext={goNext} />}
+              {id === 'hero'     && <Hero tx={tx} onNext={goNext} onBooking={() => goToPage('booking')} />}
               {id === 'about'    && <About tx={tx} />}
-              {id === 'menu'     && <Menu tx={tx} />}
+              {id === 'menu'     && <Menu tx={tx} onBooking={() => goToPage('booking')} />}
               {id === 'events'   && <Events tx={tx} lang={lang} />}
               {id === 'gallery'  && <Shelf tx={tx} lang={lang} onRequestAuth={() => setAuthOpen(true)} />}
               {id === 'team'     && <Team tx={tx} />}
-              {id === 'booking'  && <Booking tx={tx} />}
+              {/* active гасит поллинг статусов столов на закрытой странице */}
+              {id === 'booking'  && <Booking tx={tx} active={activePage === 'booking'} />}
               {id === 'contacts' && (
                 <div className="contacts-page">
                   <Contacts tx={tx} />

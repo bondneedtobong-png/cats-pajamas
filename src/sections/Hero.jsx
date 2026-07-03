@@ -24,7 +24,7 @@ const CornerMark = ({ className }) => (
   </svg>
 );
 
-export default function Hero({ tx, onNext }) {
+export default function Hero({ tx, onNext, onBooking }) {
   const [curtainDone, setCurtainDone] = useState(false);
 
   useEffect(() => {
@@ -79,7 +79,8 @@ export default function Hero({ tx, onNext }) {
 
         <p className="hero__tagline">{tx.heroTagline}</p>
         <p className="hero__sub">{tx.heroSub}</p>
-        <a href="/booking" className="hero__btn">{tx.heroCta}</a>
+        {/* Бронь — страница книги на главной, а не /booking */}
+        <button type="button" className="hero__btn" onClick={onBooking}>{tx.heroCta}</button>
 
         {/* In normal flow right after the CTA — a fixed/absolute overlay here
             would drift into the button whenever the flex-centered content

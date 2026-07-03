@@ -13,7 +13,7 @@ function GlassPlaceholder() {
   );
 }
 
-export default function Menu({ tx }) {
+export default function Menu({ tx, onBooking }) {
   const [cocktails, setCocktails] = useState([]);
   const [idx,       setIdx]       = useState(0);
   const [loading,   setLoading]   = useState(true);
@@ -79,7 +79,7 @@ export default function Menu({ tx }) {
 
               <div className="menu-carousel__footer">
                 {current.price && <span className="menu-carousel__price">{current.price}</span>}
-                <a href="/booking" className="menu-carousel__btn">{tx.menuCta}</a>
+                <button type="button" className="menu-carousel__btn" onClick={onBooking}>{tx.menuCta}</button>
               </div>
 
               {cocktails.length > 1 && (

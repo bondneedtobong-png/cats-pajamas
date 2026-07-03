@@ -394,6 +394,222 @@
 .bk-res-empty__icon { color: rgba(242,237,228,0.1); font-size: 32px; margin-bottom: 8px; }
 .bk-res-empty__text { font-size: 11px; color: rgba(242,237,228,0.22); font-style: italic; }
 
+/* ─── Booking widget v2 (.bkw — BookingWidget.jsx) ───
+   Общий виджет брони: страница книги на главной + standalone /booking.
+   Токены темы с fallback'ами (standalone живёт вне [data-theme]). */
+.bkw {
+  --bkw-gold:   var(--gold, #D4A843);
+  --bkw-accent: var(--accent, #9B5DE5);
+  --bkw-text:   var(--text, #F2EDE4);
+  --bkw-dim:    var(--text-dim, rgba(242, 237, 228, 0.55));
+  --bkw-border: var(--border, rgba(242, 237, 228, 0.14));
+  --bkw-bg2:    var(--bg2, #14102A);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.8vh, 18px);
+  height: 100%;
+  min-height: 0;
+  font-family: 'Avenir Next', sans-serif;
+}
+
+.bkw__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  min-height: 32px;
+}
+.bkw__ctl-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--bkw-dim);
+  flex-shrink: 0;
+}
+.bkw__chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  max-width: 100%;
+  padding: 2px;
+}
+.bkw__chips::-webkit-scrollbar { display: none; }
+.bkw__chip {
+  background: transparent;
+  border: 1px solid var(--bkw-border);
+  border-radius: 999px;
+  color: var(--bkw-dim);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.bkw__chip:hover { color: var(--bkw-text); }
+.bkw__chip--on { color: var(--bkw-gold); border-color: var(--bkw-gold); }
+.bkw__closed { font-size: 12px; font-style: italic; color: var(--bkw-dim); }
+
+.bkw__body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: clamp(14px, 2vw, 24px);
+}
+.bkw__plan {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+.bkw__plan .fp-svg { flex: 1; min-height: 0; }
+.bkw__loading {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--bkw-dim);
+}
+
+.bkw__legend { display: flex; gap: 18px; justify-content: center; flex-shrink: 0; }
+.bkw__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--bkw-dim);
+}
+.bkw__dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.bkw__dot--vacant   { background: var(--st-vacant, #3ECF8E); }
+.bkw__dot--reserved { background: var(--st-reserved, #D4A843); }
+.bkw__dot--occupied { background: var(--st-occupied, #9B5DE5); }
+
+/* ── Панель стола ── */
+.bkw__panel {
+  border: 1px solid var(--bkw-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bkw-bg2) 88%, transparent);
+  padding: clamp(14px, 2.2vh, 22px);
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bkw__panel--empty { align-items: center; justify-content: center; text-align: center; }
+.bkw__hint-icon { color: var(--bkw-dim); opacity: 0.6; }
+.bkw__hint-text { margin: 0; font-size: 13px; color: var(--bkw-dim); max-width: 220px; line-height: 1.6; }
+.bkw__phone-note { margin: 0; font-size: 11px; color: var(--bkw-dim); line-height: 1.7; }
+.bkw__phone-note a { color: var(--bkw-gold); text-decoration: none; }
+
+.bkw__table-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.bkw__table-title { font-family: 'Baskerville', serif; font-size: 19px; font-weight: 700; color: var(--bkw-text); }
+.bkw__table-meta { font-size: 11px; color: var(--bkw-dim); margin-top: 3px; }
+.bkw__badge {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.bkw__badge--vacant   { color: var(--st-vacant, #3ECF8E); border-color: color-mix(in srgb, var(--st-vacant, #3ECF8E) 40%, transparent); }
+.bkw__badge--reserved { color: var(--st-reserved, #D4A843); border-color: color-mix(in srgb, var(--st-reserved, #D4A843) 40%, transparent); }
+.bkw__badge--occupied { color: var(--st-occupied, #9B5DE5); border-color: color-mix(in srgb, var(--st-occupied, #9B5DE5) 40%, transparent); }
+.bkw__busy-text { margin: 0; font-size: 13px; line-height: 1.6; color: var(--bkw-dim); }
+
+/* ── Форма заявки ── */
+.bkw__form { display: flex; flex-direction: column; gap: 10px; }
+.bkw__auth { display: flex; flex-direction: column; gap: 12px; }
+.bkw__auth-text { margin: 0; font-size: 12px; line-height: 1.6; color: var(--bkw-dim); }
+.bkw__field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.bkw__field--sm { flex: 0 0 88px; }
+.bkw__row { display: flex; gap: 10px; }
+.bkw__label {
+  font-size: 9px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--bkw-dim);
+}
+.bkw__input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--bkw-border);
+  border-radius: 8px;
+  color: var(--bkw-text);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 9px 11px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+.bkw__input:focus { border-color: var(--bkw-gold); }
+.bkw__input--warn { border-color: rgba(248, 113, 113, 0.6); }
+.bkw__input--area { resize: none; }
+.bkw__input option { background: #14102A; color: #F2EDE4; }
+
+.bkw__submit {
+  background: var(--bkw-accent);
+  border: none;
+  border-radius: 9px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 13px 16px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.bkw__submit:hover { opacity: 0.88; }
+.bkw__submit:disabled { opacity: 0.5; cursor: default; }
+.bkw__confirm-note { margin: 0; font-size: 11px; line-height: 1.6; color: var(--bkw-dim); text-align: center; }
+
+/* ── Экран «заявка отправлена» ── */
+.bkw__success { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; margin: auto 0; }
+.bkw__success-icon { font-size: 30px; }
+.bkw__success-title { font-family: 'Baskerville', serif; font-size: 21px; font-weight: 700; color: var(--bkw-gold); }
+.bkw__success-text { margin: 0; font-size: 13px; line-height: 1.65; color: var(--bkw-text); }
+.bkw__success-where { margin: 0; font-size: 11px; line-height: 1.6; color: var(--bkw-dim); }
+
+/* ── Мобильная раскладка: вертикально, страница скроллится ── */
+@media (max-width: 900px) {
+  .bkw { height: auto; }
+  .bkw__body { grid-template-columns: 1fr; }
+  /* высота плана держит тап-мишени столов ≥ 44px (узкие диваны — лимитирующие) */
+  .bkw__plan { min-height: min(102vw, 470px); }
+  .bkw__panel { overflow-y: visible; }
+}
+
+/* ── Standalone /booking (Mini App и старые ссылки) ── */
+.bk-root--v2 { height: auto; min-height: 100dvh; overflow: visible; }
+.bk-header--v2 {
+  position: sticky;
+  top: 0;
+  /* safe-area: страница открывается в Telegram WebView (viewport-fit=cover) */
+  padding-top: env(safe-area-inset-top, 0px);
+  height: calc(64px + env(safe-area-inset-top, 0px));
+}
+.bk-body--v2 {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px clamp(12px, 3vw, 32px) calc(24px + env(safe-area-inset-bottom, 0px));
+}
+.bk-body--v2 .bkw { flex: 1; }
+@media (min-width: 901px) {
+  .bk-body--v2 { max-width: 1240px; width: 100%; margin: 0 auto; }
+}
+
 /* ─── Floor plan v2 (FloorPlanSvg.jsx) ───
    Статусные токены столов: внутри темы ([data-theme]) reserved/occupied тянут
    --gold/--accent и следуют за ней; на standalone /booking (.bk-root, темы нет)

@@ -462,6 +462,7 @@ html { scroll-behavior: smooth; }
 }
 .nav__cta {
   background: var(--accent);
+  border: none; /* теперь <button> (перелистывает книгу), не <a> */
   color: #fff;
   font-family: 'Avenir Next', sans-serif;
   font-size: 13px;
@@ -682,6 +683,7 @@ html { scroll-behavior: smooth; }
 }
 .hero__btn {
   display: inline-block;
+  background: transparent; /* теперь <button> (перелистывает книгу), не <a> */
   border: 1px solid var(--gold);
   color: var(--gold);
   font-family: 'Avenir Next', sans-serif;
@@ -1536,39 +1538,27 @@ html { scroll-behavior: smooth; }
   line-height: 1;
 }
 .booking__inner { text-align: center; }
-.booking__lead {
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 14px;
-  font-weight: 300;
-  color: var(--text-dim);
-  max-width: 480px;
-  margin: 0 auto 48px;
-  line-height: 1.75;
+/* Бронирование v2: страница книги — полноценная бронь (план + панель),
+   CTA-заглушка .booking__cta ушла вместе со старой секцией. */
+.booking--v2 {
+  padding: clamp(48px, 8vh, 84px) 4% clamp(18px, 3.4vh, 36px);
+  overflow: visible;
+  align-items: stretch;
 }
-.booking__cta {
-  display: inline-block;
-  background: var(--accent);
-  color: #fff;
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  padding: 24px 64px;
-  border: 1px solid rgba(var(--gold-rgb), .4);
-  transition: transform .25s ease, box-shadow .25s ease;
-  animation: bookingPulse 2.6s ease-in-out infinite;
+.booking--v2 .booking__inner {
+  max-width: 1240px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
-@keyframes bookingPulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(var(--accent-rgb), 0), 0 0 22px rgba(var(--gold-rgb), .16); }
-  50%      { box-shadow: 0 0 32px rgba(var(--accent-rgb), .55), 0 0 58px rgba(var(--gold-rgb), .32); }
-}
-.booking__cta:hover {
-  transform: translateY(-3px) scale(1.03);
-  box-shadow: 0 0 42px rgba(var(--accent-rgb), .7), 0 0 80px rgba(var(--gold-rgb), .4);
-}
-@media (prefers-reduced-motion: reduce) {
-  .booking__cta { animation: none; }
+.booking__head { text-align: center; margin-bottom: clamp(8px, 1.8vh, 20px); }
+.booking__title--v2 { margin-bottom: 0; }
+.booking__widget { flex: 1; min-height: 0; }
+/* Мобильная политика книги: страница скроллится внутри — не зажимаем высоту */
+@media (max-width: 900px) {
+  .booking--v2 { height: auto; min-height: 100%; }
+  .booking--v2 .booking__inner { display: block; }
 }
 
 /* ── CONTACTS ──────────────────────────────────────────── */
@@ -1928,9 +1918,6 @@ html { scroll-behavior: smooth; }
   .team-carousel-row { gap: 6px; }
   .team-carousel__arrow--side { width: 36px; height: 36px; font-size: 18px; }
   .team-modal  { padding: 32px 24px; }
-
-  /* Booking */
-  .booking__cta { padding: 20px 40px; font-size: 12px; letter-spacing: 2px; }
 
   /* Contacts — single column, so info+map stack instead of sitting
      side by side; both need to shrink more aggressively to still fit. */

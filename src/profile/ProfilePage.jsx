@@ -8,11 +8,12 @@ import { useFeedback } from '../ui/FeedbackProvider.jsx';
 import './profile.css';
 
 const STATUS_LABELS = {
-  pending:   { text: 'Ожидает',  color: '#D4A843' },
-  confirmed: { text: 'Активна',  color: '#22c55e' },
-  cancelled: { text: 'Отменена', color: '#6b7280' },
-  completed: { text: 'Завершена',color: '#9B5DE5' },
-  no_show:   { text: 'Неявка',   color: '#f87171' },
+  pending:   { text: 'Ждёт бармена', color: '#D4A843' },
+  confirmed: { text: 'Подтверждена', color: '#22c55e' },
+  seated:    { text: 'Вы за столом', color: '#9B5DE5' },
+  cancelled: { text: 'Отменена',     color: '#6b7280' },
+  completed: { text: 'Завершена',    color: '#9B5DE5' },
+  no_show:   { text: 'Неявка',       color: '#f87171' },
 };
 
 const TABS = [
