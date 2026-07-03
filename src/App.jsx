@@ -122,10 +122,10 @@ function MainSite() {
               {id === 'team'     && <Team tx={tx} />}
               {id === 'booking'  && <Booking tx={tx} />}
               {id === 'contacts' && (
-                <>
+                <div className="contacts-page">
                   <Contacts tx={tx} />
                   <Footer tx={tx} />
-                </>
+                </div>
               )}
             </div>
           );

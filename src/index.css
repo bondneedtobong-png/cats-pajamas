@@ -1556,12 +1556,21 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── CONTACTS ──────────────────────────────────────────── */
+/* Contacts+Footer share one page (see .contacts-page in App.jsx) — unlike
+   every other chapter, Footer has to stay pinned at the bottom instead of
+   being centered too, so the fill/center behavior other sections get from
+   their own height:100% lives one level up on the wrapper instead. */
+.contacts-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 .contacts {
-  padding: clamp(36px, 8vh, 90px) 6% clamp(10px, 3vh, 40px);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  padding: clamp(24px, 6vh, 70px) 6%;
   position: relative;
   overflow: hidden;
 }
-.contacts__inner { max-width: 980px; margin: 0 auto; position: relative; z-index: 1; }
+.contacts__inner { max-width: 980px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
 .contacts__title {
   font-family: 'Baskerville', serif;
   font-size: clamp(24px, 3.8vh, 46px);
@@ -1704,6 +1713,7 @@ html { scroll-behavior: smooth; }
 
 /* ── FOOTER ────────────────────────────────────────────── */
 .footer {
+  flex-shrink: 0;
   padding: clamp(16px, 2.6vh, 32px) 6%;
   background: var(--bg3);
   border-top: 1px solid var(--border);
