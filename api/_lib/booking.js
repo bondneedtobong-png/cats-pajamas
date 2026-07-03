@@ -109,11 +109,30 @@ export async function getTablesMerged() {
   return [...base, ...(cfg.__custom || [])];
 }
 
-// ─── стафф-сообщения по заявкам ──────────────────────────────────────────────
+// ─── подписи столов ──────────────────────────────────────────────────────────
 function tableStaffLabel(table, tableId) {
   if (!table) return `Стол ${tableId}`;
   const num = table.num ?? table.id;
   return `Стол №${num}${table.zone ? ' · ' + table.zone : ''}`;
+}
+
+const TYPE_LABEL = { round: 'Круглый стол', square: 'Квадратный стол', booth: 'Лаунж-диван', bar: 'Место у стойки' };
+
+function seatsWord(n) {
+  const d10 = n % 10, d100 = n % 100;
+  if (d10 === 1 && d100 !== 11) return 'место';
+  if (d10 >= 2 && d10 <= 4 && (d100 < 12 || d100 > 14)) return 'места';
+  return 'мест';
+}
+
+/** Человеческое описание стола для гостя — БЕЗ внутренних айдишников (T1/B1):
+ *  «Круглый стол №3 · Основной зал · 4 места». */
+export function tableGuestLabel(table) {
+  if (!table) return 'Стол';
+  const type = TYPE_LABEL[table.type] || 'Стол';
+  const num = table.num ? ` №${table.num}` : '';
+  const seats = activeSeats(table);
+  return `${type}${num} · ${table.zone} · ${seats} ${seatsWord(seats)}`;
 }
 
 /** Текст заявки в стафф-тему «Брони» — единый билдер, чтобы правки сообщения
@@ -156,10 +175,16 @@ function editStaffBookingMessage(r, table, suffix) {
   return editStaffMessage(r.staffMessageId, staffBookingText(r, table) + '\n\n' + suffix);
 }
 
-async function findUserTelegramId(guestId) {
+export async function getGuestTelegramId(guestId) {
   if (!guestId) return null;
   const { data } = await supabase.from('users').select('telegram_id').eq('id', guestId).maybeSingle();
   return data?.telegram_id || null;
+}
+
+export async function getReservationById(id) {
+  const { data, error } = await supabase.from('reservations').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? rowToRes(data) : null;
 }
 
 // ─── reservations ─────────────────────────────────────────────────────────────
@@ -394,7 +419,7 @@ export async function createReservation(p) {
     sendStaffBookingRequest(res, table).catch(e => console.error('[booking] staff notify failed:', e.message));
     if (source === 'web') {
       // Мгновенное ЛС гостю от бота (сайт свой экран показывает сам)
-      findUserTelegramId(guestId).then(tgId => tgId && notifyGuestTg(tgId,
+      getGuestTelegramId(guestId).then(tgId => tgId && notifyGuestTg(tgId,
         `📨 *Заявка отправлена!*\n\n${tableStaffLabel(table, tableId)}\n📅 ${fmtDateRu(date)} · к ${timeFrom}\n\n`
         + 'Бронь подтверждает бармен — обычно это занимает несколько минут. Уведомление придёт сюда же 🎷',
       )).catch(() => {});
@@ -403,7 +428,9 @@ export async function createReservation(p) {
   return res;
 }
 
-export async function cancelReservation(id, reason = '') {
+// opts.editStaffMessage=false — когда вызывающий сам редактирует стафф-сообщение
+// (кнопка «Отклонить» живёт прямо в нём, бот правит его через ctx).
+export async function cancelReservation(id, reason = '', opts = {}) {
   const { data: existing, error: e1 } = await supabase.from('reservations').select('*').eq('id', id).single();
   if (e1 || !existing) throw new Error('Бронь не найдена');
   if (existing.status === 'cancelled') throw new Error('Бронь уже отменена');
@@ -423,11 +450,17 @@ export async function cancelReservation(id, reason = '') {
 
   closeOccupancyForReservation(id).catch(() => {});
   // Стафф-сообщение с кнопками больше не актуально — правим его (best-effort)
-  editStaffBookingMessage(res, null, `🚫 ${reason || 'Отменена'}.`).catch(() => {});
+  if (opts.editStaffMessage !== false) {
+    editStaffBookingMessage(res, null, `🚫 ${reason || 'Отменена'}.`).catch(() => {});
+  }
   return res;
 }
 
-export async function updateReservationStatus(id, newStatus) {
+// opts.fromStatus — атомарный переход «только из этого статуса»: двойной тап
+// по кнопке или гонка двух барменов упирается в условие на уровне БД, второй
+// вызов получает «уже обработана», а не повторное действие (двойной DM гостю,
+// повторные баллы и т.п.).
+export async function updateReservationStatus(id, newStatus, { fromStatus } = {}) {
   const { data: existing } = await supabase.from('reservations').select('status, guest_id, table_id').eq('id', id).maybeSingle();
   if (!existing) throw new Error('Бронь не найдена');
   // Гость мог отменить бронь, пока у бармена на экране висит старый статус —
@@ -436,11 +469,16 @@ export async function updateReservationStatus(id, newStatus) {
   if (FINAL_STATUSES.includes(existing.status)) {
     throw new Error('Бронь уже в финальном статусе — обновите список');
   }
+  if (fromStatus && existing.status !== fromStatus) {
+    throw new Error('Заявка уже обработана — обновите список');
+  }
 
   const patch = { status: newStatus };
   if (newStatus === 'cancelled') patch.cancelled_at = new Date().toISOString();
-  const { data, error } = await supabase.from('reservations').update(patch).eq('id', id).select().single();
-  if (error) throw new Error('Бронь не найдена');
+  let q = supabase.from('reservations').update(patch).eq('id', id);
+  if (fromStatus) q = q.eq('status', fromStatus);
+  const { data, error } = await q.select().single();
+  if (error) throw new Error(fromStatus ? 'Заявка уже обработана — обновите список' : 'Бронь не найдена');
 
   // seated → стол занят по факту (строка occupancy); финал → занятость закрыта
   if (newStatus === 'seated') {
