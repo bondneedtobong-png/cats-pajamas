@@ -488,8 +488,11 @@ export function buildBot() {
     return ctx.editMessageText(`🪑 ${fmtDate(date)}, к ${time} — выберите стол:`, { reply_markup: kb });
   });
 
-  // booking: confirm screen — только время прихода, конца брони в модели нет
-  bot.callbackQuery(/^bkc:([^:]+):([^:]+):(.+)$/, async (ctx) => {
+  // booking: confirm screen — только время прихода, конца брони в модели нет.
+  // Время в callback_data содержит двоеточие («19:00»), поэтому паттерн
+  // \d\d:\d\d, а не [^:]+ — иначе «19:00:T5» режется на «19» и «00:T5»
+  // (латентный баг старого формата, чинился здесь).
+  bot.callbackQuery(/^bkc:([^:]+):(\d\d:\d\d):(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
     const [, date, time, tableId] = ctx.match;
     const table = (await getTablesMerged()).find(t => t.id === tableId);
@@ -504,7 +507,7 @@ export function buildBot() {
   });
 
   // booking: create — заявка pending, подтверждение за барменом
-  bot.callbackQuery(/^bkok:([^:]+):([^:]+):(.+)$/, async (ctx) => {
+  bot.callbackQuery(/^bkok:([^:]+):(\d\d:\d\d):(.+)$/, async (ctx) => {
     const [, date, time, tableId] = ctx.match;
     try {
       if (!(await isSubscribed(ctx.api, ctx.from.id))) {
