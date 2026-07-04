@@ -13,12 +13,20 @@ function minToTime(m) {
  */
 const BookingService = {
   // ─── tables ──────────────────────────────────────────────────────────────
+  // Пустые date/time не отправляем: '?date=undefined' Postgres не парсит (500).
+  // Без даты сервер сам берёт текущий вечер (barEveningDate).
   async getTablesWithStatus(date, time) {
-    const d = await apiFetch(`/api/tables?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`, { auth: false });
+    const q = new URLSearchParams();
+    if (date) q.set('date', date);
+    if (time) q.set('time', time);
+    const d = await apiFetch('/api/tables' + (q.toString() ? `?${q}` : ''), { auth: false });
     return d.tables;
   },
   async getTablesWithStatusAdmin(date, time) {
-    const d = await apiFetch(`/api/tables?admin=1&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`);
+    const q = new URLSearchParams({ admin: '1' });
+    if (date) q.set('date', date);
+    if (time) q.set('time', time);
+    const d = await apiFetch(`/api/tables?${q}`);
     return d.tables;
   },
   async getTablesMerged() {

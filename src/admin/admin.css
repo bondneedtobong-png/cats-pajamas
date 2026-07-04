@@ -292,11 +292,14 @@
 .adm-modal--wide { max-width: 680px; } /* история броней гостя — таблице нужна ширина */
 
 /* ─── Вкладка СТОЛЫ: план зала + панель настроек стола ─── */
+/* max-width держит план компактным: во всю ширину монитора он гигантский,
+   а панель настроек уезжает за край взгляда (жалоба владельца) */
 .adm-tblcfg {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 20px;
   align-items: start;
+  max-width: 1020px;
 }
 @media (max-width: 800px) {
   .adm-tblcfg { grid-template-columns: 1fr; }
