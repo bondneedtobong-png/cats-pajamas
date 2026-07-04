@@ -300,13 +300,15 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
 
       <div className="bkw__body">
         <div className="bkw__plan">
-          <FloorPlanSvg
-            tables={tables}
-            selectedTableId={selId}
-            onSelect={id => { setSelId(id); setSuccess(null); }}
-            onDeselect={() => setSelId(null)}
-            tx={planTx}
-          />
+          <div className="bkw__plan-card">
+            <FloorPlanSvg
+              tables={tables}
+              selectedTableId={selId}
+              onSelect={id => { setSelId(id); setSuccess(null); }}
+              onDeselect={() => setSelId(null)}
+              tx={planTx}
+            />
+          </div>
           {loading && <div className="bkw__loading">{tx.bkLoading}</div>}
           <Legend tx={tx} />
         </div>

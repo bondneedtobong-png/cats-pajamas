@@ -11,6 +11,25 @@ const ADMIN_IDS = (process.env.TELEGRAM_ADMIN_IDS || '').split(',').map(s => s.t
  * Best-effort: гость мог не запускать бота / заблокировать его — тогда
  * Telegram вернёт ошибку, глотаем её (уведомление не критично для операции).
  */
+/** ЛС гостю с картинкой (план зала с выделенным столом). Best-effort. */
+export async function notifyGuestTgPhoto(telegramId, photoBuffer, caption, { replyMarkup } = {}) {
+  if (!TOKEN || !telegramId) return false;
+  try {
+    const form = new FormData();
+    form.append('chat_id', String(telegramId));
+    form.append('photo', new Blob([photoBuffer], { type: 'image/png' }), 'plan.png');
+    form.append('caption', caption);
+    form.append('parse_mode', 'Markdown');
+    if (replyMarkup) form.append('reply_markup', JSON.stringify(replyMarkup));
+    const resp = await fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, { method: 'POST', body: form });
+    const data = await resp.json().catch(() => null);
+    return Boolean(data?.ok);
+  } catch (e) {
+    console.error('[telegramNotify] guest photo failed for', telegramId, e.message);
+    return false;
+  }
+}
+
 export async function notifyGuestTg(telegramId, text, { replyMarkup } = {}) {
   if (!TOKEN || !telegramId) return false;
   try {

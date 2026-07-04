@@ -5,8 +5,9 @@ import {
   timeToMin, minToTime, reservationInstant, barEveningDate,
 } from '../../src/booking/barTime.js';
 import { awardAttendancePoints } from './loyalty.js';
-import { notifyStaff, editStaffMessage } from './staffNotify.js';
+import { notifyStaff, notifyStaffPhoto, editStaffMessage } from './staffNotify.js';
 import { notifyGuestTg } from './telegramNotify.js';
+import { renderPlanPng } from './planImage.js';
 
 export { timeToMin, minToTime };
 
@@ -93,23 +94,19 @@ async function saveTableConfig(cfg) {
   await supabase.from('app_config').upsert({ key: TABLE_CONFIG_KEY, value: cfg });
 }
 
+// План статичен (v2): позиции столов живут только в tablesConfig.js.
+// Оверрайды из админки — депозит и активность мест, ничего больше
+// (drag&drop-редактор убран по решению владельца).
 export async function getTablesMerged() {
   const cfg = await loadTableConfig();
-  const removed = new Set(cfg.__removed || []);
-  const base = TABLES
-    .filter(t => !removed.has(t.id))
-    .map(t => {
-      const ov = cfg[t.id] || {};
-      return {
-        ...t,
-        depositPrice: ov.depositPrice ?? t.depositPrice ?? 0,
-        ...(t.type === 'round' ? { cx: ov.cx ?? t.cx, cy: ov.cy ?? t.cy } : {}),
-        ...(t.type === 'bar' ? { bx: ov.bx ?? t.bx, by: ov.by ?? t.by } : {}),
-        ...(t.type !== 'round' && t.type !== 'bar' ? { x: ov.x ?? t.x, y: ov.y ?? t.y } : {}),
-        seats: t.seats.map((s, i) => ({ ...s, active: ov.seats?.[i]?.active ?? s.active })),
-      };
-    });
-  return [...base, ...(cfg.__custom || [])];
+  return TABLES.map(t => {
+    const ov = cfg[t.id] || {};
+    return {
+      ...t,
+      depositPrice: ov.depositPrice ?? t.depositPrice ?? 0,
+      seats: t.seats.map((s, i) => ({ ...s, active: ov.seats?.[i]?.active ?? s.active })),
+    };
+  });
 }
 
 // ─── подписи столов ──────────────────────────────────────────────────────────
@@ -162,10 +159,20 @@ export function staffConfirmKeyboard(reservationId) {
 }
 
 async function sendStaffBookingRequest(res, table) {
-  const messageId = await notifyStaff(staffBookingText(res, table), {
+  const opts = {
     threadId: STAFF_BOOKINGS_THREAD(),
     replyMarkup: staffConfirmKeyboard(res.id),
-  });
+  };
+  // Заявка уходит картинкой плана с выделенным столом; если рендер или
+  // отправка фото не удались — фолбэк на обычный текст, заявка важнее красоты.
+  let messageId = null;
+  try {
+    const png = await renderPlanPng(res.tableId);
+    messageId = await notifyStaffPhoto(png, staffBookingText(res, table), opts);
+  } catch (e) {
+    console.error('[booking] plan image failed:', e.message);
+  }
+  if (!messageId) messageId = await notifyStaff(staffBookingText(res, table), opts);
   if (messageId) {
     await supabase.from('reservations').update({ staff_message_id: messageId }).eq('id', res.id);
   }
@@ -611,11 +618,6 @@ export async function setTableDepositPrice(tableId, price) {
 
 export async function setTableSeatActive(tableId, seatIndex, active) {
   const cfg = await loadTableConfig();
-  const customIdx = (cfg.__custom || []).findIndex(t => t.id === tableId);
-  if (customIdx >= 0) {
-    cfg.__custom[customIdx].seats[seatIndex].active = active;
-    await saveTableConfig(cfg); return;
-  }
   if (!cfg[tableId]) cfg[tableId] = {};
   if (!cfg[tableId].seats) {
     const src = TABLES.find(t => t.id === tableId);
@@ -623,47 +625,5 @@ export async function setTableSeatActive(tableId, seatIndex, active) {
   }
   while (cfg[tableId].seats.length <= seatIndex) cfg[tableId].seats.push({ active: true });
   cfg[tableId].seats[seatIndex] = { ...cfg[tableId].seats[seatIndex], active };
-  await saveTableConfig(cfg);
-}
-
-export async function setTablePosition(tableId, posUpdates) {
-  const cfg = await loadTableConfig();
-  const customIdx = (cfg.__custom || []).findIndex(t => t.id === tableId);
-  if (customIdx >= 0) Object.assign(cfg.__custom[customIdx], posUpdates);
-  else { if (!cfg[tableId]) cfg[tableId] = {}; Object.assign(cfg[tableId], posUpdates); }
-  await saveTableConfig(cfg);
-}
-
-export async function addCustomTable(tableData) {
-  const cfg = await loadTableConfig();
-  if (!cfg.__custom) cfg.__custom = [];
-  const taken = new Set([...TABLES.map(t => t.id), ...cfg.__custom.map(t => t.id)]);
-  let n = 1; while (taken.has(`X${n}`)) n++;
-  const newTable = { ...tableData, id: `X${n}` };
-  cfg.__custom.push(newTable);
-  await saveTableConfig(cfg);
-  return newTable;
-}
-
-export async function removeTable(tableId) {
-  const cfg = await loadTableConfig();
-  if ((cfg.__custom || []).some(t => t.id === tableId)) {
-    cfg.__custom = cfg.__custom.filter(t => t.id !== tableId);
-  } else {
-    if (!cfg.__removed) cfg.__removed = [];
-    if (!cfg.__removed.includes(tableId)) cfg.__removed.push(tableId);
-  }
-  await saveTableConfig(cfg);
-}
-
-export async function resetTableLayout() {
-  const cfg = await loadTableConfig();
-  delete cfg.__removed; delete cfg.__custom;
-  for (const key of Object.keys(cfg)) {
-    if (key.startsWith('__')) continue;
-    delete cfg[key].cx; delete cfg[key].cy;
-    delete cfg[key].x; delete cfg[key].y;
-    delete cfg[key].bx; delete cfg[key].by;
-  }
   await saveTableConfig(cfg);
 }

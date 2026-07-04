@@ -68,19 +68,6 @@ const BookingService = {
   async setTableSeatActive(tableId, seatIndex, active) {
     return apiFetch('/api/tables', { method: 'POST', body: { action: 'set_seat', tableId, seatIndex, active } });
   },
-  async setTablePosition(tableId, pos) {
-    return apiFetch('/api/tables', { method: 'POST', body: { action: 'set_position', tableId, pos } });
-  },
-  async addCustomTable(tableData) {
-    const d = await apiFetch('/api/tables', { method: 'POST', body: { action: 'add_table', tableData } });
-    return d.table;
-  },
-  async removeTable(tableId) {
-    return apiFetch('/api/tables', { method: 'POST', body: { action: 'remove_table', tableId } });
-  },
-  async resetTableLayout() {
-    return apiFetch('/api/tables', { method: 'POST', body: { action: 'reset_layout' } });
-  },
 
   // utils
   minToTime,

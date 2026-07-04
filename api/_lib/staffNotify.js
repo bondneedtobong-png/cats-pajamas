@@ -40,25 +40,56 @@ export async function notifyStaff(text, { threadId, replyMarkup } = {}) {
 }
 
 /**
+ * Заявка с картинкой плана (выделенный стол): sendPhoto + caption + кнопки.
+ * Возвращает message_id или null — вызывающий при null падает обратно на
+ * текстовый notifyStaff.
+ */
+export async function notifyStaffPhoto(photoBuffer, caption, { threadId, replyMarkup } = {}) {
+  if (!TOKEN || !STAFF_CHAT_ID) {
+    console.warn('[staffNotify] TELEGRAM_STAFF_CHAT_ID/token не заданы — уведомление пропущено');
+    return null;
+  }
+  try {
+    const form = new FormData();
+    form.append('chat_id', STAFF_CHAT_ID);
+    form.append('photo', new Blob([photoBuffer], { type: 'image/png' }), 'plan.png');
+    form.append('caption', caption);
+    form.append('parse_mode', 'Markdown');
+    if (threadId) form.append('message_thread_id', String(Number(threadId)));
+    if (replyMarkup) form.append('reply_markup', JSON.stringify(replyMarkup));
+    const resp = await fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`, { method: 'POST', body: form });
+    const data = await resp.json().catch(() => null);
+    return data?.ok ? data.result?.message_id ?? null : null;
+  } catch (e) {
+    console.error('[staffNotify] photo failed:', e.message);
+    return null;
+  }
+}
+
+/**
  * Правка ранее отправленного стафф-сообщения (по сохранённому message_id).
- * Используется, когда заявку меняет НЕ нажатие кнопки в самом сообщении
- * (там бот редактирует через ctx): отмена гостем, авто-протухание.
+ * Используется, когда заявку меняет НЕ нажатие кнопки в самом сообщении:
+ * отмена гостем, авто-протухание, подтверждение из админ-списка.
+ * Заявки теперь уходят фото+caption → сначала editMessageCaption; для
+ * старых текстовых сообщений фолбэк на editMessageText.
  * replyMarkup не передан → кнопки снимаются.
  */
 export async function editStaffMessage(messageId, text, { replyMarkup } = {}) {
   if (!TOKEN || !STAFF_CHAT_ID || !messageId) return;
+  const call = (method, field) => fetch(`https://api.telegram.org/bot${TOKEN}/${method}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: STAFF_CHAT_ID,
+      message_id: Number(messageId),
+      [field]: text,
+      parse_mode: 'Markdown',
+      reply_markup: replyMarkup,
+    }),
+  }).then(r => r.json().catch(() => null));
   try {
-    await fetch(`https://api.telegram.org/bot${TOKEN}/editMessageText`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: STAFF_CHAT_ID,
-        message_id: Number(messageId),
-        text,
-        parse_mode: 'Markdown',
-        reply_markup: replyMarkup,
-      }),
-    });
+    const first = await call('editMessageCaption', 'caption');
+    if (!first?.ok) await call('editMessageText', 'text');
   } catch (e) {
     console.error('[staffNotify] edit failed:', e.message);
   }

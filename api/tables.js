@@ -2,8 +2,7 @@ import { readBody, ok, badRequest, forbidden, serverError, applyCors } from './_
 import { getUser } from './_lib/session.js';
 import {
   getTablesWithStatus, getTablesWithStatusAdmin, getTablesMerged,
-  setTableDepositPrice, setTableSeatActive, setTablePosition,
-  addCustomTable, removeTable, resetTableLayout,
+  setTableDepositPrice, setTableSeatActive,
 } from './_lib/booking.js';
 
 export default async function handler(req, res) {
@@ -27,13 +26,11 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       if (!user || user.role !== 'admin') return forbidden(res);
       const body = await readBody(req);
+      // План статичен (v2): позиции столов не редактируются — только
+      // депозит и активные места (см. AdminPage, вкладка СТОЛЫ).
       switch (body.action) {
         case 'set_deposit':   await setTableDepositPrice(body.tableId, body.price); break;
         case 'set_seat':      await setTableSeatActive(body.tableId, body.seatIndex, body.active); break;
-        case 'set_position':  await setTablePosition(body.tableId, body.pos || {}); break;
-        case 'add_table':     return ok(res, { table: await addCustomTable(body.tableData || {}) });
-        case 'remove_table':  await removeTable(body.tableId); break;
-        case 'reset_layout':  await resetTableLayout(); break;
         default: return badRequest(res, 'Неизвестное действие');
       }
       return ok(res, { tables: await getTablesMerged() });

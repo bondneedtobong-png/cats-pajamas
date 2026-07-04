@@ -4,8 +4,6 @@
  * кликабельны. Цвета — токены темы через классы в booking.css (скоуп .fp-svg):
  * исходные #D7D8D8/#2B2A29 из CorelDRAW-экспорта здесь не используются.
  */
-import { PLAN_W, PLAN_H } from './tablesConfig.js';
-
 const noPtr = { pointerEvents: 'none' };
 const noSel = { pointerEvents: 'none', userSelect: 'none' };
 
@@ -67,16 +65,36 @@ function getChairPos(tbl, seat) {
   return { wx, wy, rot };
 }
 
-// Chair in local coords: backrest at -Y (away from table), cushion at +Y.
-function ChairShape({ tbl, seat }) {
-  if (!seat || typeof seat.angle !== 'number' || !seat.active || tbl.type === 'booth') return null;
-  const { wx, wy, rot } = getChairPos(tbl, seat);
-  return (
-    <g className="fp-chair" transform={`translate(${wx}, ${wy}) rotate(${rot})`} style={noPtr}>
-      <rect x={-390} y={-470} width={780} height={215} rx={95} />
-      <rect x={-355} y={-240} width={710} height={610} rx={140} />
-    </g>
-  );
+// Все стулья плана — ОДИН <path>: ~90 отдельных rect в группах с transform
+// заставляли Chromium растеризовать SVG медленным путём, и перелистывание
+// книги фризило на 500–700 мс (профилировано; см. web-polish/anti-flicker).
+// Спинка и сиденье — два прямоугольника в локальных координатах стула,
+// повёрнутые к столу; углы считаем матрицей вручную.
+const CHAIR_RECTS = [
+  [-390, -470, 780, 215],  // спинка (дальше от стола)
+  [-355, -240, 710, 610],  // сиденье
+];
+
+function chairsPathForTables(tables) {
+  let d = '';
+  for (const tbl of tables) {
+    if (tbl.type === 'booth' || tbl.type === 'bar' || !tbl.seats) continue;
+    for (const seat of tbl.seats) {
+      if (!seat || typeof seat.angle !== 'number' || !seat.active) continue;
+      const { wx, wy, rot } = getChairPos(tbl, seat);
+      const rad = rot * Math.PI / 180;
+      const cos = Math.cos(rad), sin = Math.sin(rad);
+      for (const [x, y, w, h] of CHAIR_RECTS) {
+        const pts = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
+          .map(([px, py]) => [
+            Math.round(wx + px * cos - py * sin),
+            Math.round(wy + px * sin + py * cos),
+          ]);
+        d += `M${pts.map(p => p.join(' ')).join('L')}Z`;
+      }
+    }
+  }
+  return d;
 }
 
 function TableShape({ tbl, selectedTableId, onSelect, tx }) {
@@ -120,7 +138,6 @@ function TableShape({ tbl, selectedTableId, onSelect, tx }) {
 
   return (
     <g className={cls} onClick={handleClick}>
-      {tbl.seats && tbl.seats.map((seat, i) => <ChairShape key={i} tbl={tbl} seat={seat} />)}
       {shape}
       {/* Лёгкая нумерация 1–9 (внутренние id гостю не показываются) */}
       <text className="fp-t-num" x={cx} y={cy + numDy} textAnchor="middle" fontSize={400} style={noSel}>
@@ -134,12 +151,17 @@ function TableShape({ tbl, selectedTableId, onSelect, tx }) {
   );
 }
 
+// ViewBox обрезан по фактическому контенту (столы + стулья + банкетки),
+// а не по холсту CorelDRAW 30000×30000 — иначе план плавал мелким пятном
+// посреди пустых полей, а стулья нижнего ряда срезались нижней границей.
+const VB = { x: 140, y: -440, w: 28640, h: 31200 };
+
 export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDeselect, tx: txProp }) {
   const tx = { ...T_DEF, ...txProp };
   return (
     <svg
       className="fp-svg"
-      viewBox={`0 -400 ${PLAN_W} ${PLAN_H + 400}`}
+      viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`}
       style={{ width: '100%', height: '100%', display: 'block' }}
       preserveAspectRatio="xMidYMid meet"
       onClick={onDeselect}
@@ -171,6 +193,9 @@ export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDese
           {tx.barNote}
         </text>
       </g>
+
+      {/* ── Стулья всех столов одним path (см. chairsPathForTables) ── */}
+      <path className="fp-chairs" d={chairsPathForTables(tables)} style={noPtr} />
 
       {/* ── Интерактивные столы ── */}
       {tables.filter(t => t.type !== 'bar').map(tbl => (

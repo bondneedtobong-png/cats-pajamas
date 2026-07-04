@@ -11,8 +11,9 @@ import {
   barEveningDate, upcomingEveningDates, buildTimeSlots, reservationInstant,
   barNow, minToTime,
 } from '../src/booking/barTime.js';
-import { notifyGuestTg } from './_lib/telegramNotify.js';
+import { notifyGuestTg, notifyGuestTgPhoto } from './_lib/telegramNotify.js';
 import { editStaffMessage } from './_lib/staffNotify.js';
+import { renderPlanPng } from './_lib/planImage.js';
 import {
   getLoyaltyStatus, getTodaySpin, spinWheel, getUnredeemedPrizes, markPrizeRedeemed,
   findRedemptionByCode, confirmRedemption,
@@ -202,10 +203,18 @@ async function performConfirm(id, who) {
   if (r.staffMessageId) {
     editStaffMessage(r.staffMessageId, staffBookingText(r, table) + `\n\n✅ Подтвердил ${who}`).catch(() => {});
   }
-  getGuestTelegramId(r.guestId).then(tgId => tgId && notifyGuestTg(tgId,
-    `✅ *Бронь подтверждена!*\n\nЖдём вас ${fmtDate(r.date)} к ${r.timeFrom}.\n🪑 ${tableGuestLabel(table)}\n\n`
-    + 'Передумаете — отмените в «📋 Мои брони» или на сайте.',
-  )).catch(() => {});
+  // Гостю — подтверждение с картинкой плана, где выделен его стол;
+  // при сбое рендера/фото откатываемся на текст (уведомление важнее красоты).
+  getGuestTelegramId(r.guestId).then(async (tgId) => {
+    if (!tgId) return;
+    const caption = `✅ *Бронь подтверждена!*\n\nЖдём вас ${fmtDate(r.date)} к ${r.timeFrom}.\n🪑 ${tableGuestLabel(table)}\n\n`
+      + 'Передумаете — отмените в «📋 Мои брони» или на сайте.';
+    let sent = false;
+    try {
+      sent = await notifyGuestTgPhoto(tgId, await renderPlanPng(r.tableId), caption);
+    } catch { /* рендер не удался — ниже текстовый фолбэк */ }
+    if (!sent) await notifyGuestTg(tgId, caption);
+  }).catch(() => {});
   return r;
 }
 

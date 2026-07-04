@@ -462,10 +462,24 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   position: relative;
 }
-.bkw__plan .fp-svg { flex: 1; min-height: 0; }
+/* «Паспарту» под чертёж: план — карточка с рамкой, а не фигуры, плавающие
+   в пустоте (жалоба владельца «криво»). Пустые поля остаются внутри рамки
+   и читаются как поля чертежа. */
+.bkw__plan-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  border: 1px solid var(--bkw-border);
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--bkw-gold) 4%, transparent), transparent 60%),
+    color-mix(in srgb, var(--bkw-bg2) 55%, transparent);
+  padding: clamp(8px, 1.4vh, 16px);
+}
+.bkw__plan-card .fp-svg { flex: 1; min-height: 0; }
 .bkw__loading {
   position: absolute;
   top: 8px;
@@ -650,10 +664,11 @@
   font-family: 'Avenir Next', sans-serif;
   font-weight: 600;
 }
-.fp-chair rect {
+.fp-chairs {
   fill: color-mix(in srgb, var(--st-reserved) 6%, transparent);
   stroke: color-mix(in srgb, var(--st-reserved) 24%, transparent);
   stroke-width: 34;
+  stroke-linejoin: round;
 }
 
 /* Декор: дуга-стена, приставные банкетки и пуфы лаунжа */
@@ -661,8 +676,8 @@
 .fp-decor rect,
 .fp-decor ellipse {
   fill: none;
-  stroke: color-mix(in srgb, var(--fp-ink) 16%, transparent);
-  stroke-width: 44;
+  stroke: color-mix(in srgb, var(--fp-ink) 24%, transparent);
+  stroke-width: 56;
 }
 
 /* Барная стойка — glow-акцент «не бронируется, просто приходите».

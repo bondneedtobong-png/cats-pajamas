@@ -1409,433 +1409,89 @@ function TabLoyalty() {
   );
 }
 
-// ─── Floor plan editor ───────────────────────────────────────────
-const EDR_ZONES = ['Основной зал', 'VIP', 'Диваны'];
-const SNAP_GRID = 600;
-const noPtr2 = { pointerEvents: 'none' };
-const noSel2 = { pointerEvents: 'none', userSelect: 'none' };
+// ─── Tab: СТОЛЫ ──────────────────────────────────────────────────
+// План v2 статичен — расположение столов соответствует реальному залу и
+// правится только в src/booking/tablesConfig.js (drag&drop-редактор убран
+// по решению владельца). Админ настраивает депозит и активные места.
+const TABLE_TYPE_LABELS = { round: 'Круглый', square: 'Квадратный', booth: 'Диван-лаунж' };
 
-function clampVal(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
-function AddTableModal({ onAdd, onClose }) {
-  const [type,  setType]  = useState('round');
-  const [zone,  setZone]  = useState('Основной зал');
-  const [count, setCount] = useState('4');
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    const n = parseInt(count) || 4;
-    const seats = Array.from({ length: n }, (_, i) => ({
-      angle: Math.round(360 * i / n),
-      active: true,
-    }));
-    const data = type === 'round'
-      ? { type, zone, cx: 15000, cy: 10800, radius: 1500, depositPrice: 0, seats }
-      : { type, zone, x: 14400, y: 9600, w: 2700, h: 2700, depositPrice: 0, seats };
-    onAdd(data);
-  }
-
-  return (
-    <div className="adm-modal-overlay" onClick={onClose}>
-      <div className="adm-modal" onClick={e => e.stopPropagation()}>
-        <div className="adm-modal__head">
-          <span className="adm-modal__title">Добавить стол</span>
-          <button className="adm-modal__close" onClick={onClose}>✕</button>
-        </div>
-        <form className="adm-modal__form" onSubmit={handleSubmit}>
-          <div className="adm-form-row">
-            <div className="adm-form-field">
-              <label className="adm-form-lbl">ТИП</label>
-              <select className="adm-form-input" value={type} onChange={e => setType(e.target.value)}>
-                <option value="round">Круглый</option>
-                <option value="square">Квадратный</option>
-              </select>
-            </div>
-            <div className="adm-form-field">
-              <label className="adm-form-lbl">ЗОНА</label>
-              <select className="adm-form-input" value={zone} onChange={e => setZone(e.target.value)}>
-                {EDR_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="adm-form-field">
-            <label className="adm-form-lbl">КОЛ-ВО МЕСТ</label>
-            <select className="adm-form-input" value={count} onChange={e => setCount(e.target.value)}>
-              {['2','3','4','5','6','7','8'].map(n => <option key={n}>{n}</option>)}
-            </select>
-          </div>
-          <p style={{ fontSize: 11, color: 'rgba(242,237,228,0.3)', margin: 0 }}>
-            Стол появится в центре плана. Перетащите на нужное место.
-          </p>
-          <button className="adm-btn adm-btn--primary" type="submit">Добавить</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function EditorPanel({ table: t, onSeatToggle, onRemove, onSaveDeposit }) {
+function TableCard({ t, onSeatToggle, onSaveDeposit }) {
   const [price, setPrice] = useState(t.depositPrice ?? 0);
   const [saved, setSaved] = useState(false);
+  useEffect(() => { setPrice(t.depositPrice ?? 0); }, [t.depositPrice]);
   const activeCount = t.seats.filter(s => s.active).length;
-  const pos = t.type === 'round'
-    ? `cx ${Math.round(t.cx)}  cy ${Math.round(t.cy)}`
-    : t.type === 'bar'
-    ? `bx ${Math.round(t.bx)}  by ${Math.round(t.by)}`
-    : `x ${Math.round(t.x)}  y ${Math.round(t.y)}`;
 
-  async function handleSaveDeposit() {
+  async function handleSave() {
     await onSaveDeposit(t.id, price);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
   return (
-    <div className="adm-editor__panel-content">
-      <div className="adm-editor__panel-head">
-        <span className="adm-table__table-id">{t.id}</span>
-        <span className="adm-editor__panel-zone">{t.zone}</span>
+    <div className="adm-tablecard">
+      <div className="adm-tablecard__head">
+        <span className="adm-table__table-id">№{t.num ?? t.id}</span>
+        <span className="adm-tablecard__name">{TABLE_TYPE_LABELS[t.type] || t.type} · {t.zone}</span>
       </div>
-      <div className="adm-editor__panel-row">
-        <span className="adm-form-lbl">ТИП</span>
-        <span>{t.type}</span>
-      </div>
-      <div className="adm-editor__panel-row">
-        <span className="adm-form-lbl">ПОЗИЦИЯ</span>
-        <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 11 }}>{pos}</span>
-      </div>
-
       <div className="adm-form-field">
         <label className="adm-form-lbl">ДЕПОЗИТ, ₽</label>
         <div className="adm-editor__deposit-row">
-          <input
-            className="adm-price-input"
-            type="number" min="0" step="100"
-            value={price}
-            onChange={e => setPrice(e.target.value)}
-          />
-          <button className={`adm-btn ${saved ? 'adm-btn--saved' : 'adm-btn--ghost'}`} onClick={handleSaveDeposit}>
-            {saved ? '✓ Сохранено' : 'Сохранить'}
+          <input className="adm-price-input" type="number" min="0" step="100"
+            value={price} onChange={e => setPrice(e.target.value)} />
+          <button className={`adm-btn ${saved ? 'adm-btn--saved' : 'adm-btn--ghost'}`} onClick={handleSave}>
+            {saved ? '✓' : 'Сохранить'}
           </button>
         </div>
       </div>
-
       <div className="adm-editor__seats-title">МЕСТА ({activeCount} / {t.seats.length})</div>
       <div className="adm-seats-grid">
         {t.seats.map((seat, i) => (
           <button key={i}
             className={`adm-seat-btn${seat.active ? ' adm-seat-btn--active' : ''}`}
             onClick={() => onSeatToggle(t.id, i, seat.active)}
-            title={`Место ${i + 1}: ${seat.angle}°`}>
+            title={`Место ${i + 1}`}>
             {i + 1}
           </button>
         ))}
       </div>
-      <button className="adm-btn adm-btn--ghost adm-editor__del-btn" onClick={() => onRemove(t.id)}>
-        Убрать с плана
-      </button>
     </div>
   );
 }
 
-// План v2: квадратный viewBox 30000×30000 (см. src/booking/tablesConfig.js)
-const VB_FULL = { x: 0, y: 0, w: 30000, h: 30000 };
-const VB_ASPECT = 30000 / 30000;
-const VB_MIN_W = 7400;
-
-function FloorEditor() {
-  const svgRef = useRef(null);
-  const [tables,       setTables]       = useState([]);
-  const [selectedId,   setSelectedId]   = useState(null);
-  const [hoveredId,    setHoveredId]    = useState(null);
-  const [dragging,     setDragging]     = useState(null);
-  const [dragPos,      setDragPos]      = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [viewBox,      setViewBox]      = useState(VB_FULL);
-  const [panning,      setPanning]      = useState(null);
-  const [confirm,      setConfirm]      = useState(null);
-  const [tick,         setTick]         = useState(0);
-
+function TabTables() {
+  const [tables, setTables] = useState([]);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
-    BookingService.getTablesMerged().then(setTables).catch(() => {});
+    BookingService.getTablesMerged()
+      .then(list => setTables([...list].sort((a, b) => (a.num ?? 99) - (b.num ?? 99))))
+      .catch(() => setTables([]));
   }, [tick]);
-
-  // Wheel-to-zoom toward the cursor. Attached non-passively so preventDefault works.
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    function onWheel(e) {
-      e.preventDefault();
-      const rect = svg.getBoundingClientRect();
-      const mx = (e.clientX - rect.left) / rect.width;
-      const my = (e.clientY - rect.top) / rect.height;
-      setViewBox(vb => {
-        const factor = e.deltaY > 0 ? 1.12 : 0.89;
-        const newW = Math.max(VB_MIN_W, Math.min(VB_FULL.w, vb.w * factor));
-        const newH = newW * VB_ASPECT;
-        const wx = vb.x + mx * vb.w;
-        const wy = vb.y + my * vb.h;
-        return { x: wx - mx * newW, y: wy - my * newH, w: newW, h: newH };
-      });
-    }
-    svg.addEventListener('wheel', onWheel, { passive: false });
-    return () => svg.removeEventListener('wheel', onWheel);
-  }, []);
-
-  const selectedTable = tables.find(t => t.id === selectedId) || null;
-
-  function svgPt(e) {
-    const svg = svgRef.current;
-    if (!svg) return { x: 0, y: 0 };
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX; pt.y = e.clientY;
-    return pt.matrixTransform(svg.getScreenCTM().inverse());
-  }
-
-  function handleMouseDown(e, tbl) {
-    e.stopPropagation();
-    e.preventDefault();
-    setSelectedId(tbl.id);
-    const { x, y } = svgPt(e);
-    const orig = tbl.type === 'round' ? { cx: tbl.cx, cy: tbl.cy }
-      : tbl.type === 'bar' ? { bx: tbl.bx, by: tbl.by }
-      : { x: tbl.x, y: tbl.y };
-    setDragging({ id: tbl.id, type: tbl.type, startX: x, startY: y, orig });
-  }
-
-  // Mouse-down on empty canvas starts a pan (and deselects).
-  function handleBgMouseDown(e) {
-    if (dragging) return;
-    setSelectedId(null);
-    const rect = svgRef.current.getBoundingClientRect();
-    setPanning({ startX: e.clientX, startY: e.clientY, origX: viewBox.x, origY: viewBox.y, scale: viewBox.w / rect.width });
-  }
-
-  function handleSvgMouseMove(e) {
-    if (dragging) {
-      // Snap the absolute final position to the grid, not the raw drag delta —
-      // otherwise a table whose starting position isn't itself grid-aligned
-      // would never actually land on a grid line, however far it's dragged.
-      const { x, y } = svgPt(e);
-      const snap = v => Math.round(v / SNAP_GRID) * SNAP_GRID;
-      if (dragging.type === 'round') {
-        const cx = snap(dragging.orig.cx + (x - dragging.startX));
-        const cy = snap(dragging.orig.cy + (y - dragging.startY));
-        setDragPos({ cx: clampVal(cx, 1600, 28100), cy: clampVal(cy, 1600, 19400) });
-      } else if (dragging.type === 'bar') {
-        const bx = snap(dragging.orig.bx + (x - dragging.startX));
-        const by = snap(dragging.orig.by + (y - dragging.startY));
-        setDragPos({ bx: clampVal(bx, 200, 28300), by: clampVal(by, 200, 19700) });
-      } else {
-        const nx = snap(dragging.orig.x + (x - dragging.startX));
-        const ny = snap(dragging.orig.y + (y - dragging.startY));
-        setDragPos({ x: clampVal(nx, 400, 26000), y: clampVal(ny, 400, 17900) });
-      }
-      return;
-    }
-    if (panning) {
-      const dx = (e.clientX - panning.startX) * panning.scale;
-      const dy = (e.clientY - panning.startY) * panning.scale;
-      setViewBox(vb => ({ ...vb, x: panning.origX - dx, y: panning.origY - dy }));
-    }
-  }
-
-  function endInteraction() {
-    if (dragging && dragPos) {
-      BookingService.setTablePosition(dragging.id, dragPos)
-        .then(() => setTick(n => n + 1))
-        .catch(() => {});
-    }
-    setDragging(null);
-    setDragPos(null);
-    setPanning(null);
-  }
-
-  function effPos(tbl) {
-    if (dragging?.id === tbl.id && dragPos) return dragPos;
-    if (tbl.type === 'round') return { cx: tbl.cx, cy: tbl.cy };
-    if (tbl.type === 'bar')   return { bx: tbl.bx, by: tbl.by };
-    return { x: tbl.x, y: tbl.y };
-  }
 
   async function handleSeatToggle(tableId, i, cur) {
     await BookingService.setTableSeatActive(tableId, i, !cur);
     setTick(n => n + 1);
   }
-
   async function handleSaveDeposit(tableId, price) {
     await BookingService.setTableDepositPrice(tableId, price);
     setTick(n => n + 1);
   }
 
-  function handleRemoveTable(tableId) {
-    setConfirm({
-      title: 'Убрать стол',
-      message: `Убрать стол ${tableId} с плана зала? Существующие брони не затрагиваются.`,
-      confirmLabel: 'Убрать',
-      onConfirm: async () => {
-        await BookingService.removeTable(tableId);
-        setSelectedId(null);
-        setTick(n => n + 1);
-        setConfirm(null);
-      },
-    });
-  }
-
-  async function handleAddTable(data) {
-    await BookingService.addCustomTable(data);
-    setShowAddModal(false);
-    setTick(n => n + 1);
-  }
-
-  function handleResetLayout() {
-    setConfirm({
-      title: 'Сбросить расположение',
-      message: 'Сбросить расположение столов к исходному? Цены депозитов и состояние мест сохранятся.',
-      confirmLabel: 'Сбросить',
-      onConfirm: async () => {
-        await BookingService.resetTableLayout();
-        setSelectedId(null);
-        setTick(n => n + 1);
-        setConfirm(null);
-      },
-    });
-  }
-
   return (
-    <div className="adm-editor">
-      <div className="adm-editor__toolbar">
-        <button className="adm-btn adm-btn--primary" onClick={() => setShowAddModal(true)}>+ Добавить стол</button>
-        <button className="adm-btn adm-btn--ghost" onClick={handleResetLayout}>Сбросить расположение</button>
-        {viewBox.w < VB_FULL.w && (
-          <button className="adm-btn adm-btn--ghost" onClick={() => setViewBox(VB_FULL)}>Сбросить зум</button>
-        )}
-        <span className="adm-editor__hint">Перетащите стол · колесо = зум · фон = панорама · сетка {SNAP_GRID} ед.</span>
+    <div>
+      <p className="adm-tables-note">
+        Расположение столов на плане фиксированное — как в зале. Здесь настраиваются
+        депозит и количество активных мест: выключенное место уменьшает вместимость
+        стола на сайте и в боте.
+      </p>
+      <div className="adm-tables-grid">
+        {tables.map(t => (
+          <TableCard key={t.id} t={t} onSeatToggle={handleSeatToggle} onSaveDeposit={handleSaveDeposit} />
+        ))}
       </div>
-
-      <div className="adm-editor__body">
-        <div className="adm-editor__svg-wrap">
-          <svg
-            ref={svgRef}
-            viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
-            className="adm-editor__svg"
-            preserveAspectRatio="xMidYMid meet"
-            style={{ userSelect: 'none', cursor: panning ? 'grabbing' : 'default' }}
-            onMouseDown={handleBgMouseDown}
-            onMouseMove={handleSvgMouseMove}
-            onMouseUp={endInteraction}
-            onMouseLeave={endInteraction}
-          >
-            <defs>
-              <pattern id="edr-g" x={0} y={0} width={SNAP_GRID} height={SNAP_GRID} patternUnits="userSpaceOnUse">
-                <path d={`M${SNAP_GRID} 0L0 0 0 ${SNAP_GRID}`} fill="none" stroke="rgba(212,168,67,0.06)" strokeWidth={8} />
-              </pattern>
-              {/* Major grid every 5 cells, like a CAD/design-tool ruler — gives the plan a sense of scale. */}
-              <pattern id="edr-g-major" x={0} y={0} width={SNAP_GRID * 5} height={SNAP_GRID * 5} patternUnits="userSpaceOnUse">
-                <path d={`M${SNAP_GRID * 5} 0L0 0 0 ${SNAP_GRID * 5}`} fill="none" stroke="rgba(212,168,67,0.14)" strokeWidth={12} />
-              </pattern>
-              <filter id="edr-shadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="0" dy="0" stdDeviation="90" floodColor="#D4A843" floodOpacity="0.45" />
-              </filter>
-            </defs>
-            {/* Фон-обстановка плана v2 (та же геометрия, что в FloorPlanSvg) */}
-            <rect width={30000} height={30000} fill="#080616" />
-            <rect width={30000} height={30000} fill="url(#edr-g)" style={noPtr2} />
-            <rect width={30000} height={30000} fill="url(#edr-g-major)" style={noPtr2} />
-            <rect x={7980} y={0} width={13200} height={4093} rx={200}
-              fill="rgba(212,168,67,0.04)" stroke="rgba(212,168,67,0.16)" strokeWidth={40} style={noPtr2} />
-            <text x={14580} y={2350} textAnchor="middle" fill="rgba(212,168,67,0.14)"
-              fontSize={750} fontFamily="Avenir Next,sans-serif" letterSpacing={180} style={noSel2}>БАР</text>
-            <path d="M27322.13 2749.55c-6992.43,3818.13 -18287.38,3819.15 -25228,2.29"
-              fill="none" stroke="rgba(242,237,228,0.10)" strokeWidth={44} style={noPtr2} />
-            <rect x={244} y={7206} width={1156} height={7330} rx={200}
-              fill="rgba(155,93,229,0.04)" stroke="rgba(155,93,229,0.10)" strokeWidth={30} style={noPtr2} />
-            <rect x={290} y={15919} width={1156} height={7330} rx={200}
-              fill="rgba(155,93,229,0.04)" stroke="rgba(155,93,229,0.10)" strokeWidth={30} style={noPtr2} />
-
-            {tables.map(tbl => {
-              const isSel = tbl.id === selectedId;
-              const isDrg = dragging?.id === tbl.id;
-              const isHov = tbl.id === hoveredId && !isSel && !isDrg;
-              const pos = effPos(tbl);
-              const sc  = isSel ? '#D4A843' : isHov ? 'rgba(212,168,67,0.55)' : 'rgba(212,168,67,0.30)';
-              const sw  = isSel ? 80 : isHov ? 55 : 40;
-              const fl  = isSel ? 'rgba(212,168,67,0.14)' : isHov ? 'rgba(212,168,67,0.09)' : 'rgba(212,168,67,0.05)';
-              const lbl = isSel ? '#D4A843' : 'rgba(242,237,228,0.45)';
-
-              return (
-                <g key={tbl.id} style={{ cursor: isDrg ? 'grabbing' : 'grab' }}
-                  filter={(isSel || isDrg) ? 'url(#edr-shadow)' : undefined}
-                  onMouseDown={e => handleMouseDown(e, tbl)}
-                  onMouseEnter={() => setHoveredId(tbl.id)}
-                  onMouseLeave={() => setHoveredId(id => id === tbl.id ? null : id)}
-                  onClick={e => { e.stopPropagation(); setSelectedId(tbl.id); }}>
-                  {tbl.type === 'round' ? (
-                    <>
-                      <circle cx={pos.cx} cy={pos.cy} r={1500} fill={fl} stroke={sc} strokeWidth={sw} />
-                      <text x={pos.cx} y={pos.cy + 220} textAnchor="middle"
-                        fill={lbl} fontSize={520} fontFamily="Avenir Next,sans-serif" fontWeight={700} style={noSel2}>{tbl.id}</text>
-                    </>
-                  ) : tbl.type === 'bar' ? (
-                    <>
-                      <rect x={pos.bx} y={pos.by} width={BAR_STOOL_W} height={BAR_STOOL_H} rx={215} fill={fl} stroke={sc} strokeWidth={isSel ? 50 : 28} />
-                      <text x={pos.bx + BAR_STOOL_W / 2} y={pos.by + BAR_STOOL_H / 2 + 95} textAnchor="middle"
-                        fill={lbl} fontSize={250} fontFamily="Avenir Next,sans-serif" fontWeight={700} style={noSel2}>{tbl.id}</text>
-                    </>
-                  ) : (
-                    <>
-                      <rect x={pos.x} y={pos.y} width={tbl.w} height={tbl.h} rx={220} fill={fl} stroke={sc} strokeWidth={sw} />
-                      <text x={pos.x + tbl.w / 2} y={pos.y + tbl.h / 2 + 220} textAnchor="middle"
-                        fill={lbl} fontSize={520} fontFamily="Avenir Next,sans-serif" fontWeight={700} style={noSel2}>{tbl.id}</text>
-                    </>
-                  )}
-                  {tbl.type !== 'bar' && tbl.seats.map((seat, i) => {
-                    const rad = seat.angle * Math.PI / 180;
-                    const r   = tbl.type === 'round' ? (tbl.radius || 1500) + 120 : Math.max(tbl.w, tbl.h) / 2 + 220;
-                    const ox  = tbl.type === 'round' ? pos.cx : pos.x + tbl.w / 2;
-                    const oy  = tbl.type === 'round' ? pos.cy : pos.y + tbl.h / 2;
-                    return (
-                      <circle key={i} cx={ox + r * Math.cos(rad)} cy={oy + r * Math.sin(rad)} r={160}
-                        fill={seat.active ? 'rgba(34,197,94,0.6)' : 'rgba(242,237,228,0.08)'} style={noPtr2} />
-                    );
-                  })}
-                </g>
-              );
-            })}
-
-            {/* Ghost outline at the drag origin */}
-            {dragging && dragPos && (() => {
-              const o = dragging.orig;
-              const gp = { fill: 'none', stroke: 'rgba(212,168,67,0.28)', strokeWidth: 30, strokeDasharray: '140 100', style: noPtr2 };
-              if (dragging.type === 'round') return <circle cx={o.cx} cy={o.cy} r={1500} {...gp} />;
-              if (dragging.type === 'bar')   return <rect x={o.bx} y={o.by} width={BAR_STOOL_W} height={BAR_STOOL_H} rx={215} {...gp} />;
-              const t = tables.find(tt => tt.id === dragging.id);
-              return <rect x={o.x} y={o.y} width={t?.w || 2700} height={t?.h || 2700} rx={220} {...gp} />;
-            })()}
-          </svg>
-        </div>
-
-        <div className="adm-editor__panel">
-          {selectedTable
-            ? <EditorPanel key={selectedTable.id} table={selectedTable} onSeatToggle={handleSeatToggle} onRemove={handleRemoveTable} onSaveDeposit={handleSaveDeposit} />
-            : <div className="adm-editor__panel-empty">Кликните на стол, чтобы выбрать</div>
-          }
-        </div>
-      </div>
-
-      {showAddModal && <AddTableModal onAdd={handleAddTable} onClose={() => setShowAddModal(false)} />}
-      {confirm && (
-        <ConfirmModal
-          title={confirm.title}
-          message={confirm.message}
-          confirmLabel={confirm.confirmLabel}
-          onConfirm={confirm.onConfirm}
-          onClose={() => setConfirm(null)}
-        />
-      )}
     </div>
   );
 }
+
 
 // ─── Styled confirm modal (replaces window.confirm) ──────────────
 function ConfirmModal({ title, message, confirmLabel, onConfirm, onClose }) {
@@ -1856,11 +1512,6 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onClose }) {
       </div>
     </div>
   );
-}
-
-// ─── Tab: РЕДАКТОР ───────────────────────────────────────────────
-function TabEditor() {
-  return <FloorEditor />;
 }
 
 // ─── Page ────────────────────────────────────────────────────────
@@ -1914,7 +1565,7 @@ export default function AdminPage() {
       </header>
 
       <div className="adm-tabs">
-        {[['reservations','БРОНИ'],['editor','РЕДАКТОР'],['menu','МЕНЮ'],['events','СОБЫТИЯ'],['reviews','ОТЗЫВЫ'],['team','КОМАНДА'],['loyalty','ЛОЯЛЬНОСТЬ']].map(([key, label]) => (
+        {[['reservations','БРОНИ'],['tables','СТОЛЫ'],['menu','МЕНЮ'],['events','СОБЫТИЯ'],['reviews','ОТЗЫВЫ'],['team','КОМАНДА'],['loyalty','ЛОЯЛЬНОСТЬ']].map(([key, label]) => (
           <button key={key}
             className={`adm-tab-btn${tab === key ? ' adm-tab-btn--active' : ''}`}
             onClick={() => setTab(key)}>
@@ -1925,7 +1576,7 @@ export default function AdminPage() {
 
       <main className="adm-main">
         {tab === 'reservations' && <TabReservations adminId={user.id} />}
-        {tab === 'editor'       && <TabEditor />}
+        {tab === 'tables'       && <TabTables />}
         {tab === 'menu'         && <TabMenu />}
         {tab === 'events'       && <TabEvents />}
         {tab === 'reviews'      && <TabReviews />}
