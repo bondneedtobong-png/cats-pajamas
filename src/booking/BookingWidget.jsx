@@ -40,8 +40,11 @@ function isValidPhone(value) {
 
 // Дата и время прихода — селекты в панели заявки (макет владельца):
 // смена даты перезагружает статусы плана, время влияет только на заявку.
-function WhenPicker({ dates, date, onDateChange, slots, time, onTimeChange, tx }) {
-  const dateLabel = (d, i) => {
+// allDates — полный ряд дат для подписей «Сегодня»/«Завтра» (dates может быть
+// отфильтрован: владелец закрывает даты для брони через админку).
+function WhenPicker({ dates, allDates, date, onDateChange, slots, time, onTimeChange, tx }) {
+  const dateLabel = (d) => {
+    const i = allDates.indexOf(d);
     if (i === 0) return tx.bkToday;
     if (i === 1) return tx.bkTomorrow;
     const [, m, day] = d.split('-');
@@ -53,7 +56,7 @@ function WhenPicker({ dates, date, onDateChange, slots, time, onTimeChange, tx }
         <label className="bkw__field">
           <span className="bkw__label">{tx.bkDateLabel}</span>
           <select className="bkw__input" value={date} onChange={e => onDateChange(e.target.value)}>
-            {dates.map((d, i) => <option key={d} value={d}>{dateLabel(d, i)}</option>)}
+            {dates.map((d) => <option key={d} value={d}>{dateLabel(d)}</option>)}
           </select>
         </label>
         <label className="bkw__field">
@@ -132,6 +135,11 @@ function Panel({ table, when, date, time, tx, currentUser, onRequestAuth, onSubm
           <div className="bkw__success-icon">📨</div>
           <div className="bkw__success-title">{tx.bkSuccessTitle}</div>
           <p className="bkw__success-text">{tx.bkSuccessText}</p>
+          {success.depositPrice > 0 && (
+            <p className="bkw__success-text bkw__success-text--deposit">
+              💰 {tx.bkDepositLabel}: {success.depositPrice} ₽. {tx.bkSuccessDeposit}
+            </p>
+          )}
           <p className="bkw__success-where">{tx.bkSuccessWhere}</p>
           <button type="button" className="bkw__submit" onClick={onSuccessOk}>{tx.bkSuccessOk}</button>
         </div>
@@ -179,6 +187,14 @@ function Panel({ table, when, date, time, tx, currentUser, onRequestAuth, onSubm
         <p className="bkw__busy-text">
           {table.status === 'occupied' ? tx.bkOccupiedText : tx.bkReservedText}
         </p>
+      )}
+
+      {/* Депозит стола — виден ДО отправки заявки, чтобы не был сюрпризом */}
+      {table.status === 'vacant' && table.depositPrice > 0 && (
+        <div className="bkw__deposit">
+          <span className="bkw__deposit-sum">💰 {tx.bkDepositLabel}: {table.depositPrice} ₽</span>
+          <span className="bkw__deposit-note">{tx.bkDepositNote}</span>
+        </div>
       )}
 
       {table.status === 'vacant' && !currentUser && (
@@ -230,8 +246,19 @@ function Panel({ table, when, date, time, tx, currentUser, onRequestAuth, onSubm
 }
 
 export default function BookingWidget({ tx, active = true, authTick = 0, variant = 'book' }) {
-  const dates = upcomingEveningDates(7);
-  const [date, setDate] = useState(dates[0]);
+  const allDates = upcomingEveningDates(7);
+  // Даты, закрытые владельцем для брони (админ-панель бота / вкладка СТОЛЫ):
+  // конкретные даты + флаги «Сегодня»/«Завтра». Закрытые даты просто не
+  // показываем в селекте; сервер всё равно проверяет то же при создании.
+  const [dateCfg, setDateCfg] = useState(null);
+  const dates = allDates.filter((d, i) => {
+    if (!dateCfg) return true;
+    if (dateCfg.blockedDates?.includes(d)) return false;
+    if (i === 0 && dateCfg.blockToday) return false;
+    if (i === 1 && dateCfg.blockTomorrow) return false;
+    return true;
+  });
+  const [date, setDate] = useState(allDates[0]);
   const slots = buildTimeSlots(date);
   const [time, setTime] = useState(() => (slots.includes('19:00') ? '19:00' : slots[0] || null));
   const [selId, setSelId] = useState(null);
@@ -240,6 +267,15 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
   const [success, setSuccess] = useState(null);
   const [currentUser, setCurrentUser] = useState(() => AuthService.getCurrentUser());
   const [authOpen, setAuthOpen] = useState(false);
+
+  useEffect(() => {
+    BookingService.getBookingDates().then(setDateCfg).catch(() => {});
+  }, []);
+
+  // конфиг дат подгрузился, а выбранная дата оказалась закрытой → первая открытая
+  useEffect(() => {
+    if (dates.length && !dates.includes(date)) setDate(dates[0]);
+  }, [dateCfg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // выбранная дата сменилась → слоты пересобрались; чиним невалидное время
   useEffect(() => {
@@ -296,7 +332,7 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
 
   const when = (
     <WhenPicker
-      dates={dates} date={date} onDateChange={d => { setDate(d); setSelId(null); }}
+      dates={dates} allDates={allDates} date={date} onDateChange={d => { setDate(d); setSelId(null); }}
       slots={slots} time={time} onTimeChange={setTime} tx={tx}
     />
   );
@@ -322,18 +358,33 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
           <Legend tx={tx} />
         </div>
 
-        <Panel
-          table={sel}
-          when={when}
-          date={date}
-          time={time}
-          tx={tx}
-          currentUser={currentUser}
-          onRequestAuth={() => setAuthOpen(true)}
-          onSubmitted={handleSubmitted}
-          success={success}
-          onSuccessOk={() => setSuccess(null)}
-        />
+        <div className="bkw__side">
+          <Panel
+            table={sel}
+            when={when}
+            date={date}
+            time={time}
+            tx={tx}
+            currentUser={currentUser}
+            onRequestAuth={() => setAuthOpen(true)}
+            onSubmitted={handleSubmitted}
+            success={success}
+            onSuccessOk={() => setSuccess(null)}
+          />
+          {/* Большая компания / нестандартный запрос → текстовая заявка в боте */}
+          <div className="bkw__tg-fallback">
+            <p className="bkw__tg-fallback-text">
+              <strong>{tx.bkTgFallbackText}</strong> {tx.bkTgFallbackText2}
+            </p>
+            <a
+              className="bkw__tg-fallback-btn"
+              href="https://t.me/cats_pajama_bot?start=bigparty"
+              target="_blank" rel="noopener noreferrer"
+            >
+              {tx.bkTgFallbackBtn}
+            </a>
+          </div>
+        </div>
       </div>
 
       {authOpen && (

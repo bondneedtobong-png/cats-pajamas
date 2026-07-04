@@ -107,7 +107,9 @@ export const PLAN_VB = { x: 500, y: -200, w: 31300, h: 26600 };
 export const BAR_STOOL_W = 1148;
 export const BAR_STOOL_H = 1023;
 
-/** Returns the number of active (placed) seats for a table */
+/** Число доступных мест: явный seatsCount из админки (число, 2026-07-04)
+ *  побеждает; иначе считаем активные места из статичной конфигурации. */
 export function activeSeats(table) {
+  if (Number.isFinite(table.seatsCount) && table.seatsCount > 0) return table.seatsCount;
   return table.seats.filter(s => s.active).length;
 }

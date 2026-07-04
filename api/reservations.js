@@ -32,12 +32,16 @@ export default async function handler(req, res) {
       if (!user) return unauthorized(res);
       const body = await readBody(req);
       const isAdmin = user.role === 'admin';
+      // «Звонок» — только когда админ ЯВНО создаёт бронь за гостя из админки
+      // (ManualBookingModal шлёт source='phone_manual'). Бронь из виджета —
+      // всегда source='web' и от своего имени, даже если бронирует админ
+      // (раньше админ с сайта получал «звонок» + автоподтверждение — баг).
+      const manual = isAdmin && body.source === 'phone_manual';
       const res1 = await createReservation({
         ...body,
-        // guests book under their own id; admin may book on behalf (manual)
-        guestId: isAdmin ? (body.guestId ?? null) : user.id,
-        source: isAdmin ? (body.source || 'phone_manual') : 'web',
-        createdByAdminId: isAdmin ? user.id : null,
+        guestId: manual ? (body.guestId ?? null) : user.id,
+        source: manual ? 'phone_manual' : 'web',
+        createdByAdminId: manual ? user.id : null,
       });
       return ok(res, { reservation: res1 });
     }
@@ -57,11 +61,19 @@ export default async function handler(req, res) {
         }
         return ok(res, { reservation: await cancelReservation(id, body.reason || '') });
       }
+      if (action === 'pay') {
+        // Депозит оплачивает сам гость из ЛК (демо-оплата); админ — как фолбэк
+        // «оплатили на месте». Гость может платить только по своей брони.
+        if (user.role !== 'admin') {
+          const own = (await getReservations({ guestId: user.id })).some(r => r.id === id);
+          if (!own) return forbidden(res);
+        }
+        return ok(res, { reservation: await payDeposit(id) });
+      }
       // status / transfer — admin only
       if (user.role !== 'admin') return forbidden(res);
       if (action === 'status') return ok(res, { reservation: await updateReservationStatus(id, body.status) });
       if (action === 'update') return ok(res, { reservation: await updateReservation(id, body.updates || {}) });
-      if (action === 'pay')    return ok(res, { reservation: await payDeposit(id) });
       return badRequest(res, 'Неизвестное действие');
     }
 

@@ -32,7 +32,7 @@ const db = createDb({
     { id: 'r_s1', table_id: 'T2', guest_id: 'u_guest', status: 'completed', date: '2026-06-01', time_from: '19:00', time_to: '21:00', guests_count: 2, guest_name: 'Гость Тестовый', source: 'web' },
     { id: 'r_s2', table_id: 'T3', guest_id: 'u_guest', status: 'completed', date: '2026-06-08', time_from: '20:00', time_to: '22:00', guests_count: 3, guest_name: 'Гость Тестовый', source: 'telegram_bot' },
     { id: 'r_s3', table_id: 'T2', guest_id: 'u_guest', status: 'completed', date: '2026-06-15', time_from: '19:30', time_to: '21:30', guests_count: 2, guest_name: 'Гость Тестовый', source: 'web' },
-    { id: 'r_s4', table_id: 'T5', guest_id: 'u_guest', status: 'confirmed', date: '2026-07-20', time_from: '19:00', time_to: '21:00', guests_count: 2, guest_name: 'Гость Тестовый', source: 'web' },
+    { id: 'r_s4', table_id: 'T5', guest_id: 'u_guest', status: 'confirmed', date: '2026-07-20', time_from: '19:00', time_to: '21:00', guests_count: 2, guest_name: 'Гость Тестовый', source: 'web', deposit_price: 1000, deposit_status: 'pending' },
     { id: 'r_s5', table_id: 'T6', guest_id: 'u_guest', status: 'no_show',   date: '2026-05-20', time_from: '19:00', time_to: '21:00', guests_count: 2, guest_name: 'Гость Тестовый', source: 'phone_manual' },
     { id: 'r_s6', table_id: 'T4', guest_id: 'u_maria', status: 'completed', date: '2026-06-20', time_from: '21:00', time_to: '23:00', guests_count: 2, guest_name: 'Мария', source: 'telegram_bot' },
   ],

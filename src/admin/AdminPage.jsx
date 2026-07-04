@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthService from '../auth/AuthService.js';
 import BookingService from '../booking/BookingService.js';
-import { BAR_STOOL_W, BAR_STOOL_H } from '../booking/tablesConfig.js';
+import FloorPlanSvg from '../booking/FloorPlanSvg.jsx';
+import { upcomingEveningDates } from '../booking/barTime.js';
+import '../booking/booking.css';
 import CocktailsService from '../menu/CocktailsService.js';
 import EventsService from '../events/EventsService.js';
 import ReviewsService from '../reviews/ReviewsService.js';
@@ -1309,88 +1311,173 @@ function TabGuests() {
 }
 
 // ─── Tab: СТОЛЫ ──────────────────────────────────────────────────
-// План v2 статичен — расположение столов соответствует реальному залу и
-// правится только в src/booking/tablesConfig.js (drag&drop-редактор убран
-// по решению владельца). Админ настраивает депозит и активные места.
+// Тот же план зала, что видят гости в брони (переделано 2026-07-04 по просьбе
+// владельца): клик по столу открывает справа настройки именно этого стола —
+// депозит и число мест числовыми полями. Позиции столов статичны
+// (src/booking/tablesConfig.js), drag&drop-редактора нет.
+// Ниже — календарь дат: какие дни закрыты для брони.
 
+function TableEditorPanel({ table, onSaved }) {
+  const { toast } = useFeedback();
+  const [price, setPrice] = useState(table.depositPrice ?? 0);
+  const [seats, setSeats] = useState(table.activeSeatsCount ?? 4);
+  const [saving, setSaving] = useState(false);
 
-function TableCard({ t, onSeatToggle, onSaveDeposit }) {
-  const [price, setPrice] = useState(t.depositPrice ?? 0);
-  const [saved, setSaved] = useState(false);
-  useEffect(() => { setPrice(t.depositPrice ?? 0); }, [t.depositPrice]);
-  const activeCount = t.seats.filter(s => s.active).length;
+  useEffect(() => {
+    setPrice(table.depositPrice ?? 0);
+    setSeats(table.activeSeatsCount ?? 4);
+  }, [table.id, table.depositPrice, table.activeSeatsCount]);
 
-  async function handleSave() {
-    await onSaveDeposit(t.id, price);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  async function handleSave(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await BookingService.setTableDepositPrice(table.id, parseInt(price, 10) || 0);
+      await BookingService.setTableSeatsCount(table.id, parseInt(seats, 10) || 1);
+      toast.success('Настройки стола сохранены');
+      onSaved();
+    } catch (ex) {
+      toast.error(ex.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
+  const title = table.type === 'booth' ? `Диван №${table.num}` : `${table.zone}, стол №${table.num}`;
+
   return (
-    <div className="adm-tablecard">
-      <div className="adm-tablecard__head">
-        <span className="adm-table__table-id">{t.zoneShort} {t.num}</span>
-        <span className="adm-tablecard__name">{t.type === 'booth' ? `Диван №${t.num}` : `${t.zone}, стол №${t.num}`}</span>
+    <form className="adm-tblcfg__panel" onSubmit={handleSave}>
+      <div className="adm-tblcfg__title">{title}</div>
+      <div className="adm-form-field">
+        <label className="adm-form-lbl">ДЕПОЗИТ, ₽ (0 — БЕЗ ДЕПОЗИТА)</label>
+        <input className="adm-form-input" type="number" min="0" step="100"
+          value={price} onChange={e => setPrice(e.target.value)} />
       </div>
       <div className="adm-form-field">
-        <label className="adm-form-lbl">ДЕПОЗИТ, ₽</label>
-        <div className="adm-editor__deposit-row">
-          <input className="adm-price-input" type="number" min="0" step="100"
-            value={price} onChange={e => setPrice(e.target.value)} />
-          <button className={`adm-btn ${saved ? 'adm-btn--saved' : 'adm-btn--ghost'}`} onClick={handleSave}>
-            {saved ? '✓' : 'Сохранить'}
-          </button>
-        </div>
+        <label className="adm-form-lbl">ДОСТУПНО МЕСТ</label>
+        <input className="adm-form-input" type="number" min="1" max="30"
+          value={seats} onChange={e => setSeats(e.target.value)} />
       </div>
-      <div className="adm-editor__seats-title">МЕСТА ({activeCount} / {t.seats.length})</div>
-      <div className="adm-seats-grid">
-        {t.seats.map((seat, i) => (
-          <button key={i}
-            className={`adm-seat-btn${seat.active ? ' adm-seat-btn--active' : ''}`}
-            onClick={() => onSeatToggle(t.id, i, seat.active)}
-            title={`Место ${i + 1}`}>
-            {i + 1}
+      <button className="adm-btn adm-btn--primary" type="submit" disabled={saving}>
+        {saving ? 'Сохраняем…' : 'Сохранить'}
+      </button>
+    </form>
+  );
+}
+
+// Календарь дат: закрытые даты + переключатели кнопок «Сегодня»/«Завтра».
+// Флаг «Сегодня» привязан к КНОПКЕ, а не к дате: пока включён, каждый новый
+// день блокирует свою «сегодняшнюю» дату (просьба владельца).
+function BookingDatesSection() {
+  const { toast } = useFeedback();
+  const [cfg, setCfg] = useState(null);
+  const [newDate, setNewDate] = useState('');
+
+  useEffect(() => { BookingService.getBookingDates().then(setCfg).catch(() => {}); }, []);
+
+  async function apply(patch, okText) {
+    try {
+      const next = await BookingService.setBookingDates(patch);
+      setCfg(next);
+      if (okText) toast.success(okText);
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
+  if (!cfg) return null;
+
+  const days = upcomingEveningDates(14);
+  const fmt = (iso) => { const [, m, d] = iso.split('-'); return `${d}.${m}`; };
+  const extraBlocked = cfg.blockedDates.filter(d => !days.includes(d));
+
+  return (
+    <>
+      <p className="adm-tab__desc" style={{ marginTop: 32 }}>
+        Даты брони: нажмите на дату, чтобы закрыть или открыть её. Переключатели «Сегодня»/«Завтра» блокируют сами кнопки на сайте и переезжают на новый день автоматически — закрытое «сегодня» и завтра останется закрытым.
+      </p>
+      <div className="adm-filters">
+        <button type="button"
+          className={`adm-btn ${cfg.blockToday ? 'adm-btn--primary' : 'adm-btn--ghost'}`}
+          onClick={() => apply({ blockToday: !cfg.blockToday }, cfg.blockToday ? 'Кнопка «Сегодня» открыта' : 'Кнопка «Сегодня» закрыта')}>
+          {cfg.blockToday ? '🚫 «Сегодня» закрыто' : '✅ «Сегодня» открыто'}
+        </button>
+        <button type="button"
+          className={`adm-btn ${cfg.blockTomorrow ? 'adm-btn--primary' : 'adm-btn--ghost'}`}
+          onClick={() => apply({ blockTomorrow: !cfg.blockTomorrow }, cfg.blockTomorrow ? 'Кнопка «Завтра» открыта' : 'Кнопка «Завтра» закрыта')}>
+          {cfg.blockTomorrow ? '🚫 «Завтра» закрыто' : '✅ «Завтра» открыто'}
+        </button>
+      </div>
+      <div className="adm-dates-grid">
+        {days.map(d => {
+          const blocked = cfg.blockedDates.includes(d);
+          return (
+            <button key={d} type="button"
+              className={`adm-date-chip${blocked ? ' adm-date-chip--blocked' : ''}`}
+              title={blocked ? 'Открыть дату для брони' : 'Закрыть дату для брони'}
+              onClick={() => apply(blocked ? { removeDate: d } : { addDate: d })}>
+              {blocked ? '🚫' : '✅'} {fmt(d)}
+            </button>
+          );
+        })}
+        {extraBlocked.map(d => (
+          <button key={d} type="button" className="adm-date-chip adm-date-chip--blocked"
+            title="Открыть дату для брони"
+            onClick={() => apply({ removeDate: d })}>
+            🚫 {fmt(d)}.{d.slice(0, 4)}
           </button>
         ))}
       </div>
-    </div>
+      <div className="adm-filters" style={{ marginTop: 10 }}>
+        <input className="adm-select" type="date" value={newDate} onChange={e => setNewDate(e.target.value)} />
+        <button type="button" className="adm-btn adm-btn--ghost" disabled={!newDate}
+          onClick={() => { apply({ addDate: newDate }, 'Дата закрыта для брони'); setNewDate(''); }}>
+          Закрыть выбранную дату
+        </button>
+      </div>
+    </>
   );
 }
 
 function TabTables() {
   const [tables, setTables] = useState([]);
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    BookingService.getTablesMerged().then(setTables).catch(() => setTables([]));
-  }, [tick]);
+  const [selId, setSelId] = useState(null);
 
-  async function handleSeatToggle(tableId, i, cur) {
-    await BookingService.setTableSeatActive(tableId, i, !cur);
-    setTick(n => n + 1);
+  function load() {
+    // Публичный статус-эндпоинт: те же цвета/статусы, что видят гости,
+    // плюс depositPrice/activeSeatsCount из merged-конфига.
+    BookingService.getTablesWithStatus().then(setTables).catch(() => setTables([]));
   }
-  async function handleSaveDeposit(tableId, price) {
-    await BookingService.setTableDepositPrice(tableId, price);
-    setTick(n => n + 1);
-  }
+  useEffect(load, []);
+
+  const sel = selId ? tables.find(t => t.id === selId) : null;
 
   return (
-    <div>
-      <p className="adm-tables-note">
-        Расположение столов на плане фиксированное — как в зале. Здесь настраиваются
-        депозит и количество активных мест: выключенное место уменьшает вместимость
-        стола на сайте и в боте.
+    <div className="adm-tab">
+      <p className="adm-tab__desc">
+        Нажмите на стол на плане — справа откроются его настройки: депозит и число доступных мест.
       </p>
-      <div className="adm-tables-grid">
-        {tables.map(t => (
-          <TableCard key={t.id} t={t} onSeatToggle={handleSeatToggle} onSaveDeposit={handleSaveDeposit} />
-        ))}
+      <div className="adm-tblcfg">
+        <div className="adm-tblcfg__plan bkw">
+          <FloorPlanSvg
+            tables={tables}
+            selectedTableId={selId}
+            onSelect={setSelId}
+            onDeselect={() => setSelId(null)}
+          />
+        </div>
+        {sel ? (
+          <TableEditorPanel table={sel} onSaved={load} />
+        ) : (
+          <div className="adm-tblcfg__hint">Выберите стол на плане слева</div>
+        )}
       </div>
+
+      <BookingDatesSection />
     </div>
   );
 }
 
-
-// ─── Styled confirm modal (replaces window.confirm) ──────────────
 function ConfirmModal({ title, message, confirmLabel, onConfirm, onClose }) {
   return (
     <div className="adm-modal-overlay" onClick={onClose}>

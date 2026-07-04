@@ -21,6 +21,13 @@ const TABS = [
   { key: 'loyalty',      label: 'Уровень' },
 ];
 
+const DEPOSIT_LABELS = {
+  pending:            'ожидает оплаты',
+  paid_mock:          'оплачен',
+  refunded:           'возвращён',
+  partially_retained: 'частично удержан',
+};
+
 const AVATAR_COLORS = ['#9B5DE5', '#D4A843', '#22c55e', '#f87171', '#3b82f6', '#ec4899'];
 
 function hashStr(s) {
@@ -122,6 +129,7 @@ function ReservationsTab() {
   const [loading,      setLoading]      = useState(true);
   const [loadError,    setLoadError]    = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
+  const [payingId,     setPayingId]     = useState(null);
 
   function loadReservations() {
     setLoading(true);
@@ -151,6 +159,27 @@ function ReservationsTab() {
       toast.error(e.message);
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  // Демо-оплата депозита (мок-провайдер, без реального эквайринга) —
+  // подтверждение брони это НЕ заменяет, его делает бармен.
+  async function handlePayDeposit(r) {
+    const ok = await confirm({
+      title: 'Оплатить депозит?',
+      message: `Депозит ${r.depositPrice} ₽ за стол ${r.tableId}. Демо-оплата: спишется мгновенно и засчитается в счёт заказа при визите.`,
+      confirmLabel: `Оплатить ${r.depositPrice} ₽`,
+    });
+    if (!ok) return;
+    setPayingId(r.id);
+    try {
+      await BookingService.payDeposit(r.id);
+      loadReservations();
+      toast.success('Депозит оплачен — барменам уже видно');
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setPayingId(null);
     }
   }
 
@@ -220,6 +249,20 @@ function ReservationsTab() {
                     </span>
                   </div>
                   {r.note && <div className="prof-res-card__note">💬 {r.note}</div>}
+                  {r.depositPrice > 0 && (
+                    <div className="prof-res-card__deposit">
+                      <span>💰 Депозит: {r.depositPrice} ₽ · {DEPOSIT_LABELS[r.depositStatus] || r.depositStatus}</span>
+                      {r.depositStatus === 'pending' && (
+                        <button
+                          className="prof-pay-btn"
+                          onClick={() => handlePayDeposit(r)}
+                          disabled={payingId === r.id}
+                        >
+                          {payingId === r.id ? 'Оплачиваем…' : `Оплатить ${r.depositPrice} ₽`}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {canCancel && (
                     <button
                       className="prof-cancel-btn"

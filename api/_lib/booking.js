@@ -94,8 +94,8 @@ async function saveTableConfig(cfg) {
 }
 
 // План статичен (v2): позиции столов живут только в tablesConfig.js.
-// Оверрайды из админки — депозит и активность мест, ничего больше
-// (drag&drop-редактор убран по решению владельца).
+// Оверрайды из админки — депозит и число мест (seatsCount задаётся числом,
+// 2026-07-04; старые пер-местные seats-оверрайды читаются для совместимости).
 export async function getTablesMerged() {
   const cfg = await loadTableConfig();
   return TABLES.map(t => {
@@ -103,9 +103,56 @@ export async function getTablesMerged() {
     return {
       ...t,
       depositPrice: ov.depositPrice ?? t.depositPrice ?? 0,
+      seatsCount: Number.isFinite(ov.seatsCount) && ov.seatsCount > 0 ? ov.seatsCount : null,
       seats: t.seats.map((s, i) => ({ ...s, active: ov.seats?.[i]?.active ?? s.active })),
     };
   });
+}
+
+// ─── блокировка дат бронирования (app_config: booking_dates) ─────────────────
+// blockedDates — конкретные даты (ISO). blockToday/blockTomorrow — блокировка
+// ОТНОСИТЕЛЬНЫХ кнопок «Сегодня»/«Завтра»: флаг живёт, пока владелец его не
+// снимет, и каждый день блокирует новую «сегодняшнюю» дату (просьба владельца).
+const BOOKING_DATES_KEY = 'booking_dates';
+
+export async function getBookingDatesConfig() {
+  const { data } = await supabase.from('app_config').select('value').eq('key', BOOKING_DATES_KEY).maybeSingle();
+  const v = data?.value || {};
+  return {
+    blockToday: !!v.blockToday,
+    blockTomorrow: !!v.blockTomorrow,
+    blockedDates: Array.isArray(v.blockedDates) ? v.blockedDates : [],
+  };
+}
+
+export async function setBookingDatesConfig(patch) {
+  const cur = await getBookingDatesConfig();
+  const next = { ...cur, ...patch };
+  next.blockedDates = [...new Set(next.blockedDates)]
+    .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .sort();
+  await supabase.from('app_config').upsert({ key: BOOKING_DATES_KEY, value: next });
+  return next;
+}
+
+function tomorrowEveningDate() {
+  const today = barEveningDate();
+  return new Date(Date.parse(today + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10);
+}
+
+/** Бросает, если владелец закрыл эту дату для брони. Сервер — последний рубеж:
+ *  виджет прячет закрытые даты, но проверка обязана жить и здесь. */
+export async function assertDateBookable(date) {
+  const cfg = await getBookingDatesConfig();
+  if (cfg.blockedDates.includes(date)) {
+    throw new Error('На эту дату брони не принимаются — выберите другой день');
+  }
+  if (cfg.blockToday && date === barEveningDate()) {
+    throw new Error('Сегодня брони не принимаются — выберите другой день');
+  }
+  if (cfg.blockTomorrow && date === tomorrowEveningDate()) {
+    throw new Error('На завтра брони не принимаются — выберите другой день');
+  }
 }
 
 // ─── подписи столов ──────────────────────────────────────────────────────────
@@ -144,6 +191,9 @@ export function staffBookingText(r, table) {
     `👤 ${mdEscape(r.guestName)}${r.guestPhone ? ' · ' + mdEscape(r.guestPhone) : ''}`,
   ];
   if (r.note) lines.push(`💬 ${mdEscape(r.note)}`);
+  if (r.depositPrice > 0) {
+    lines.push(`💰 Депозит: ${r.depositPrice} ₽${r.depositStatus === 'paid_mock' ? ' · оплачен' : ''}`);
+  }
   lines.push(`Источник: ${SRC_LABEL[r.source] || r.source}`);
   return lines.join('\n');
 }
@@ -381,18 +431,20 @@ export async function createReservation(p) {
     }
   }
 
+  // Заблокированные владельцем даты (админ-панель бота / вкладка СТОЛЫ)
+  await assertDateBookable(date);
+
   const depositPrice = table?.depositPrice ?? 0;
   const now = new Date().toISOString();
-  // Каждую гостевую заявку подтверждает бармен (решение владельца) → 'pending'.
-  // Бронь, созданную персоналом руками (админка/телефон), персонал подтверждает
-  // самим фактом создания → сразу 'confirmed'.
-  const staffCreated = Boolean(createdByAdminId) || source === 'phone_manual';
+  // КАЖДУЮ заявку подтверждает бармен кнопкой → 'pending', в том числе
+  // созданную персоналом вручную (решение владельца 2026-07-04: автоподтверждение
+  // убрано — создание и подтверждение могут делать разные люди).
   const row = {
     id: generateId(),
     table_id: tableId,
     guest_id: guestId,
     source,
-    status: staffCreated ? 'confirmed' : 'pending',
+    status: 'pending',
     date,
     time_from: timeFrom,
     time_to: timeTo,
@@ -415,22 +467,18 @@ export async function createReservation(p) {
   }
   const res = rowToRes(data);
 
-  if (staffCreated) {
-    notifyStaff(
-      staffBookingText(res, table) + '\n\n✅ Создана персоналом — уже подтверждена.',
-      { threadId: STAFF_BOOKINGS_THREAD() },
-    ).catch(() => {});
-  } else {
-    // Заявка с кнопками подтверждения — best-effort: сбой уведомления не
-    // должен ронять создание брони (стафф-чат может быть не настроен).
-    sendStaffBookingRequest(res, table).catch(e => console.error('[booking] staff notify failed:', e.message));
-    if (source === 'web') {
-      // Мгновенное ЛС гостю от бота (сайт свой экран показывает сам)
-      getGuestTelegramId(guestId).then(tgId => tgId && notifyGuestTg(tgId,
-        `📨 *Заявка отправлена!*\n\n${tableStaffLabel(table, tableId)}\n📅 ${fmtDateRu(date)} · к ${timeFrom}\n\n`
-        + 'Бронь подтверждает бармен — обычно это занимает несколько минут. Уведомление придёт сюда же 🎷',
-      )).catch(() => {});
-    }
+  // Заявка с кнопками подтверждения — best-effort: сбой уведомления не
+  // должен ронять создание брони (стафф-чат может быть не настроен).
+  sendStaffBookingRequest(res, table).catch(e => console.error('[booking] staff notify failed:', e.message));
+  if (source === 'web') {
+    // Мгновенное ЛС гостю от бота (сайт свой экран показывает сам)
+    const depLine = depositPrice > 0
+      ? `\n💰 Депозит ${depositPrice} ₽ — после подтверждения его можно оплатить в «Мои брони» на сайте.\n`
+      : '\n';
+    getGuestTelegramId(guestId).then(tgId => tgId && notifyGuestTg(tgId,
+      `📨 *Заявка отправлена!*\n\n${tableStaffLabel(table, tableId)}\n📅 ${fmtDateRu(date)} · к ${timeFrom}${depLine}\n`
+      + 'Бронь подтверждает бармен — обычно это занимает несколько минут. Уведомление придёт сюда же 🎷',
+    )).catch(() => {});
   }
   return res;
 }
@@ -587,11 +635,35 @@ export async function payDeposit(reservationId) {
   if (r.depositStatus === 'paid_mock') throw new Error('Депозит уже оплачен');
   if (!r.depositPrice || r.depositPrice <= 0) throw new Error('Депозит не требуется');
   const txId = 'tx_mock_' + Date.now();
+  // Статус брони НЕ меняем: подтверждает только бармен кнопкой (оплата
+  // депозита — не подтверждение; правило «без автоподтверждений», 2026-07-04).
   const { data, error } = await supabase.from('reservations').update({
-    deposit_status: 'paid_mock', deposit_transaction_id: txId, status: 'confirmed',
+    deposit_status: 'paid_mock', deposit_transaction_id: txId,
   }).eq('id', reservationId).select().single();
   if (error) throw new Error(error.message);
-  return rowToRes(data);
+  const res = rowToRes(data);
+  // Барменам видно, что депозит уже внесён — правим карточку заявки.
+  // Если заявка ещё pending, кнопки подтверждения обязаны остаться на месте.
+  if (res.staffMessageId) {
+    getTablesMerged().then(tables => {
+      const table = tables.find(t => t.id === res.tableId);
+      const markup = res.status === 'pending' ? staffConfirmKeyboard(res.id) : undefined;
+      return editStaffMessage(res.staffMessageId,
+        staffBookingText(res, table) + '\n\n💰 Депозит оплачен гостем.',
+        { replyMarkup: markup });
+    }).catch(() => {});
+  }
+  return res;
+}
+
+export async function setTableSeatsCount(tableId, count) {
+  const n = parseInt(count, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 30) throw new Error('Число мест — от 1 до 30');
+  const cfg = await loadTableConfig();
+  if (!cfg[tableId]) cfg[tableId] = {};
+  cfg[tableId].seatsCount = n;
+  await saveTableConfig(cfg);
+  return n;
 }
 
 // ─── table config setters ─────────────────────────────────────────────────────

@@ -1,18 +1,21 @@
-import { Bot, InlineKeyboard, Keyboard, session } from 'grammy';
+import { Bot, InlineKeyboard, InputFile, Keyboard, session } from 'grammy';
 import { readBody } from './_lib/http.js';
 import { ensureTelegramUser, isTelegramStaff, completeLoginToken, setUserPhone } from './_lib/auth.js';
 import {
   getTablesWithStatusAdmin, getTablesMerged, getReservations, getReservationById,
-  createReservation, cancelReservation, updateReservationStatus,
+  cancelReservation, updateReservationStatus,
   setTableOccupied, freeTableOccupancy,
+  setTableDepositPrice, setTableSeatsCount,
+  getBookingDatesConfig, setBookingDatesConfig,
   staffBookingText, staffConfirmKeyboard, tableGuestLabel, getGuestTelegramId,
 } from './_lib/booking.js';
+import { activeSeats } from '../src/booking/tablesConfig.js';
 import {
-  barEveningDate, upcomingEveningDates, buildTimeSlots, reservationInstant,
+  barEveningDate, upcomingEveningDates, reservationInstant,
   barNow, minToTime,
 } from '../src/booking/barTime.js';
 import { notifyGuestTg, notifyGuestTgPhoto } from './_lib/telegramNotify.js';
-import { editStaffMessage } from './_lib/staffNotify.js';
+import { editStaffMessage, notifyStaff } from './_lib/staffNotify.js';
 import { renderPlanPng } from './_lib/planImage.js';
 import { getGuestLevel } from './_lib/loyalty.js';
 import { getGuestContact } from './_lib/guests.js';
@@ -27,6 +30,7 @@ const CHANNEL = process.env.TELEGRAM_CHANNEL;           // @catspajajam
 const SECRET  = process.env.TELEGRAM_WEBHOOK_SECRET;
 const CHANNEL_URL = CHANNEL ? `https://t.me/${CHANNEL.replace(/^@/, '')}` : '';
 const SITE_URL = process.env.PUBLIC_SITE_URL || 'https://cats-pajamas.ru';
+const BAR_PHONE = '+7 (908) 418-00-09';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 // Дата вечера (бар работает за полночь, зона Самары — см. barTime.js), не
@@ -128,12 +132,14 @@ function guestMenu(isStaff = false) {
   return kb;
 }
 
-// Панель бармена/админа: столы, брони, события (пост на сайт+канал), рассылка.
+// Панель бармена/админа: столы, брони, настройка столов/дат, события, рассылка.
 // Гейт — isTelegramStaff: владелец хочет, чтобы бармены управляли всем этим.
 function adminMenu() {
   return new InlineKeyboard()
     .text('🍸 Столы сейчас', 'tbl').row()
     .text('📋 Текущие брони', 'adm').row()
+    .text('🪑 Настроить столы', 'tblcfg').row()
+    .text('📅 Даты брони', 'bdates').row()
     .text('📢 Событие', 'ev').row()
     .text('📨 Рассылка', 'bc').row()
     .text('🏠 Обычное меню', 'menu');
@@ -188,7 +194,10 @@ async function performConfirm(id, who) {
   // при сбое рендера/фото откатываемся на текст (уведомление важнее красоты).
   getGuestTelegramId(r.guestId).then(async (tgId) => {
     if (!tgId) return;
-    const caption = `✅ *Бронь подтверждена!*\n\nЖдём вас ${fmtDate(r.date)} к ${r.timeFrom}.\n🪑 ${tableGuestLabel(table)}\n\n`
+    const depLine = r.depositPrice > 0 && r.depositStatus !== 'paid_mock'
+      ? `💰 Депозит ${r.depositPrice} ₽ — оплатите на сайте в «Мои брони» (засчитывается в счёт заказа).\n`
+      : '';
+    const caption = `✅ *Бронь подтверждена!*\n\nЖдём вас ${fmtDate(r.date)} к ${r.timeFrom}.\n🪑 ${tableGuestLabel(table)}\n${depLine}\n`
       + 'Передумаете — отмените в «📋 Мои брони» или на сайте.';
     let sent = false;
     try {
@@ -330,6 +339,9 @@ export function buildBot() {
     }
     if (await proceedWebLogin(ctx)) return;
     await ensureTelegramUser(ctx.from);
+    // Deep-link с плана зала на сайте («Большая компания? Напишите нам») —
+    // сразу открываем текстовую заявку, минуя приветствие.
+    if (payload === 'bigparty') return freeBookingStart(ctx, { edit: false });
     await ctx.replyWithPhoto(`${SITE_URL}/uploads/team/bar-evening.jpg`, {
       caption: `🎷 Привет, ${ctx.from.first_name}! Это Cat's Pajamas — джаз-бар, где столик ждёт, уровень растёт с каждым визитом, а бармены уже разогревают шейкеры.\n\nЖми ниже — и вы внутри, без лишних меню.`,
       reply_markup: new InlineKeyboard().webApp("🐾 Открыть Cat's Pajamas", `${SITE_URL}/app`),
@@ -395,118 +407,71 @@ export function buildBot() {
     return ctx.editMessageText('🛠 *Админ-панель*', { reply_markup: adminMenu(), parse_mode: 'Markdown' }).catch(() => {});
   });
 
-  // booking: choose date (запасной путь для тех, у кого не открылся Mini App —
-  // единственная точка входа теперь и кнопка «Забронировать текстом», и /booking_steps)
-  async function bookingStepsStart(ctx, { edit } = {}) {
+  // ─── «Забронировать текстом» — свободная заявка без выбора стола ───────────
+  // Логика изменена 2026-07-04 (решение владельца): гость больше не выбирает
+  // конкретный стол (для этого есть план зала в Mini App) — он пишет дату и
+  // время, число гостей и сообщение, а бармены «что-нибудь придумают».
+  // Заявка уходит в стафф-тему «Брони» как текст (в БД не пишется — стола нет).
+  const FB_CANCEL_KB = new InlineKeyboard().text('‹ Отмена', 'fbcancel');
+
+  async function freeBookingStart(ctx, { edit } = {}) {
     if (!(await isSubscribed(ctx.api, ctx.from.id))) {
       const g = subGate();
       return edit ? ctx.editMessageText(g.text, { reply_markup: g.kb }) : ctx.reply(g.text, { reply_markup: g.kb });
     }
-    const kb = new InlineKeyboard();
-    upcomingEveningDates(7).forEach((d, i) => {
-      kb.text(fmtDate(d), `bkd:${d}`);
-      if (i % 2 === 1) kb.row();
-    });
-    kb.row().text('‹ Назад', 'menu');
-    const text = 'На какой день бронируем?';
-    return edit ? ctx.editMessageText(text, { reply_markup: kb }) : ctx.reply(text, { reply_markup: kb });
+    resetSession(ctx);
+    ctx.session.step = 'fb_when';
+    const text = '📝 *Заявка на бронь*\n\nШаг 1 из 3. Напишите дату и время визита — например: «12 июля, 21:00».';
+    const opts = { reply_markup: FB_CANCEL_KB, parse_mode: 'Markdown' };
+    return edit ? ctx.editMessageText(text, opts) : ctx.reply(text, opts);
   }
 
   bot.callbackQuery('bk', async (ctx) => {
     await ctx.answerCallbackQuery();
-    return bookingStepsStart(ctx, { edit: true });
+    return freeBookingStart(ctx, { edit: true });
   });
 
   // Telegram не разрешает дефис в именах команд (только [a-z0-9_]) —
   // /booking_steps вместо /booking-steps.
-  bot.command('booking_steps', (ctx) => bookingStepsStart(ctx, { edit: false }));
+  bot.command('booking_steps', (ctx) => freeBookingStart(ctx, { edit: false }));
 
-  // booking: choose time (слоты от часов работы, включая ночные после полуночи)
-  bot.callbackQuery(/^bkd:(.+)$/, async (ctx) => {
-    await ctx.answerCallbackQuery();
-    const date = ctx.match[1];
-    const slots = buildTimeSlots(date);
-    if (!slots.length) {
-      const kb = new InlineKeyboard().text('‹ Другой день', 'bk');
-      return ctx.editMessageText('На этот вечер заявки уже не принимаются — выберите другой день.', { reply_markup: kb });
-    }
-    const kb = new InlineKeyboard();
-    slots.forEach((t, i) => {
-      kb.text(t, `bkt:${date}:${t}`);
-      if (i % 3 === 2) kb.row();
-    });
-    kb.row().text('‹ Назад', 'bk');
-    return ctx.editMessageText(`📅 ${fmtDate(date)} — к какому времени вас ждать?`, { reply_markup: kb });
+  bot.callbackQuery('fbcancel', async (ctx) => {
+    await ctx.answerCallbackQuery({ text: 'Отменено' });
+    resetSession(ctx);
+    return ctx.editMessageText('Выберите действие:', { reply_markup: guestMenu(isTelegramStaff(ctx.from.id)) }).catch(() => {});
   });
 
-  // booking: choose table (only vacant; правило вечера уже учтено статусами).
-  // Подписи столов — человеческие, без внутренних айдишников (T1/B1).
-  bot.callbackQuery(/^bkt:([^:]+):(.+)$/, async (ctx) => {
-    await ctx.answerCallbackQuery();
-    const [, date, time] = ctx.match;
-    const tables = await getTablesWithStatusAdmin(date);
-    const vacant = tables.filter(t => t.status === 'vacant' && t.type !== 'bar');
-    if (!vacant.length) {
-      const kb = new InlineKeyboard().text('‹ Другой день', 'bk');
-      return ctx.editMessageText(
-        `На ${fmtDate(date)} свободных столов нет 😔\n\nНо стойка не бронируется — за ней место найдётся всегда, просто приходите 🎷`,
-        { reply_markup: kb },
-      );
-    }
-    const kb = new InlineKeyboard();
-    vacant.forEach(t => kb.text(tableGuestLabel(t), `bkc:${date}:${time}:${t.id}`).row());
-    kb.text('‹ Назад', `bkd:${date}`);
-    return ctx.editMessageText(`🪑 ${fmtDate(date)}, к ${time} — выберите стол:`, { reply_markup: kb });
-  });
-
-  // booking: confirm screen — только время прихода, конца брони в модели нет.
-  // Время в callback_data содержит двоеточие («19:00»), поэтому паттерн
-  // \d\d:\d\d, а не [^:]+ — иначе «19:00:T5» режется на «19» и «00:T5»
-  // (латентный баг старого формата, чинился здесь).
-  bot.callbackQuery(/^bkc:([^:]+):(\d\d:\d\d):(.+)$/, async (ctx) => {
-    await ctx.answerCallbackQuery();
-    const [, date, time, tableId] = ctx.match;
-    const table = (await getTablesMerged()).find(t => t.id === tableId);
-    const kb = new InlineKeyboard()
-      .text('📨 Отправить заявку', `bkok:${date}:${time}:${tableId}`).row()
-      .text('‹ Назад', `bkt:${date}:${time}`);
-    return ctx.editMessageText(
-      `Проверьте заявку:\n\n🪑 ${tableGuestLabel(table)}\n📅 ${fmtDate(date)}\n🕐 приход к ${time}\n\n`
-      + 'Бронь подтверждает бармен — уведомление придёт сюда, в Telegram.',
-      { reply_markup: kb, parse_mode: 'Markdown' },
-    );
-  });
-
-  // booking: create — заявка pending, подтверждение за барменом
-  bot.callbackQuery(/^bkok:([^:]+):(\d\d:\d\d):(.+)$/, async (ctx) => {
-    const [, date, time, tableId] = ctx.match;
-    try {
-      if (!(await isSubscribed(ctx.api, ctx.from.id))) {
-        await ctx.answerCallbackQuery({ text: 'Нужна подписка на канал', show_alert: true });
-        const g = subGate();
-        return ctx.editMessageText(g.text, { reply_markup: g.kb });
-      }
-      const user = await ensureTelegramUser(ctx.from);
-      const table = (await getTablesMerged()).find(t => t.id === tableId);
-      const cap = table ? table.seats.filter(s => s.active).length : 2;
-      const r = await createReservation({
-        tableId, date, timeFrom: time,
-        guestsCount: Math.min(2, cap || 1),
-        guestName: ctx.from.first_name || 'Гость',
-        source: 'telegram_bot', guestId: user.id,
+  bot.callbackQuery('fbsend', async (ctx) => {
+    const d = ctx.session.draft;
+    if (!d?.fbWhen || !d?.fbGuests) {
+      await ctx.answerCallbackQuery();
+      resetSession(ctx);
+      return ctx.editMessageText('Заявка утеряна, начните заново.', {
+        reply_markup: new InlineKeyboard().text('📝 Забронировать текстом', 'bk').row().text('🏠 Меню', 'menu'),
       });
-      await ctx.answerCallbackQuery({ text: 'Заявка отправлена!' });
-      const kb = new InlineKeyboard().text('📋 Мои брони', 'my').text('🏠 Меню', 'menu');
-      return ctx.editMessageText(
-        `📨 *Заявка отправлена!*\n\n🪑 ${tableGuestLabel(table)}\n📅 ${fmtDate(date)} · приход к ${r.timeFrom}\n\n`
-        + 'Бронь подтверждает бармен — обычно это занимает несколько минут. Уведомление придёт сюда 🎷',
-        { reply_markup: kb, parse_mode: 'Markdown' },
-      );
-    } catch (e) {
-      await ctx.answerCallbackQuery({ text: e.message || 'Ошибка', show_alert: true });
-      const kb = new InlineKeyboard().text('‹ Выбрать заново', `bkt:${date}:${time}`);
-      return ctx.editMessageText(`Не удалось отправить заявку: ${e.message}`, { reply_markup: kb });
     }
+    await ctx.answerCallbackQuery({ text: 'Отправляю...' });
+    const user = await ensureTelegramUser(ctx.from);
+    const uname = ctx.from.username ? ' · @' + escapeMd(ctx.from.username) : '';
+    const phone = user.phone ? ` · +${user.phone}` : '';
+    const staffText = '🙋 *Заявка на бронь текстом*\n\n'
+      + `📅 ${escapeMd(d.fbWhen)}\n`
+      + `👥 Гостей: ${d.fbGuests}\n`
+      + (d.fbMsg ? `💬 ${escapeMd(d.fbMsg)}\n` : '')
+      + `👤 ${escapeMd(user.name || ctx.from.first_name || 'Гость')}${uname}${phone}\n\n`
+      + 'Ответьте гостю в Telegram и, если договорились, создайте бронь в админке.';
+    resetSession(ctx);
+    const sentId = await notifyStaff(staffText, { threadId: process.env.TELEGRAM_STAFF_BOOKINGS_THREAD_ID });
+    if (!sentId) {
+      return ctx.editMessageText(
+        `Не получилось передать заявку 😿 Позвоните нам, пожалуйста: ${BAR_PHONE}`,
+        { reply_markup: new InlineKeyboard().text('🏠 Меню', 'menu') },
+      );
+    }
+    return ctx.editMessageText(
+      '📨 *Заявка у барменов!*\n\nОни посмотрят, что можно придумать, и ответят вам здесь, в Telegram 🎷',
+      { reply_markup: new InlineKeyboard().text('🏠 Меню', 'menu'), parse_mode: 'Markdown' },
+    );
   });
 
   // my reservations — заявки и брони со статусами; сравнение времени через
@@ -880,6 +845,149 @@ export function buildBot() {
     );
   });
 
+  // ─── админ-панель: настройка столов (депозит + число мест) ─────────────────
+  const TC_CANCEL_KB = new InlineKeyboard().text('‹ Отмена', 'tblcfg');
+
+  async function tblcfgContent() {
+    const tables = (await getTablesMerged()).filter(t => t.type !== 'bar');
+    const kb = new InlineKeyboard();
+    for (const t of tables) {
+      const dep = t.depositPrice > 0 ? `${t.depositPrice} ₽` : 'без депозита';
+      kb.text(`${t.zoneShort} №${t.num} · ${dep} · ${activeSeats(t)} мест`, `tccard:${t.id}`).row();
+    }
+    kb.text('‹ Админ-панель', 'adminmenu');
+    return {
+      text: '🪑 *Настройка столов*\n\nНажмите на стол — придёт карточка с планом зала, депозитом и числом мест.',
+      kb,
+    };
+  }
+
+  bot.callbackQuery('tblcfg', async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    await ctx.answerCallbackQuery();
+    resetSession(ctx);
+    const { text, kb } = await tblcfgContent();
+    // Сюда возвращаются и из фото-карточки стола — подпись фото в текст не
+    // редактируется, поэтому шлём новое сообщение.
+    if (ctx.callbackQuery.message?.photo) {
+      return ctx.reply(text, { reply_markup: kb, parse_mode: 'Markdown' });
+    }
+    return ctx.editMessageText(text, { reply_markup: kb, parse_mode: 'Markdown' }).catch(() => {});
+  });
+
+  function tableCfgCaption(t) {
+    return `🪑 *${t.zone}, №${t.num}*\n💰 Депозит: ${t.depositPrice > 0 ? t.depositPrice + ' ₽' : 'не нужен'}\n👥 Мест: ${activeSeats(t)}`;
+  }
+  function tableCfgKb(id) {
+    return new InlineKeyboard()
+      .text('💰 Изменить депозит', `tcdep:${id}`).row()
+      .text('👥 Изменить места', `tcseats:${id}`).row()
+      .text('‹ К столам', 'tblcfg');
+  }
+
+  // Карточка стола: фото плана с выделенным столом (как в заявках на бронь) —
+  // бармен видит, какой именно стол настраивает. Сбой рендера → текст.
+  bot.callbackQuery(/^tccard:(.+)$/, async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    await ctx.answerCallbackQuery();
+    const t = (await getTablesMerged()).find(x => x.id === ctx.match[1]);
+    if (!t) return ctx.reply('Стол не найден.', { reply_markup: new InlineKeyboard().text('‹ К столам', 'tblcfg') });
+    const opts = { caption: tableCfgCaption(t), reply_markup: tableCfgKb(t.id), parse_mode: 'Markdown' };
+    try {
+      const png = await renderPlanPng(t.id);
+      return await ctx.replyWithPhoto(new InputFile(png, 'plan.png'), opts);
+    } catch {
+      return ctx.reply(opts.caption, { reply_markup: opts.reply_markup, parse_mode: 'Markdown' });
+    }
+  });
+
+  bot.callbackQuery(/^tcdep:(.+)$/, async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    await ctx.answerCallbackQuery();
+    ctx.session.step = 'tc_deposit';
+    ctx.session.draft = { tableId: ctx.match[1] };
+    return ctx.reply('Введите сумму депозита в рублях (0 — без депозита):', { reply_markup: TC_CANCEL_KB });
+  });
+
+  bot.callbackQuery(/^tcseats:(.+)$/, async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    await ctx.answerCallbackQuery();
+    ctx.session.step = 'tc_seats';
+    ctx.session.draft = { tableId: ctx.match[1] };
+    return ctx.reply('Сколько мест доступно за этим столом? Введите число от 1 до 30:', { reply_markup: TC_CANCEL_KB });
+  });
+
+  // ─── админ-панель: даты брони (закрытые даты + кнопки «Сегодня»/«Завтра») ──
+  const BD_CANCEL_KB = new InlineKeyboard().text('‹ Отмена', 'bdates');
+
+  async function bdatesContent() {
+    const cfg = await getBookingDatesConfig();
+    const days = upcomingEveningDates(7);
+    const kb = new InlineKeyboard();
+    kb.text(`Кнопка «Сегодня»: ${cfg.blockToday ? '🚫 закрыта' : '✅ открыта'}`, 'bdtoday').row();
+    kb.text(`Кнопка «Завтра»: ${cfg.blockTomorrow ? '🚫 закрыта' : '✅ открыта'}`, 'bdtomorrow').row();
+    days.forEach((d, i) => {
+      kb.text(`${cfg.blockedDates.includes(d) ? '🚫' : '✅'} ${fmtEventDate(d).slice(0, 5)}`, `bdt:${d}`);
+      if (i % 3 === 2) kb.row();
+    });
+    kb.row();
+    // Закрытые даты за пределами недели — отдельными кнопками, чтобы снять
+    for (const d of cfg.blockedDates.filter(x => !days.includes(x))) {
+      kb.text(`🚫 ${fmtEventDate(d)} — открыть`, `bdt:${d}`).row();
+    }
+    kb.text('✍️ Закрыть другую дату', 'bdadd').row();
+    kb.text('‹ Админ-панель', 'adminmenu');
+    const text = '📅 *Даты брони*\n\n'
+      + 'Нажмите на дату, чтобы закрыть или открыть её для броней (🚫 — брони не принимаются).\n\n'
+      + 'Переключатели «Сегодня»/«Завтра» блокируют сами кнопки на сайте и переезжают на новый день автоматически: закрытое «сегодня» и завтра останется закрытым, пока вы его не откроете.';
+    return { text, kb };
+  }
+
+  async function renderBdates(ctx) {
+    const { text, kb } = await bdatesContent();
+    return ctx.editMessageText(text, { reply_markup: kb, parse_mode: 'Markdown' }).catch(() => {});
+  }
+
+  bot.callbackQuery('bdates', async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    await ctx.answerCallbackQuery();
+    resetSession(ctx);
+    return renderBdates(ctx);
+  });
+
+  bot.callbackQuery(/^bd(today|tomorrow)$/, async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    const key = ctx.match[1] === 'today' ? 'blockToday' : 'blockTomorrow';
+    const cfg = await getBookingDatesConfig();
+    const next = !cfg[key];
+    await setBookingDatesConfig({ [key]: next });
+    await ctx.answerCallbackQuery({ text: next ? 'Закрыто для брони' : 'Открыто для брони' });
+    return renderBdates(ctx);
+  });
+
+  bot.callbackQuery(/^bdt:(\d{4}-\d{2}-\d{2})$/, async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    const iso = ctx.match[1];
+    const cfg = await getBookingDatesConfig();
+    const wasBlocked = cfg.blockedDates.includes(iso);
+    await setBookingDatesConfig({
+      blockedDates: wasBlocked ? cfg.blockedDates.filter(d => d !== iso) : [...cfg.blockedDates, iso],
+    });
+    await ctx.answerCallbackQuery({ text: wasBlocked ? 'Дата открыта' : 'Дата закрыта' });
+    return renderBdates(ctx);
+  });
+
+  bot.callbackQuery('bdadd', async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    await ctx.answerCallbackQuery();
+    ctx.session.step = 'bd_date';
+    ctx.session.draft = {};
+    return ctx.reply(
+      'Введите дату в формате ДД.ММ.ГГГГ — она закроется для брони (повторный ввод той же даты откроет её):',
+      { reply_markup: BD_CANCEL_KB },
+    );
+  });
+
   // Свободный текст: (1) причина отклонения заявки — бармен отвечает (Reply)
   // на промпт бота в стафф-группе; (2) шаги мастера «Добавить событие» (админ).
   bot.on('message:text', async (ctx) => {
@@ -898,6 +1006,49 @@ export function buildBot() {
       }
     }
 
+    // Шаги гостевой текстовой заявки (fb_*) — доступны ЛЮБОМУ гостю,
+    // поэтому обрабатываются ДО стафф-гейта ниже.
+    const guestStep = ctx.session.step;
+    if (guestStep === 'fb_when' || guestStep === 'fb_guests' || guestStep === 'fb_msg') {
+      const gText = ctx.message.text.trim();
+      if (gText === '/cancel') {
+        resetSession(ctx);
+        return ctx.reply('Отменено.', { reply_markup: guestMenu(isTelegramStaff(ctx.from.id)) });
+      }
+      if (guestStep === 'fb_when') {
+        if (!gText || gText.length > 120) {
+          return ctx.reply('Напишите дату и время текстом, например: «12 июля, 21:00».', { reply_markup: FB_CANCEL_KB });
+        }
+        ctx.session.draft.fbWhen = gText;
+        ctx.session.step = 'fb_guests';
+        return ctx.reply('Шаг 2 из 3. Сколько вас будет? Напишите число:', { reply_markup: FB_CANCEL_KB });
+      }
+      if (guestStep === 'fb_guests') {
+        const n = parseInt(gText.replace(/\D/g, ''), 10);
+        if (!Number.isFinite(n) || n < 1 || n > 200) {
+          return ctx.reply('Напишите число гостей, например: 6', { reply_markup: FB_CANCEL_KB });
+        }
+        ctx.session.draft.fbGuests = n;
+        ctx.session.step = 'fb_msg';
+        return ctx.reply(
+          'Шаг 3 из 3. Сообщение для барменов: какой стол хотите, повод, пожелания. Или отправьте «-», чтобы пропустить:',
+          { reply_markup: FB_CANCEL_KB },
+        );
+      }
+      // fb_msg — финал: превью и подтверждение
+      ctx.session.draft.fbMsg = gText === '-' ? '' : gText.slice(0, 500);
+      ctx.session.step = null;
+      const d = ctx.session.draft;
+      const kb = new InlineKeyboard()
+        .text('📨 Отправить барменам', 'fbsend').row()
+        .text('✏️ Начать заново', 'bk').row()
+        .text('‹ Отмена', 'fbcancel');
+      return ctx.reply(
+        `Проверьте заявку:\n\n📅 ${d.fbWhen}\n👥 Гостей: ${d.fbGuests}${d.fbMsg ? `\n💬 ${d.fbMsg}` : ''}\n\nОтправляем барменам?`,
+        { reply_markup: kb },
+      );
+    }
+
     if (!isTelegramStaff(ctx.from.id)) return;
     const step = ctx.session.step;
     if (!step) return;
@@ -906,6 +1057,53 @@ export function buildBot() {
     if (text === '/cancel') {
       resetSession(ctx);
       return ctx.reply('Отменено.', { reply_markup: adminMenu() });
+    }
+
+    // Настройка столов: депозит / число мест (draft.tableId выставлен кнопкой)
+    if (step === 'tc_deposit' || step === 'tc_seats') {
+      const tableId = ctx.session.draft.tableId;
+      const table = (await getTablesMerged()).find(t => t.id === tableId);
+      if (!table) {
+        resetSession(ctx);
+        return ctx.reply('Стол не найден, начните заново.', { reply_markup: adminMenu() });
+      }
+      const label = `${table.zoneShort} №${table.num}`;
+      const doneKb = new InlineKeyboard().text('🪑 К столам', 'tblcfg').text('🏠 Меню', 'adminmenu');
+      if (step === 'tc_deposit') {
+        const n = parseInt(text.replace(/\D/g, ''), 10);
+        if (!Number.isFinite(n) || n < 0 || n > 1000000) {
+          return ctx.reply('Введите сумму в рублях числом (0 — без депозита):', { reply_markup: TC_CANCEL_KB });
+        }
+        await setTableDepositPrice(tableId, n);
+        resetSession(ctx);
+        return ctx.reply(`Готово: ${label} — депозит ${n > 0 ? n + ' ₽' : 'не нужен'}.`, { reply_markup: doneKb });
+      }
+      const n = parseInt(text.replace(/\D/g, ''), 10);
+      try {
+        await setTableSeatsCount(tableId, n);
+      } catch (e) {
+        return ctx.reply(`${e.message}. Введите число мест:`, { reply_markup: TC_CANCEL_KB });
+      }
+      resetSession(ctx);
+      return ctx.reply(`Готово: ${label} — ${n} мест.`, { reply_markup: doneKb });
+    }
+
+    // Даты брони: закрыть/открыть произвольную дату вводом ДД.ММ.ГГГГ
+    if (step === 'bd_date') {
+      const m = text.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+      const iso = m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+      if (!iso || Number.isNaN(new Date(iso).getTime())) {
+        return ctx.reply('Введите дату в формате ДД.ММ.ГГГГ, например 15.08.2026:', { reply_markup: BD_CANCEL_KB });
+      }
+      const cfg = await getBookingDatesConfig();
+      const wasBlocked = cfg.blockedDates.includes(iso);
+      await setBookingDatesConfig({
+        blockedDates: wasBlocked ? cfg.blockedDates.filter(d => d !== iso) : [...cfg.blockedDates, iso],
+      });
+      resetSession(ctx);
+      const { text: bdText, kb: bdKb } = await bdatesContent();
+      await ctx.reply(wasBlocked ? `Дата ${text} снова открыта для брони.` : `Дата ${text} закрыта для брони.`);
+      return ctx.reply(bdText, { reply_markup: bdKb, parse_mode: 'Markdown' });
     }
 
     // Мастер рассылки: один шаг — текст, дальше превью с подтверждением.

@@ -65,8 +65,20 @@ const BookingService = {
   async setTableDepositPrice(tableId, price) {
     return apiFetch('/api/tables', { method: 'POST', body: { action: 'set_deposit', tableId, price } });
   },
-  async setTableSeatActive(tableId, seatIndex, active) {
-    return apiFetch('/api/tables', { method: 'POST', body: { action: 'set_seat', tableId, seatIndex, active } });
+  async setTableSeatsCount(tableId, count) {
+    return apiFetch('/api/tables', { method: 'POST', body: { action: 'set_seats_count', tableId, count } });
+  },
+
+  // ─── даты брони (закрытые владельцем) ────────────────────────────────────
+  /** Публично: { blockToday, blockTomorrow, blockedDates[] } — виджет прячет закрытые даты. */
+  async getBookingDates() {
+    const d = await apiFetch('/api/tables?dates=1', { auth: false });
+    return d.dates;
+  },
+  /** Админ: patch = { blockToday?, blockTomorrow?, addDate?, removeDate? }. */
+  async setBookingDates(patch) {
+    const d = await apiFetch('/api/tables', { method: 'POST', body: { action: 'set_dates', ...patch } });
+    return d.dates;
   },
 
   // utils

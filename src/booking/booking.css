@@ -399,6 +399,7 @@
    Токены темы с fallback'ами (standalone живёт вне [data-theme]). */
 .bkw {
   --bkw-gold:   var(--gold, #D4A843);
+  --bkw-gold-rgb: var(--gold-rgb, 212, 168, 67);
   --bkw-accent: var(--accent, #9B5DE5);
   --bkw-text:   var(--text, #F2EDE4);
   --bkw-dim:    var(--text-dim, rgba(242, 237, 228, 0.55));
@@ -423,6 +424,66 @@
 }
 .bkw__when { display: flex; gap: 10px; }
 .bkw__closed { margin: 0; font-size: 11px; font-style: italic; color: var(--bkw-dim); }
+
+/* Правая колонка: панель заявки + подсказка «большая компания» под ней.
+   Панель тянется, подсказка прижата к низу колонки (место из макета владельца). */
+.bkw__side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+.bkw__side .bkw__panel { flex: 1; }
+.bkw__tg-fallback {
+  border: 1px dashed rgba(var(--bkw-gold-rgb), .35);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.bkw__tg-fallback-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--bkw-dim);
+  flex: 1;
+  min-width: 160px;
+}
+.bkw__tg-fallback-text strong { color: var(--bkw-text); font-weight: 600; }
+.bkw__tg-fallback-btn {
+  border: 1px solid rgba(var(--bkw-gold-rgb), .5);
+  border-radius: 8px;
+  color: var(--bkw-gold);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  white-space: nowrap;
+  transition: transform .2s, border-color .2s;
+}
+.bkw__tg-fallback-btn:hover { border-color: var(--bkw-gold); transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .bkw__tg-fallback-btn { transition: border-color .2s; }
+  .bkw__tg-fallback-btn:hover { transform: none; }
+}
+
+/* Депозит выбранного стола — видим до отправки заявки */
+.bkw__deposit {
+  border: 1px solid rgba(var(--bkw-gold-rgb), .25);
+  background: rgba(var(--bkw-gold-rgb), .06);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 10px;
+}
+.bkw__deposit-sum { font-size: 13px; color: var(--bkw-gold); font-weight: 600; }
+.bkw__deposit-note { font-size: 11px; color: var(--bkw-dim); line-height: 1.45; }
+.bkw__success-text--deposit { color: var(--bkw-gold); }
 .bkw__plan {
   min-height: 0;
   display: flex;
@@ -612,7 +673,8 @@
    работает fallback с теми же значениями. --st-vacant — единственный «зелёный»
    проекта, определён только здесь. */
 [data-theme],
-.bk-root {
+.bk-root,
+.adm-root { /* план живёт и в админке (вкладка СТОЛЫ) — темы там нет */
   --st-vacant:   #3ECF8E;
   --st-reserved: var(--gold, #D4A843);
   --st-occupied: var(--accent, #9B5DE5);
