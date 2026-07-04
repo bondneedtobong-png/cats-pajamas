@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { TABLES, ZONE_LABELS, activeSeats } from '../../src/booking/tablesConfig.js';
+import { TABLES, ZONE_LABELS, WINDOWS, BAR_GEO, ARC_D, PLAN_VB, activeSeats } from '../../src/booking/tablesConfig.js';
 
 // Серверный рендер плана зала в PNG с выделенным столом — прикладывается к
 // заявке в стафф-группе и к «Бронь подтверждена» гостю, чтобы стол было видно
@@ -10,8 +10,8 @@ import { TABLES, ZONE_LABELS, activeSeats } from '../../src/booking/tablesConfig
 // Всё best-effort: любой сбой рендера не должен ронять создание/подтверждение
 // брони — вызывающие стороны обязаны оборачивать в try/catch.
 
-const VB = { x: 140, y: -440, w: 28640, h: 31200 }; // как в FloorPlanSvg.jsx
-const OUT_W = 840;
+const VB = PLAN_VB; // общий с FloorPlanSvg.jsx
+const OUT_W = 1000;
 
 const C = {
   bg: '#0C0A18',
@@ -25,12 +25,7 @@ const C = {
   dark: '#0C0A18',
 };
 
-const DECOR_ARC_D = 'M27322.13 2749.55c-6992.43,3818.13 -18287.38,3819.15 -25228,2.29';
-const BAR = { x: 7979.6, y: -70, w: 13200.8, h: 4163, rx: 200 };
-const SIDE_RECTS = [
-  { x: 244.39, y: 7206.06, w: 1155.63, h: 7329.95 },
-  { x: 289.93, y: 15919, w: 1155.63, h: 7329.95 },
-];
+const BAR = BAR_GEO;
 
 function tableShapeSvg(t, highlighted) {
   const stroke = highlighted ? C.gold : C.tableStroke;
@@ -61,10 +56,10 @@ export async function renderPlanPng(highlightTableId) {
   parts.push(`<rect x="${VB.x}" y="${VB.y}" width="${VB.w}" height="${VB.h}" fill="${C.bg}"/>`);
   // стойка и декор
   parts.push(`<rect x="${BAR.x}" y="${BAR.y}" width="${BAR.w}" height="${BAR.h}" rx="${BAR.rx}" fill="rgba(212,168,67,0.06)" stroke="${C.goldDim}" stroke-width="60"/>`);
-  parts.push(`<text x="${BAR.x + BAR.w / 2}" y="2450" text-anchor="middle" font-family="sans-serif" font-size="1050" letter-spacing="300" fill="${C.goldDim}">BAR</text>`);
-  parts.push(`<path d="${DECOR_ARC_D}" fill="none" stroke="${C.line}" stroke-width="56"/>`);
-  for (const r of SIDE_RECTS) {
-    parts.push(`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="200" fill="none" stroke="${C.line}" stroke-width="56"/>`);
+  parts.push(`<text x="${BAR.x + BAR.w / 2}" y="${BAR.y + 2050}" text-anchor="middle" font-family="sans-serif" font-size="1050" letter-spacing="300" fill="${C.goldDim}">BAR</text>`);
+  parts.push(`<path d="${ARC_D}" fill="none" stroke="${C.line}" stroke-width="56"/>`);
+  for (const w of WINDOWS) {
+    parts.push(`<rect x="${w.x}" y="${w.y}" width="${w.w}" height="${w.h}" rx="90" fill="none" stroke="${C.line}" stroke-width="50"/>`);
   }
   // подписи зон — нумерация столов зонная («Основной зал №1», «У окна №2»…)
   for (const z of ZONE_LABELS) {

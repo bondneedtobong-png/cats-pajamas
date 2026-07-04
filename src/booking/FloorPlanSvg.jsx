@@ -4,7 +4,7 @@
  * кликабельны. Цвета — токены темы через классы в booking.css (скоуп .fp-svg):
  * исходные #D7D8D8/#2B2A29 из CorelDRAW-экспорта здесь не используются.
  */
-import { ZONE_LABELS } from './tablesConfig.js';
+import { ZONE_LABELS, WINDOWS, BAR_GEO, ARC_D, PLAN_VB } from './tablesConfig.js';
 
 const noPtr = { pointerEvents: 'none' };
 const noSel = { pointerEvents: 'none', userSelect: 'none' };
@@ -21,23 +21,8 @@ const T_DEF = {
   zoneSofas: 'ДИВАНЫ',
 };
 
-// Декоративная дуга через верх зала (стена/сцена) — из plan-v2.svg как есть
-const DECOR_ARC_D = 'M27322.13 2749.55c-6992.43,3818.13 -18287.38,3819.15 -25228,2.29';
-
-// Барная стойка: скруглённый прямоугольник сверху по центру (из path
-// M8179,4093 в plan-v2.svg; верхний край чуть выше нулевой линии — как в исходнике)
-const BAR = { x: 7979.6, y: -70, w: 13200.8, h: 4163, rx: 200 };
-
-// Приставные места лаунж-зоны (узкие банкетки + пуфы слева от диванов) —
-// декор, отдельно не бронируются (§4 ТЗ)
-const SIDE_RECTS = [
-  { x: 244.39, y: 7206.06, w: 1155.63, h: 7329.95 },
-  { x: 289.93, y: 15919, w: 1155.63, h: 7329.95 },
-];
-const SIDE_POUFS = [
-  { cx: 803.19, cy: 7760.2 }, { cx: 803.19, cy: 13966.56 },
-  { cx: 848.74, cy: 16473.15 }, { cx: 848.74, cy: 22679.51 },
-];
+// Геометрия стойки/дуги/окон — общая с planImage.js, живёт в tablesConfig
+const BAR = BAR_GEO;
 
 /**
  * Position and rotation for a chair around a table (decorative).
@@ -159,10 +144,7 @@ function TableShape({ tbl, selectedTableId, onSelect, tx }) {
   );
 }
 
-// ViewBox обрезан по фактическому контенту (столы + стулья + банкетки),
-// а не по холсту CorelDRAW 30000×30000 — иначе план плавал мелким пятном
-// посреди пустых полей, а стулья нижнего ряда срезались нижней границей.
-const VB = { x: 140, y: -440, w: 28640, h: 31200 };
+const VB = PLAN_VB;
 
 export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDeselect, tx: txProp }) {
   const tx = { ...T_DEF, ...txProp };
@@ -174,14 +156,14 @@ export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDese
       preserveAspectRatio="xMidYMid meet"
       onClick={onDeselect}
     >
-      {/* ── Декор: дуга-стена и приставные места лаунжа ── */}
+      {/* ── Декор: дуга-сцена под стойкой и окна на нижней стене ── */}
       <g className="fp-decor" style={noPtr}>
-        <path d={DECOR_ARC_D} fill="none" />
-        {SIDE_RECTS.map((r, i) => (
-          <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx={200} />
-        ))}
-        {SIDE_POUFS.map((p, i) => (
-          <ellipse key={i} cx={p.cx} cy={p.cy} rx={542} ry={558} />
+        <path d={ARC_D} fill="none" />
+        {WINDOWS.map((w, i) => (
+          <g key={i} className="fp-window">
+            <rect x={w.x} y={w.y} width={w.w} height={w.h} rx={90} />
+            <line x1={w.x + 260} y1={w.y + w.h / 2} x2={w.x + w.w - 260} y2={w.y + w.h / 2} />
+          </g>
         ))}
       </g>
 
@@ -190,17 +172,17 @@ export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDese
       <g className="fp-bar" style={noPtr}>
         <rect x={BAR.x} y={BAR.y} width={BAR.w} height={BAR.h} rx={BAR.rx} className="fp-bar-glow__inner" />
         <rect x={BAR.x} y={BAR.y} width={BAR.w} height={BAR.h} rx={BAR.rx} className="fp-bar-body" />
-        <text className="fp-bar-title" x={BAR.x + BAR.w / 2} y={1750} textAnchor="middle" fontSize={720} letterSpacing={170} style={noSel}>
+        <text className="fp-bar-title" x={BAR.x + BAR.w / 2} y={BAR.y + 1350} textAnchor="middle" fontSize={720} letterSpacing={170} style={noSel}>
           BAR
         </text>
-        <text className="fp-bar-note" x={BAR.x + BAR.w / 2} y={2900} textAnchor="middle" fontSize={430} style={noSel}>
+        <text className="fp-bar-note" x={BAR.x + BAR.w / 2} y={BAR.y + 2400} textAnchor="middle" fontSize={430} style={noSel}>
           {tx.barNote}
         </text>
       </g>
 
-      {/* ── Подписи зон (нумерация столов — внутри зоны) ── */}
-      {ZONE_LABELS.map(z => (
-        <text key={z.key} className="fp-zone-label" x={z.x} y={z.y} textAnchor="middle" fontSize={520} letterSpacing={220} style={noSel}>
+      {/* ── Подписи зон (нумерация столов — внутри зоны; «У окна» ×2) ── */}
+      {ZONE_LABELS.map((z, i) => (
+        <text key={i} className="fp-zone-label" x={z.x} y={z.y} textAnchor="middle" fontSize={520} letterSpacing={220} style={noSel}>
           {tx[z.key] || z.ru}
         </text>
       ))}

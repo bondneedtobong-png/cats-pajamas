@@ -452,17 +452,19 @@
   position: absolute;
   inset: clamp(8px, 1.4vh, 16px);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  container-type: size;
 }
+/* Вписывание с сохранением аспекта по ОБЕИМ осям (cqh = высота стейджа):
+   при «широком» контейнере лимитирует высота, при «узком» — ширина; svg
+   всегда заполняет слой целиком → HTML-оверлеи не расходятся с планом */
 .bkw__stage-in {
   position: relative;
-  height: 100%;
-  aspect-ratio: 28640 / 31200;
-  max-width: 100%;
+  margin: auto;
+  aspect-ratio: 32000 / 21900;
+  width: min(100%, calc(100cqh * 32000 / 21900));
 }
 .bkw__stage-in .fp-svg { width: 100%; height: 100%; }
-.bkw__glowbar-pos { left: 27.38%; top: 1.19%; width: 46.09%; height: 13.34%; }
+.bkw__glowbar-pos { left: 31.56%; top: 1.37%; width: 40.63%; height: 14.61%; }
 .bkw__loading {
   position: absolute;
   top: 8px;
@@ -585,7 +587,7 @@
      Поля минимальные — узкие диваны должны давать тап ≥ 44px. */
   .bkw__plan { min-height: 0; }
   .bkw__plan-card { padding: 4px; }
-  .bkw__stage { position: relative; inset: auto; display: block; height: auto; }
+  .bkw__stage { position: relative; inset: auto; display: block; height: auto; container-type: normal; }
   .bkw__stage-in { width: 100%; height: auto; }
   .bkw__panel { overflow-y: visible; }
 }
