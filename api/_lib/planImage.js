@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { TABLES, activeSeats } from '../../src/booking/tablesConfig.js';
+import { TABLES, ZONE_LABELS, activeSeats } from '../../src/booking/tablesConfig.js';
 
 // Серверный рендер плана зала в PNG с выделенным столом — прикладывается к
 // заявке в стафф-группе и к «Бронь подтверждена» гостю, чтобы стол было видно
@@ -65,6 +65,10 @@ export async function renderPlanPng(highlightTableId) {
   parts.push(`<path d="${DECOR_ARC_D}" fill="none" stroke="${C.line}" stroke-width="56"/>`);
   for (const r of SIDE_RECTS) {
     parts.push(`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="200" fill="none" stroke="${C.line}" stroke-width="56"/>`);
+  }
+  // подписи зон — нумерация столов зонная («Основной зал №1», «У окна №2»…)
+  for (const z of ZONE_LABELS) {
+    parts.push(`<text x="${z.x}" y="${z.y}" text-anchor="middle" font-family="sans-serif" font-size="560" letter-spacing="220" fill="${C.num}">${z.ru}</text>`);
   }
   // столы: сперва обычные, выделенный — поверх
   const sorted = [...TABLES].sort((a, b) => (a.id === highlightTableId) - (b.id === highlightTableId));

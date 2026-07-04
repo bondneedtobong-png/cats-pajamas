@@ -412,52 +412,17 @@
   font-family: 'Avenir Next', sans-serif;
 }
 
-.bkw__controls {
-  display: flex;
-  align-items: center;
-  gap: 8px 12px;
-  flex-wrap: wrap;
-  min-height: 32px;
-}
-.bkw__ctl-label {
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--bkw-dim);
-  flex-shrink: 0;
-}
-.bkw__chips {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  max-width: 100%;
-  padding: 2px;
-}
-.bkw__chips::-webkit-scrollbar { display: none; }
-.bkw__chip {
-  background: transparent;
-  border: 1px solid var(--bkw-border);
-  border-radius: 999px;
-  color: var(--bkw-dim);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 6px 12px;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
-}
-.bkw__chip:hover { color: var(--bkw-text); }
-.bkw__chip--on { color: var(--bkw-gold); border-color: var(--bkw-gold); }
-.bkw__closed { font-size: 12px; font-style: italic; color: var(--bkw-dim); }
-
+/* Дата и время живут в панели заявки (перевёрстка по макету владельца);
+   план занимает всю левую зону, панель шире. */
 .bkw__body {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 410px);
   gap: clamp(14px, 2vw, 24px);
 }
+.bkw__when { display: flex; gap: 10px; }
+.bkw__closed { margin: 0; font-size: 11px; font-style: italic; color: var(--bkw-dim); }
 .bkw__plan {
   min-height: 0;
   display: flex;
@@ -471,7 +436,7 @@
 .bkw__plan-card {
   flex: 1;
   min-height: 0;
-  display: flex;
+  position: relative;
   border: 1px solid var(--bkw-border);
   border-radius: 12px;
   background:
@@ -479,7 +444,25 @@
     color-mix(in srgb, var(--bkw-bg2) 55%, transparent);
   padding: clamp(8px, 1.4vh, 16px);
 }
-.bkw__plan-card .fp-svg { flex: 1; min-height: 0; }
+/* Стейдж: absolute-заливка карточки (даёт определённую высоту в любой
+   вёрстке), внутри — слой с аспектом viewBox плана: svg заполняет его
+   целиком, и HTML-оверлеи (пульс стойки) позиционируются процентами
+   без рассинхрона с letterbox'ом */
+.bkw__stage {
+  position: absolute;
+  inset: clamp(8px, 1.4vh, 16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bkw__stage-in {
+  position: relative;
+  height: 100%;
+  aspect-ratio: 28640 / 31200;
+  max-width: 100%;
+}
+.bkw__stage-in .fp-svg { width: 100%; height: 100%; }
+.bkw__glowbar-pos { left: 27.38%; top: 1.19%; width: 46.09%; height: 13.34%; }
 .bkw__loading {
   position: absolute;
   top: 8px;
@@ -598,13 +581,17 @@
 @media (max-width: 900px) {
   .bkw { height: auto; }
   .bkw__body { grid-template-columns: 1fr; }
-  /* высота плана держит тап-мишени столов ≥ 44px (узкие диваны — лимитирующие) */
-  .bkw__plan { min-height: min(102vw, 470px); }
+  /* План width-driven: стейдж в потоке, высота из аспекта viewBox.
+     Поля минимальные — узкие диваны должны давать тап ≥ 44px. */
+  .bkw__plan { min-height: 0; }
+  .bkw__plan-card { padding: 4px; }
+  .bkw__stage { position: relative; inset: auto; display: block; height: auto; }
+  .bkw__stage-in { width: 100%; height: auto; }
   .bkw__panel { overflow-y: visible; }
 }
 
 /* ── Standalone /booking (Mini App и старые ссылки) ── */
-.bk-root--v2 { height: auto; min-height: 100dvh; overflow: visible; }
+.bk-root--v2 { height: 100dvh; overflow: hidden; }
 .bk-header--v2 {
   position: sticky;
   top: 0;
@@ -615,6 +602,7 @@
 .bk-body--v2 {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   padding: 14px clamp(12px, 3vw, 32px) calc(24px + env(safe-area-inset-bottom, 0px));
@@ -637,8 +625,10 @@
   --fp-ink:      var(--text, #F2EDE4);
 }
 
-/* Hover — только opacity (правило web-polish: без transition на filter) */
-.fp-table { cursor: pointer; opacity: 0.92; transition: opacity 0.18s ease; }
+/* ВАЖНО: внутри .fp-svg НЕТ ни одной animation/transition — любое изменение
+   внутри SVG перерисовывает план на CPU каждый кадр (профилировано: на слабых
+   машинах это фризы). Hover мгновенный, пульс стойки — HTML-оверлей .bkw__glowbar. */
+.fp-table { cursor: pointer; opacity: 0.92; }
 .fp-table:hover { opacity: 1; }
 
 .fp-t--vacant   { --tbl: var(--st-vacant); }
@@ -680,20 +670,13 @@
   stroke-width: 56;
 }
 
-/* Барная стойка — glow-акцент «не бронируется, просто приходите».
-   Анимируется ТОЛЬКО opacity готового glow-слоя (web-polish). */
+/* Барная стойка — статичный акцент «не бронируется, просто приходите». */
 .fp-bar-body {
   fill: color-mix(in srgb, var(--st-reserved) 5%, transparent);
   stroke: color-mix(in srgb, var(--st-reserved) 55%, transparent);
   stroke-width: 46;
 }
-.fp-bar-glow__outer { fill: none; stroke: var(--st-reserved); stroke-width: 340; opacity: 0.06; }
 .fp-bar-glow__inner { fill: none; stroke: var(--st-reserved); stroke-width: 140; opacity: 0.14; }
-.fp-bar-glow { animation: fp-bar-glow 5s ease-in-out infinite; }
-@keyframes fp-bar-glow {
-  0%, 100% { opacity: 0.45; }
-  50%      { opacity: 1; }
-}
 .fp-bar-title {
   fill: color-mix(in srgb, var(--st-reserved) 60%, transparent);
   font-family: 'Baskerville', serif;
@@ -704,30 +687,41 @@
   font-style: italic;
 }
 
-.fp-pulse-ring {
+/* Подписи зон — нумерация столов зонная («Основной зал №1», «У окна №2»…) */
+.fp-zone-label {
+  fill: color-mix(in srgb, var(--fp-ink) 26%, transparent);
+  font-family: 'Avenir Next', sans-serif;
+  font-weight: 600;
+}
+
+/* Статичное кольцо у стола с бронью (без анимации — см. комментарий выше) */
+.fp-ring {
   fill: none;
   stroke: var(--tbl);
   stroke-width: 24;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: fp-pulse 2.2s ease-in-out infinite;
-}
-@keyframes fp-pulse {
-  0%, 100% { opacity: 0.12; transform: scale(0.97); }
-  50%      { opacity: 0.40; transform: scale(1.03); }
+  opacity: 0.3;
 }
 
-/* Infinite-анимации плана обязаны стоять на паузе на неактивных страницах
-   книги (правило CLAUDE.md); вне книги (/booking, Mini App) книги нет —
-   селектор не матчится, анимации живут. */
-.book__page:not(.book__page--active) .fp-pulse-ring,
-.book__page:not(.book__page--active) .fp-bar-glow {
+/* Пульс свечения стойки — HTML-оверлей ПОВЕРХ svg (композитная opacity-
+   анимация, план не перерисовывается). Пауза на неактивных страницах книги
+   (правило CLAUDE.md) и при reduced-motion. */
+.bkw__glowbar {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 10px;
+  box-shadow: 0 0 22px 4px color-mix(in srgb, var(--bkw-gold) 30%, transparent),
+              inset 0 0 18px 2px color-mix(in srgb, var(--bkw-gold) 18%, transparent);
+  animation: bkw-glow 5s ease-in-out infinite;
+}
+@keyframes bkw-glow {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.9; }
+}
+.book__page:not(.book__page--active) .bkw__glowbar {
   animation-play-state: paused;
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .fp-pulse-ring { animation: none; }
-  .fp-bar-glow { animation: none; opacity: 0.7; }
+  .bkw__glowbar { animation: none; opacity: 0.5; }
 }
 
 /* На телефоне план ужимается до ~375px — подписи в world-units становятся
@@ -1328,4 +1322,15 @@ select option { background: #110E22; color: #F2EDE4; }
   /* Booking panel covers the full width on small screens */
   .bk-panel,
   .bk-panel__inner { width: 100%; }
+}
+
+/* Пустое состояние панели: контент по центру под селектами даты/времени */
+.bkw__panel-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
 }

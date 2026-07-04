@@ -110,13 +110,14 @@ export async function getTablesMerged() {
 }
 
 // ─── подписи столов ──────────────────────────────────────────────────────────
+// Нумерация ЗОННАЯ (решение владельца): «Основной зал, стол №2», «У окна,
+// стол №3», «Диван №1». Внутренние id (T1/B1) гостю и бармену не показываются.
 function tableStaffLabel(table, tableId) {
   if (!table) return `Стол ${tableId}`;
-  const num = table.num ?? table.id;
-  return `Стол №${num}${table.zone ? ' · ' + table.zone : ''}`;
+  return table.type === 'booth'
+    ? `Диван №${table.num}`
+    : `${table.zone}, стол №${table.num}`;
 }
-
-const TYPE_LABEL = { round: 'Круглый стол', square: 'Квадратный стол', booth: 'Лаунж-диван', bar: 'Место у стойки' };
 
 function seatsWord(n) {
   const d10 = n % 10, d100 = n % 100;
@@ -125,14 +126,11 @@ function seatsWord(n) {
   return 'мест';
 }
 
-/** Человеческое описание стола для гостя — БЕЗ внутренних айдишников (T1/B1):
- *  «Круглый стол №3 · Основной зал · 4 места». */
+/** Человеческое описание стола для гостя: «Основной зал, стол №2 · 4 места». */
 export function tableGuestLabel(table) {
   if (!table) return 'Стол';
-  const type = TYPE_LABEL[table.type] || 'Стол';
-  const num = table.num ? ` №${table.num}` : '';
   const seats = activeSeats(table);
-  return `${type}${num} · ${table.zone} · ${seats} ${seatsWord(seats)}`;
+  return `${tableStaffLabel(table)} · ${seats} ${seatsWord(seats)}`;
 }
 
 /** Текст заявки в стафф-тему «Брони» — единый билдер, чтобы правки сообщения

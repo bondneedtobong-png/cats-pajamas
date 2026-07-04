@@ -24,10 +24,13 @@ import './booking.css';
 const POLL_MS = 25000;
 const BAR_PHONE = { href: 'tel:+79084180009', label: '+7 (908) 418-00-09' };
 
-const TYPE_KEY = { round: 'bkTypeRound', square: 'bkTypeSquare', booth: 'bkTypeBooth' };
+const ZONE_KEY = { 'Основной зал': 'bkZoneMain', 'У окна': 'bkZoneWindow', 'Диваны': 'bkZoneSofas' };
 
 function tableTitle(t, tx) {
-  return `${tx[TYPE_KEY[t.type]] || ''} №${t.num ?? ''}`.trim();
+  return `${t.type === 'booth' ? tx.bkSofa : tx.bkTableWord} №${t.num ?? ''}`.trim();
+}
+function zoneName(t, tx) {
+  return tx[ZONE_KEY[t.zone]] || t.zone;
 }
 
 function isValidPhone(value) {
@@ -35,40 +38,35 @@ function isValidPhone(value) {
   return digits.length === 10 || digits.length === 11;
 }
 
-function DateChips({ dates, value, onChange, tx }) {
-  const label = (d, i) => {
+// Дата и время прихода — селекты в панели заявки (макет владельца):
+// смена даты перезагружает статусы плана, время влияет только на заявку.
+function WhenPicker({ dates, date, onDateChange, slots, time, onTimeChange, tx }) {
+  const dateLabel = (d, i) => {
     if (i === 0) return tx.bkToday;
     if (i === 1) return tx.bkTomorrow;
     const [, m, day] = d.split('-');
     return `${day}.${m}`;
   };
   return (
-    <div className="bkw__chips" role="group" aria-label={tx.bkDateLabel}>
-      {dates.map((d, i) => (
-        <button
-          key={d}
-          type="button"
-          className={`bkw__chip${d === value ? ' bkw__chip--on' : ''}`}
-          onClick={() => onChange(d)}
-        >{label(d, i)}</button>
-      ))}
-    </div>
-  );
-}
-
-function TimeChips({ slots, value, onChange, tx }) {
-  if (!slots.length) return <div className="bkw__closed">{tx.bkClosedToday}</div>;
-  return (
-    <div className="bkw__chips" role="group" aria-label={tx.bkTimeLabel}>
-      {slots.map(t => (
-        <button
-          key={t}
-          type="button"
-          className={`bkw__chip${t === value ? ' bkw__chip--on' : ''}`}
-          onClick={() => onChange(t)}
-        >{t}</button>
-      ))}
-    </div>
+    <>
+      <div className="bkw__when">
+        <label className="bkw__field">
+          <span className="bkw__label">{tx.bkDateLabel}</span>
+          <select className="bkw__input" value={date} onChange={e => onDateChange(e.target.value)}>
+            {dates.map((d, i) => <option key={d} value={d}>{dateLabel(d, i)}</option>)}
+          </select>
+        </label>
+        <label className="bkw__field">
+          <span className="bkw__label">{tx.bkTimeLabel}</span>
+          <select className="bkw__input" value={time || ''} onChange={e => onTimeChange(e.target.value)} disabled={!slots.length}>
+            {slots.length
+              ? slots.map(t => <option key={t} value={t}>{t}</option>)
+              : <option value="">—</option>}
+          </select>
+        </label>
+      </div>
+      {!slots.length && <p className="bkw__closed">{tx.bkClosedToday}</p>}
+    </>
   );
 }
 
@@ -92,7 +90,7 @@ function Legend({ tx }) {
 
 // Панель справа от плана: состояние выбранного стола / форма заявки /
 // экран «заявка отправлена». Депозитов и времени окончания в v2 нет.
-function Panel({ table, date, time, tx, currentUser, onRequestAuth, onSubmitted, success, onSuccessOk }) {
+function Panel({ table, when, date, time, tx, currentUser, onRequestAuth, onSubmitted, success, onSuccessOk }) {
   const { toast } = useFeedback();
   const [name, setName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone ? '+' + currentUser.phone : '');
@@ -143,7 +141,9 @@ function Panel({ table, date, time, tx, currentUser, onRequestAuth, onSubmitted,
 
   if (!table) {
     return (
-      <div className="bkw__panel bkw__panel--empty">
+      <div className="bkw__panel">
+        {when}
+        <div className="bkw__panel-center">
         <div className="bkw__hint-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="12" cy="12" r="9" />
@@ -155,6 +155,7 @@ function Panel({ table, date, time, tx, currentUser, onRequestAuth, onSubmitted,
           {tx.bkPanelPhone}<br />
           <a href={BAR_PHONE.href}>{BAR_PHONE.label}</a>
         </p>
+        </div>
       </div>
     );
   }
@@ -165,10 +166,11 @@ function Panel({ table, date, time, tx, currentUser, onRequestAuth, onSubmitted,
 
   return (
     <div className="bkw__panel">
+      {when}
       <div className="bkw__table-head">
         <div>
           <div className="bkw__table-title">{tableTitle(table, tx)}</div>
-          <div className="bkw__table-meta">{table.zone} · {table.activeSeatsCount} {tx.bkSeatsLabel}</div>
+          <div className="bkw__table-meta">{zoneName(table, tx)} · {table.activeSeatsCount} {tx.bkSeatsLabel}</div>
         </div>
         <span className={`bkw__badge bkw__badge--${table.status}`}>{statusText}</span>
       </div>
@@ -287,27 +289,36 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
     statusReservedAt: tx.bkStatusReservedAt,
     statusOccupied: tx.bkStatusOccupied,
     barNote: tx.bkBarNote,
+    zoneMain: (tx.bkZoneMain || '').toUpperCase(),
+    zoneWindow: (tx.bkZoneWindow || '').toUpperCase(),
+    zoneSofas: (tx.bkZoneSofas || '').toUpperCase(),
   };
+
+  const when = (
+    <WhenPicker
+      dates={dates} date={date} onDateChange={d => { setDate(d); setSelId(null); }}
+      slots={slots} time={time} onTimeChange={setTime} tx={tx}
+    />
+  );
 
   return (
     <div className={`bkw bkw--${variant}`}>
-      <div className="bkw__controls">
-        <span className="bkw__ctl-label">{tx.bkDateLabel}</span>
-        <DateChips dates={dates} value={date} onChange={d => { setDate(d); setSelId(null); }} tx={tx} />
-        <span className="bkw__ctl-label">{tx.bkTimeLabel}</span>
-        <TimeChips slots={slots} value={time} onChange={setTime} tx={tx} />
-      </div>
-
       <div className="bkw__body">
         <div className="bkw__plan">
           <div className="bkw__plan-card">
-            <FloorPlanSvg
-              tables={tables}
-              selectedTableId={selId}
-              onSelect={id => { setSelId(id); setSuccess(null); }}
-              onDeselect={() => setSelId(null)}
-              tx={planTx}
-            />
+            <div className="bkw__stage">
+              <div className="bkw__stage-in">
+              <FloorPlanSvg
+                tables={tables}
+                selectedTableId={selId}
+                onSelect={id => { setSelId(id); setSuccess(null); }}
+                onDeselect={() => setSelId(null)}
+                tx={planTx}
+              />
+              {/* Пульс стойки — HTML-слой (composited), SVG остаётся статичным */}
+              <div className="bkw__glowbar bkw__glowbar-pos" aria-hidden="true" />
+              </div>
+            </div>
           </div>
           {loading && <div className="bkw__loading">{tx.bkLoading}</div>}
           <Legend tx={tx} />
@@ -315,6 +326,7 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
 
         <Panel
           table={sel}
+          when={when}
           date={date}
           time={time}
           tx={tx}

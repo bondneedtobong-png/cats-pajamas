@@ -1413,7 +1413,7 @@ function TabLoyalty() {
 // План v2 статичен — расположение столов соответствует реальному залу и
 // правится только в src/booking/tablesConfig.js (drag&drop-редактор убран
 // по решению владельца). Админ настраивает депозит и активные места.
-const TABLE_TYPE_LABELS = { round: 'Круглый', square: 'Квадратный', booth: 'Диван-лаунж' };
+
 
 function TableCard({ t, onSeatToggle, onSaveDeposit }) {
   const [price, setPrice] = useState(t.depositPrice ?? 0);
@@ -1430,8 +1430,8 @@ function TableCard({ t, onSeatToggle, onSaveDeposit }) {
   return (
     <div className="adm-tablecard">
       <div className="adm-tablecard__head">
-        <span className="adm-table__table-id">№{t.num ?? t.id}</span>
-        <span className="adm-tablecard__name">{TABLE_TYPE_LABELS[t.type] || t.type} · {t.zone}</span>
+        <span className="adm-table__table-id">{t.zoneShort} {t.num}</span>
+        <span className="adm-tablecard__name">{t.type === 'booth' ? `Диван №${t.num}` : `${t.zone}, стол №${t.num}`}</span>
       </div>
       <div className="adm-form-field">
         <label className="adm-form-lbl">ДЕПОЗИТ, ₽</label>
@@ -1462,9 +1462,7 @@ function TabTables() {
   const [tables, setTables] = useState([]);
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    BookingService.getTablesMerged()
-      .then(list => setTables([...list].sort((a, b) => (a.num ?? 99) - (b.num ?? 99))))
-      .catch(() => setTables([]));
+    BookingService.getTablesMerged().then(setTables).catch(() => setTables([]));
   }, [tick]);
 
   async function handleSeatToggle(tableId, i, cur) {

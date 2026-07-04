@@ -248,8 +248,6 @@ async function answerAlreadyHandled(ctx, id, e) {
 }
 
 // ─── «Столы сейчас» — интерфейс бармена ──────────────────────────────────────
-const TYPE_SHORT = { round: 'круглый', square: 'квадратный', booth: 'диван' };
-
 async function tablesNowContent() {
   // Барные стулья (type='bar') не показываем: стойка не бронируется и walk-in
   // по отдельным стульям не отмечается — она всегда «просто приходите».
@@ -257,8 +255,9 @@ async function tablesNowContent() {
   const kb = new InlineKeyboard();
   const lines = [];
   for (const t of tables) {
-    const label = `№${t.num ?? t.id}`;
-    const name = `*${label}* ${TYPE_SHORT[t.type] || 'стол'}`;
+    // зонная нумерация: «Зал 1», «Окно 3», «Диван 2»
+    const label = `${t.zoneShort || ''} ${t.num ?? t.id}`.trim();
+    const name = `*${label}*`;
     if (t.status === 'occupied' && t.occupancy?.source === 'walk_in') {
       const extra = t.reservation ? ` · есть бронь к ${t.reservation.timeFrom}!` : '';
       lines.push(`🔴 ${name} — занят (walk-in)${extra}`);

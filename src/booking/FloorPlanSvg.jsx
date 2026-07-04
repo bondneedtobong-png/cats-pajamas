@@ -4,6 +4,8 @@
  * кликабельны. Цвета — токены темы через классы в booking.css (скоуп .fp-svg):
  * исходные #D7D8D8/#2B2A29 из CorelDRAW-экспорта здесь не используются.
  */
+import { ZONE_LABELS } from './tablesConfig.js';
+
 const noPtr = { pointerEvents: 'none' };
 const noSel = { pointerEvents: 'none', userSelect: 'none' };
 
@@ -14,6 +16,9 @@ const T_DEF = {
   statusOccupied: 'Занят',
   barNote: 'Стойка не бронируется — просто приходите',
   seatsWord: 'мест',
+  zoneMain: 'ОСНОВНОЙ ЗАЛ',
+  zoneWindow: 'У ОКНА',
+  zoneSofas: 'ДИВАНЫ',
 };
 
 // Декоративная дуга через верх зала (стена/сцена) — из plan-v2.svg как есть
@@ -107,6 +112,9 @@ function TableShape({ tbl, selectedTableId, onSelect, tx }) {
   const handleClick = (e) => { e.stopPropagation(); onSelect(tbl.id); };
   const cls = `fp-table fp-t--${status}${isSel ? ' fp-t--sel' : ''}`;
 
+  // Кольцо у reserved-стола — СТАТИЧНОЕ: анимации внутри SVG заставляют
+  // браузер перерисовывать план каждый кадр (профилировано — фризы на
+  // слабых машинах), поэтому в .fp-svg нет ни одной animation/transition.
   let cx, cy, shape, numDy, statusDy, statusFs;
   if (tbl.type === 'round') {
     cx = tbl.cx; cy = tbl.cy;
@@ -114,7 +122,7 @@ function TableShape({ tbl, selectedTableId, onSelect, tx }) {
     shape = (
       <>
         {status === 'reserved' && (
-          <circle className="fp-pulse-ring" cx={cx} cy={cy} r={(tbl.radius || 2400) + 380} style={noPtr} />
+          <circle className="fp-ring" cx={cx} cy={cy} r={(tbl.radius || 2400) + 380} style={noPtr} />
         )}
         <circle className="fp-t-shape" cx={cx} cy={cy} r={tbl.radius || 2400} />
       </>
@@ -129,7 +137,7 @@ function TableShape({ tbl, selectedTableId, onSelect, tx }) {
     shape = (
       <>
         {status === 'reserved' && (
-          <rect className="fp-pulse-ring" x={tbl.x - m} y={tbl.y - m} width={tbl.w + 2 * m} height={tbl.h + 2 * m} rx={420} style={noPtr} />
+          <rect className="fp-ring" x={tbl.x - m} y={tbl.y - m} width={tbl.w + 2 * m} height={tbl.h + 2 * m} rx={420} style={noPtr} />
         )}
         <rect className="fp-t-shape" x={tbl.x} y={tbl.y} width={tbl.w} height={tbl.h} rx={220} />
       </>
@@ -177,14 +185,10 @@ export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDese
         ))}
       </g>
 
-      {/* ── Барная стойка: glow-акцент, НЕ кликабельна, НЕ бронируется ── */}
+      {/* ── Барная стойка: НЕ кликабельна, НЕ бронируется. Свечение статично;
+             пульс — HTML-оверлеем поверх плана (композитно, не трогает SVG) ── */}
       <g className="fp-bar" style={noPtr}>
-        {/* Готовый glow-слой — анимируется только его opacity (web-polish);
-            пауза на неактивных страницах книги и при reduced-motion — в CSS */}
-        <g className="fp-bar-glow">
-          <rect x={BAR.x} y={BAR.y} width={BAR.w} height={BAR.h} rx={BAR.rx} className="fp-bar-glow__outer" />
-          <rect x={BAR.x} y={BAR.y} width={BAR.w} height={BAR.h} rx={BAR.rx} className="fp-bar-glow__inner" />
-        </g>
+        <rect x={BAR.x} y={BAR.y} width={BAR.w} height={BAR.h} rx={BAR.rx} className="fp-bar-glow__inner" />
         <rect x={BAR.x} y={BAR.y} width={BAR.w} height={BAR.h} rx={BAR.rx} className="fp-bar-body" />
         <text className="fp-bar-title" x={BAR.x + BAR.w / 2} y={1750} textAnchor="middle" fontSize={720} letterSpacing={170} style={noSel}>
           BAR
@@ -193,6 +197,13 @@ export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDese
           {tx.barNote}
         </text>
       </g>
+
+      {/* ── Подписи зон (нумерация столов — внутри зоны) ── */}
+      {ZONE_LABELS.map(z => (
+        <text key={z.key} className="fp-zone-label" x={z.x} y={z.y} textAnchor="middle" fontSize={520} letterSpacing={220} style={noSel}>
+          {tx[z.key] || z.ru}
+        </text>
+      ))}
 
       {/* ── Стулья всех столов одним path (см. chairsPathForTables) ── */}
       <path className="fp-chairs" d={chairsPathForTables(tables)} style={noPtr} />
