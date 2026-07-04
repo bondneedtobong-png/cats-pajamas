@@ -430,41 +430,35 @@
   gap: 8px;
   position: relative;
 }
-/* «Паспарту» под чертёж: план — карточка с рамкой, а не фигуры, плавающие
-   в пустоте (жалоба владельца «криво»). Пустые поля остаются внутри рамки
-   и читаются как поля чертежа. */
+/* Карточка-контейнер только центрирует план — рамки/фона на ней нет.
+   Рамка «паспарту» переехала на сам аспект-локнутый бокс плана (.bkw__stage-in),
+   поэтому бордюр ОБНИМАЕТ план: боковых/верт. зазоров внутри рамки больше нет
+   при любой форме карточки (жалоба владельца на «прогалы слева и справа»). */
 .bkw__plan-card {
   flex: 1;
   min-height: 0;
   position: relative;
+  display: flex;
+  container-type: size;
+}
+/* Аспект-локнутый бокс = рамка чертежа. Вписывается по ОБЕИМ осям (cqh =
+   высота карточки): при широкой карточке лимитирует высота, при узкой —
+   ширина; svg заполняет бокс целиком → HTML-оверлей стойки не расходится
+   с планом. Поля вокруг столов — в самом viewBox (PLAN_VB), не в padding,
+   иначе оверлей ушёл бы на величину padding. */
+.bkw__stage-in {
+  position: relative;
+  margin: auto;
+  aspect-ratio: 31300 / 26600;
+  width: min(100%, calc(100cqh * 31300 / 26600));
   border: 1px solid var(--bkw-border);
   border-radius: 12px;
   background:
     radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--bkw-gold) 4%, transparent), transparent 60%),
     color-mix(in srgb, var(--bkw-bg2) 55%, transparent);
-  padding: clamp(8px, 1.4vh, 16px);
-}
-/* Стейдж: absolute-заливка карточки (даёт определённую высоту в любой
-   вёрстке), внутри — слой с аспектом viewBox плана: svg заполняет его
-   целиком, и HTML-оверлеи (пульс стойки) позиционируются процентами
-   без рассинхрона с letterbox'ом */
-.bkw__stage {
-  position: absolute;
-  inset: clamp(8px, 1.4vh, 16px);
-  display: flex;
-  container-type: size;
-}
-/* Вписывание с сохранением аспекта по ОБЕИМ осям (cqh = высота стейджа):
-   при «широком» контейнере лимитирует высота, при «узком» — ширина; svg
-   всегда заполняет слой целиком → HTML-оверлеи не расходятся с планом */
-.bkw__stage-in {
-  position: relative;
-  margin: auto;
-  aspect-ratio: 31400 / 26600;
-  width: min(100%, calc(100cqh * 31400 / 26600));
 }
 .bkw__stage-in .fp-svg { width: 100%; height: 100%; }
-.bkw__glowbar-pos { left: 28.34%; top: 1.50%; width: 47.77%; height: 14.66%; }
+.bkw__glowbar-pos { left: 28.75%; top: 2.26%; width: 47.92%; height: 14.66%; }
 .bkw__loading {
   position: absolute;
   top: 8px;
@@ -583,12 +577,10 @@
 @media (max-width: 900px) {
   .bkw { height: auto; }
   .bkw__body { grid-template-columns: 1fr; }
-  /* План width-driven: стейдж в потоке, высота из аспекта viewBox.
-     Поля минимальные — узкие диваны должны давать тап ≥ 44px. */
+  /* План width-driven: бокс в потоке, высота из аспекта viewBox. */
   .bkw__plan { min-height: 0; }
-  .bkw__plan-card { padding: 4px; }
-  .bkw__stage { position: relative; inset: auto; display: block; height: auto; container-type: normal; }
-  .bkw__stage-in { width: 100%; height: auto; }
+  .bkw__plan-card { display: block; container-type: normal; }
+  .bkw__stage-in { width: 100%; height: auto; aspect-ratio: 31300 / 26600; }
   .bkw__panel { overflow-y: visible; }
 }
 
@@ -656,14 +648,7 @@
   font-family: 'Avenir Next', sans-serif;
   font-weight: 600;
 }
-.fp-chairs {
-  fill: color-mix(in srgb, var(--st-reserved) 6%, transparent);
-  stroke: color-mix(in srgb, var(--st-reserved) 24%, transparent);
-  stroke-width: 34;
-  stroke-linejoin: round;
-}
-
-/* Декор: дуга-стена, приставные банкетки и пуфы лаунжа */
+/* Декор: окна на нижней стене */
 .fp-decor path,
 .fp-decor rect,
 .fp-decor ellipse {

@@ -24,69 +24,6 @@ const T_DEF = {
 // Геометрия стойки/дуги/окон — общая с planImage.js, живёт в tablesConfig
 const BAR = BAR_GEO;
 
-/**
- * Position and rotation for a chair around a table (decorative).
- * Angle: 0 = East, 90 = South (standard SVG math); rotate(angle+90) turns
- * the chair so its seat faces the table centre.
- */
-function getChairPos(tbl, seat) {
-  const rad = seat.angle * Math.PI / 180;
-  const rot = seat.angle + 90;
-  if (tbl.type === 'round') {
-    const dist = (tbl.radius || 2400) + 220;
-    return { wx: tbl.cx + dist * Math.cos(rad), wy: tbl.cy + dist * Math.sin(rad), rot };
-  }
-  // Square: snap to nearest edge
-  const cx = tbl.x + tbl.w / 2, cy = tbl.y + tbl.h / 2;
-  const D = 420;
-  const a = ((seat.angle % 360) + 360) % 360;
-  let wx, wy;
-  switch (a) {
-    case 0:   wx = tbl.x + tbl.w + D; wy = cy; break;
-    case 45:  wx = tbl.x + tbl.w + D * 0.7; wy = tbl.y + tbl.h + D * 0.7; break;
-    case 90:  wx = cx; wy = tbl.y + tbl.h + D; break;
-    case 135: wx = tbl.x - D * 0.7; wy = tbl.y + tbl.h + D * 0.7; break;
-    case 180: wx = tbl.x - D; wy = cy; break;
-    case 225: wx = tbl.x - D * 0.7; wy = tbl.y - D * 0.7; break;
-    case 270: wx = cx; wy = tbl.y - D; break;
-    case 315: wx = tbl.x + tbl.w + D * 0.7; wy = tbl.y - D * 0.7; break;
-    default: { const d = Math.max(tbl.w, tbl.h) / 2 + D; wx = cx + d * Math.cos(rad); wy = cy + d * Math.sin(rad); }
-  }
-  return { wx, wy, rot };
-}
-
-// Все стулья плана — ОДИН <path>: ~90 отдельных rect в группах с transform
-// заставляли Chromium растеризовать SVG медленным путём, и перелистывание
-// книги фризило на 500–700 мс (профилировано; см. web-polish/anti-flicker).
-// Спинка и сиденье — два прямоугольника в локальных координатах стула,
-// повёрнутые к столу; углы считаем матрицей вручную.
-const CHAIR_RECTS = [
-  [-390, -470, 780, 215],  // спинка (дальше от стола)
-  [-355, -240, 710, 610],  // сиденье
-];
-
-function chairsPathForTables(tables) {
-  let d = '';
-  for (const tbl of tables) {
-    if (tbl.type === 'booth' || tbl.type === 'bar' || !tbl.seats) continue;
-    for (const seat of tbl.seats) {
-      if (!seat || typeof seat.angle !== 'number' || !seat.active) continue;
-      const { wx, wy, rot } = getChairPos(tbl, seat);
-      const rad = rot * Math.PI / 180;
-      const cos = Math.cos(rad), sin = Math.sin(rad);
-      for (const [x, y, w, h] of CHAIR_RECTS) {
-        const pts = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
-          .map(([px, py]) => [
-            Math.round(wx + px * cos - py * sin),
-            Math.round(wy + px * sin + py * cos),
-          ]);
-        d += `M${pts.map(p => p.join(' ')).join('L')}Z`;
-      }
-    }
-  }
-  return d;
-}
-
 function TableShape({ tbl, selectedTableId, onSelect, tx }) {
   const { status, reservation } = tbl;
   const isSel = tbl.id === selectedTableId;
@@ -186,8 +123,7 @@ export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDese
         </text>
       ))}
 
-      {/* ── Стулья всех столов одним path (см. chairsPathForTables) ── */}
-      <path className="fp-chairs" d={chairsPathForTables(tables)} style={noPtr} />
+      {/* Стулья убраны по просьбе владельца — на плане только чистые столы. */}
 
       {/* ── Интерактивные столы ── */}
       {tables.filter(t => t.type !== 'bar').map(tbl => (

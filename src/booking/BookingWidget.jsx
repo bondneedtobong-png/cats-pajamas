@@ -306,8 +306,7 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
       <div className="bkw__body">
         <div className="bkw__plan">
           <div className="bkw__plan-card">
-            <div className="bkw__stage">
-              <div className="bkw__stage-in">
+            <div className="bkw__stage-in">
               <FloorPlanSvg
                 tables={tables}
                 selectedTableId={selId}
@@ -317,7 +316,6 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
               />
               {/* Пульс стойки — HTML-слой (composited), SVG остаётся статичным */}
               <div className="bkw__glowbar bkw__glowbar-pos" aria-hidden="true" />
-              </div>
             </div>
           </div>
           {loading && <div className="bkw__loading">{tx.bkLoading}</div>}
