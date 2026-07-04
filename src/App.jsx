@@ -6,7 +6,7 @@ import Hero     from './sections/Hero.jsx';
 import About    from './sections/About.jsx';
 import Menu     from './sections/Menu.jsx';
 import Events   from './sections/Events.jsx';
-import Shelf    from './sections/Shelf.jsx';
+// import Shelf from './sections/Shelf.jsx'; // полка в разработке (см. PAGES)
 import Team     from './sections/Team.jsx';
 import Booking  from './sections/Booking.jsx';
 import Contacts from './sections/Contacts.jsx';
@@ -29,7 +29,10 @@ import ErrorBoundary    from './ErrorBoundary.jsx';
 // conditionally rendered) so the API-backed carousels (Menu/Events/Shelf/
 // Team) keep their fetched state and current slide across navigation —
 // only the CSS transform in .book__page moves them in and out of view.
-const PAGES = ['hero', 'about', 'menu', 'events', 'gallery', 'team', 'booking', 'contacts'];
+// «Полка воспоминаний» ('gallery' + <Shelf/>) временно скрыта — в разработке
+// (решение владельца, 2026-07-05). Вернуть: добавить 'gallery' после 'events',
+// раскомментировать рендер Shelf ниже и ссылки «Полка» в Nav.jsx.
+const PAGES = ['hero', 'about', 'menu', 'events', 'team', 'booking', 'contacts'];
 
 function BookControls({ index, onPrev, onNext }) {
   return (
@@ -118,7 +121,7 @@ function MainSite() {
               {id === 'about'    && <About tx={tx} />}
               {id === 'menu'     && <Menu tx={tx} onBooking={() => goToPage('booking')} />}
               {id === 'events'   && <Events tx={tx} lang={lang} />}
-              {id === 'gallery'  && <Shelf tx={tx} lang={lang} onRequestAuth={() => setAuthOpen(true)} />}
+              {/* {id === 'gallery' && <Shelf tx={tx} lang={lang} onRequestAuth={() => setAuthOpen(true)} />} — полка в разработке */}
               {id === 'team'     && <Team tx={tx} />}
               {/* active гасит поллинг статусов столов на закрытой странице */}
               {id === 'booking'  && <Booking tx={tx} active={activePage === 'booking'} />}

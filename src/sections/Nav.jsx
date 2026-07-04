@@ -86,7 +86,7 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
           <a href="#" style={linkStyle('about')}    className={linkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
           <a href="#" style={linkStyle('menu')}     className={linkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
           <a href="#" style={linkStyle('events')}   className={linkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
-          <a href="#" style={linkStyle('gallery')}  className={linkCls('gallery')}  onClick={nav('gallery')}>{tx.navGallery}</a>
+          {/* «Полка» скрыта — в разработке (см. PAGES в App.jsx) */}
           <a href="#" style={linkStyle('team')}     className={linkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
           <a href="#" style={linkStyle('contacts')} className={linkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
         </div>
@@ -121,7 +121,7 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
         <a href="#" className={mobileLinkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
         <a href="#" className={mobileLinkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
         <a href="#" className={mobileLinkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
-        <a href="#" className={mobileLinkCls('gallery')}  onClick={nav('gallery')}>{tx.navGallery}</a>
+        {/* «Полка» скрыта — в разработке (см. PAGES в App.jsx) */}
         <a href="#" className={mobileLinkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
         <a href="#" className={mobileLinkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
         {isAdmin && (
