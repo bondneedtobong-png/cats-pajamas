@@ -163,9 +163,9 @@ html { scroll-behavior: smooth; }
    stacking on top of the other 7 pages — pause it whenever hero isn't the
    one on screen. */
 .book__page:not(.book__page--active) .hero__bg-slide,
-.book__page:not(.book__page--active) .hero__logo,
 .book__page:not(.book__page--active) .hero__next,
-.book__page:not(.book__page--active) .contacts__social {
+.book__page:not(.book__page--active) .menu-carousel__photo,
+.book__page:not(.book__page--active) .menu-carousel__placeholder-icon {
   animation-play-state: paused;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -226,10 +226,7 @@ html { scroll-behavior: smooth; }
 @keyframes curtainLeft  { from { transform: translateX(0); }    to { transform: translateX(-100%); } }
 @keyframes curtainRight { from { transform: translateX(0); }    to { transform: translateX(100%);  } }
 @keyframes heroUp       { from { opacity:0; transform:translateY(44px); } to { opacity:1; transform:translateY(0); } }
-@keyframes logoGlow {
-  0%,100% { filter: drop-shadow(0 0 12px rgba(212,168,67,.55)) drop-shadow(0 0 40px rgba(212,168,67,.25)); }
-  50%      { filter: drop-shadow(0 0 24px rgba(212,168,67,.9))  drop-shadow(0 0 80px rgba(212,168,67,.45)); }
-}
+
 @keyframes scrollPulse {
   0%   { transform: scaleY(0); transform-origin: top; opacity: 0; }
   40%  { opacity: .5; }
@@ -455,11 +452,11 @@ html { scroll-behavior: smooth; }
 }
 .nav__lang:hover { border-color: var(--gold); color: var(--text); }
 
-/* CTA — "крупная, чуть светящаяся": biggest, brightest item in the sidebar */
-@keyframes navCtaGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0), 0 4px 16px rgba(0,0,0,.3); }
-  50%      { box-shadow: 0 0 22px 3px rgba(var(--accent-rgb), .45), 0 4px 16px rgba(0,0,0,.3); }
-}
+/* CTA — "крупная, чуть светящаяся": biggest, brightest item in the sidebar.
+   Свечение СТАТИЧНОЕ: box-shadow-пульс перерисовывал слой 60 кадров/с и
+   вместе с остальными вечными пульсами держал GPU нагруженным даже в покое
+   (диспетчер задач владельца, 2026-07-04). Не возвращать infinite-анимации
+   на постоянно видимые элементы. */
 .nav__cta {
   background: var(--accent);
   border: none; /* теперь <button> (перелистывает книгу), не <a> */
@@ -473,19 +470,13 @@ html { scroll-behavior: smooth; }
   border-radius: 10px;
   padding: clamp(14px, 2.6vh, 22px) 18px;
   display: block;
-  animation: navCtaGlow 3.2s ease-in-out infinite;
+  box-shadow: 0 0 18px 2px rgba(var(--accent-rgb), .30), 0 4px 16px rgba(0,0,0,.3);
   transition: transform .2s, background .2s;
 }
 .nav__cta:hover { background: color-mix(in srgb, var(--accent) 85%, white); transform: translateY(-2px); }
-@media (prefers-reduced-motion: reduce) {
-  .nav__cta { animation: none; }
-}
 
 /* ── Telegram login / profile link ────────────────────── */
-@keyframes navTgGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--gold-rgb), 0); }
-  50%      { box-shadow: 0 0 10px 1px rgba(var(--gold-rgb), .18); }
-}
+
 .nav__tg, .nav__profile {
   display: flex;
   align-items: center;
@@ -504,7 +495,7 @@ html { scroll-behavior: smooth; }
 }
 .nav__tg-icon { width: 14px; height: 14px; flex-shrink: 0; transition: transform .25s; }
 
-.nav__tg { animation: navTgGlow 3s ease-in-out infinite; }
+.nav__tg { box-shadow: 0 0 8px 1px rgba(var(--gold-rgb), .12); } /* статично, см. коммент у .nav__cta */
 .nav__tg:hover {
   color: #29b5e8;
   border-color: #29b5e8;
@@ -516,9 +507,7 @@ html { scroll-behavior: smooth; }
 
 .nav__profile:hover { border-color: var(--gold); color: var(--text); }
 
-@media (prefers-reduced-motion: reduce) {
-  .nav__tg { animation: none; }
-}
+
 
 /* Icon-only in the sidebar — it's a fixed 236px column regardless of
    viewport width, "ВОЙТИ ЧЕРЕЗ TELEGRAM" doesn't fit next to the icon at
@@ -655,7 +644,9 @@ html { scroll-behavior: smooth; }
   align-items: center;
   justify-content: center;
   margin-bottom: 22px;
-  animation: logoGlow 4s ease-in-out 2.8s infinite;
+  /* Свечение статично: анимация filter: drop-shadow пересчитывала блюр
+     каждый кадр — главный GPU-жор hero-страницы. */
+  filter: drop-shadow(0 0 16px rgba(212,168,67,.65)) drop-shadow(0 0 50px rgba(212,168,67,.30));
 }
 .hero__logo-svg {
   width: auto;
@@ -1614,10 +1605,7 @@ html { scroll-behavior: smooth; }
   transition: color .2s;
 }
 .contacts__phone:hover { color: var(--gold); }
-@keyframes socialGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--gold-rgb), 0); }
-  50%       { box-shadow: 0 0 12px 2px rgba(var(--gold-rgb), 0.18); }
-}
+
 @keyframes socialShine {
   from { background-position: -200% center; }
   to   { background-position:  200% center; }
@@ -1639,7 +1627,7 @@ html { scroll-behavior: smooth; }
   position: relative;
   overflow: hidden;
   transition: color .3s, border-color .3s, transform .3s, box-shadow .3s;
-  animation: socialGlow 3s ease-in-out infinite;
+  box-shadow: 0 0 10px 1px rgba(var(--gold-rgb), .14); /* статично, см. .nav__cta */
 }
 
 /* shimmer sweep on hover */

@@ -711,17 +711,10 @@
   border-radius: 10px;
   box-shadow: 0 0 22px 4px color-mix(in srgb, var(--bkw-gold) 30%, transparent),
               inset 0 0 18px 2px color-mix(in srgb, var(--bkw-gold) 18%, transparent);
-  animation: bkw-glow 5s ease-in-out infinite;
-}
-@keyframes bkw-glow {
-  0%, 100% { opacity: 0.25; }
-  50%      { opacity: 0.9; }
-}
-.book__page:not(.book__page--active) .bkw__glowbar {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .bkw__glowbar { animation: none; opacity: 0.5; }
+  /* Свечение СТАТИЧНОЕ: даже композитный opacity-пульс держит рендер-цикл
+     60 кадров/с — в покое на странице брони не должно быть ни одной
+     бесконечной анимации (GPU-замер владельца, 2026-07-04). */
+  opacity: 0.55;
 }
 
 /* На телефоне план ужимается до ~375px — подписи в world-units становятся
