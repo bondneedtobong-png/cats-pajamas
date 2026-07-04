@@ -1,5 +1,11 @@
 # Cat's Pajamas Club — настройка бэкенда + Telegram-бота
 
+> **🗄 СТАТУС (2026-07-04): ИСТОРИЯ первичной настройки.** Описывает старую схему
+> **Vercel + облачный Supabase** — она ОТКЛЮЧЕНА. Сейчас всё на одном VPS с
+> self-hosted Supabase (см. `../HANDOFF_CATS_PAJAMAS.md` §«где живёт прод» и
+> `../HANDOFF_VPS_MIGRATION.md`). Файл полезен для понимания устройства
+> Supabase-стека / разворачивания с нуля.
+
 Переход с localStorage на настоящий бэкенд: **Vercel (serverless) + Supabase (Postgres) + один Telegram-бот** (заявки, админ-панель, проверка подписки).
 
 Архитектура:
