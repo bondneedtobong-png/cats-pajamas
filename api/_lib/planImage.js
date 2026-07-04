@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { TABLES, ZONE_LABELS, WINDOWS, BAR_GEO, ARC_D, PLAN_VB, activeSeats } from '../../src/booking/tablesConfig.js';
+import { TABLES, ZONE_LABELS, WINDOWS, BAR_GEO, PLAN_VB, activeSeats } from '../../src/booking/tablesConfig.js';
 
 // Серверный рендер плана зала в PNG с выделенным столом — прикладывается к
 // заявке в стафф-группе и к «Бронь подтверждена» гостю, чтобы стол было видно
@@ -57,7 +57,6 @@ export async function renderPlanPng(highlightTableId) {
   // стойка и декор
   parts.push(`<rect x="${BAR.x}" y="${BAR.y}" width="${BAR.w}" height="${BAR.h}" rx="${BAR.rx}" fill="rgba(212,168,67,0.06)" stroke="${C.goldDim}" stroke-width="60"/>`);
   parts.push(`<text x="${BAR.x + BAR.w / 2}" y="${BAR.y + 2050}" text-anchor="middle" font-family="sans-serif" font-size="1050" letter-spacing="300" fill="${C.goldDim}">BAR</text>`);
-  parts.push(`<path d="${ARC_D}" fill="none" stroke="${C.line}" stroke-width="56"/>`);
   for (const w of WINDOWS) {
     parts.push(`<rect x="${w.x}" y="${w.y}" width="${w.w}" height="${w.h}" rx="90" fill="none" stroke="${C.line}" stroke-width="50"/>`);
   }

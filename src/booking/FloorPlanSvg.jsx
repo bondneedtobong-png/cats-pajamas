@@ -4,7 +4,7 @@
  * кликабельны. Цвета — токены темы через классы в booking.css (скоуп .fp-svg):
  * исходные #D7D8D8/#2B2A29 из CorelDRAW-экспорта здесь не используются.
  */
-import { ZONE_LABELS, WINDOWS, BAR_GEO, ARC_D, PLAN_VB } from './tablesConfig.js';
+import { ZONE_LABELS, WINDOWS, BAR_GEO, PLAN_VB } from './tablesConfig.js';
 
 const noPtr = { pointerEvents: 'none' };
 const noSel = { pointerEvents: 'none', userSelect: 'none' };
@@ -156,9 +156,8 @@ export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDese
       preserveAspectRatio="xMidYMid meet"
       onClick={onDeselect}
     >
-      {/* ── Декор: дуга-сцена под стойкой и окна на нижней стене ── */}
+      {/* ── Декор: окна на нижней стене (центральный вход — проём между ними) ── */}
       <g className="fp-decor" style={noPtr}>
-        <path d={ARC_D} fill="none" />
         {WINDOWS.map((w, i) => (
           <g key={i} className="fp-window">
             <rect x={w.x} y={w.y} width={w.w} height={w.h} rx={90} />
@@ -172,10 +171,10 @@ export default function FloorPlanSvg({ tables, selectedTableId, onSelect, onDese
       <g className="fp-bar" style={noPtr}>
         <rect x={BAR.x} y={BAR.y} width={BAR.w} height={BAR.h} rx={BAR.rx} className="fp-bar-glow__inner" />
         <rect x={BAR.x} y={BAR.y} width={BAR.w} height={BAR.h} rx={BAR.rx} className="fp-bar-body" />
-        <text className="fp-bar-title" x={BAR.x + BAR.w / 2} y={BAR.y + 1350} textAnchor="middle" fontSize={720} letterSpacing={170} style={noSel}>
+        <text className="fp-bar-title" x={BAR.x + BAR.w / 2} y={BAR.y + 1500} textAnchor="middle" fontSize={820} letterSpacing={200} style={noSel}>
           BAR
         </text>
-        <text className="fp-bar-note" x={BAR.x + BAR.w / 2} y={BAR.y + 2400} textAnchor="middle" fontSize={430} style={noSel}>
+        <text className="fp-bar-note" x={BAR.x + BAR.w / 2} y={BAR.y + 2700} textAnchor="middle" fontSize={470} style={noSel}>
           {tx.barNote}
         </text>
       </g>

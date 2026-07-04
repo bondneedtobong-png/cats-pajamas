@@ -1532,7 +1532,7 @@ html { scroll-behavior: smooth; }
 /* Бронирование v2: страница книги — полноценная бронь (план + панель),
    CTA-заглушка .booking__cta ушла вместе со старой секцией. */
 .booking--v2 {
-  padding: clamp(48px, 8vh, 84px) 4% clamp(18px, 3.4vh, 36px);
+  padding: clamp(44px, 7vh, 72px) 4% clamp(8px, 1.6vh, 16px);
   overflow: visible;
   align-items: stretch;
 }

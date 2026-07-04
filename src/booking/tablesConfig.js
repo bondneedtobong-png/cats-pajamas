@@ -19,60 +19,63 @@ const seats = (...angles) => angles.map(seat);
 
 /** @type {import('./types').TableConfig[]} */
 export const TABLES = [
-  // ── Основной зал (центр): квадратный + круглый, ещё круглый правее ──
+  // ── Основной зал: идёт ВВЕРХ вдоль диванов (квадрат напротив дивана №1,
+  //    круглый №2 напротив дивана №2), круглый №3 — у правой стены.
+  //    Центр плана свободен — там центральный вход (проём между окнами).
   {
     id: 'T7', num: 1, zone: 'Основной зал', zoneShort: 'Зал', type: 'square',
-    x: 8200, y: 9000, w: 4800, h: 4800,
+    x: 8600, y: 5500, w: 4400, h: 4400,
     depositPrice: 0,
     seats: seats(0, 90, 180, 270, 45, 315),
   },
   {
     id: 'T1', num: 2, zone: 'Основной зал', zoneShort: 'Зал', type: 'round',
-    cx: 17400, cy: 11400, radius: 2400,
+    cx: 10800, cy: 15400, radius: 2200,
     depositPrice: 0,
     seats: seats(0, 90, 180, 270),
   },
   {
     id: 'T2', num: 3, zone: 'Основной зал', zoneShort: 'Зал', type: 'round',
-    cx: 26500, cy: 11400, radius: 2400,
+    cx: 26800, cy: 12200, radius: 2200,
     depositPrice: 0,
     seats: seats(0, 90, 180, 270),
   },
-  // ── У окна: два окна по нижним углам, по два стола у каждого ──
+  // ── У окна: два окна по нижним углам, центральный вход между ними.
+  //    Левая группа прижата к левому краю (планировка владельца).
   {
     id: 'T3', num: 1, zone: 'У окна', zoneShort: 'Окно', type: 'round',
-    cx: 8600, cy: 18400, radius: 2400,
+    cx: 4900, cy: 22800, radius: 2200,
     depositPrice: 0,
     seats: seats(0, 90, 180, 270),
   },
   {
     id: 'T4', num: 2, zone: 'У окна', zoneShort: 'Окно', type: 'round',
-    cx: 14400, cy: 18400, radius: 2400,
+    cx: 10800, cy: 22800, radius: 2200,
     depositPrice: 0,
     seats: seats(0, 90, 180, 270),
   },
   {
     id: 'T5', num: 3, zone: 'У окна', zoneShort: 'Окно', type: 'round',
-    cx: 22600, cy: 18400, radius: 2400,
+    cx: 23200, cy: 22800, radius: 2200,
     depositPrice: 0,
     seats: seats(0, 90, 180, 270),
   },
   {
     id: 'T6', num: 4, zone: 'У окна', zoneShort: 'Окно', type: 'round',
-    cx: 29200, cy: 18400, radius: 2400,
+    cx: 29100, cy: 22800, radius: 2200,
     depositPrice: 0,
     seats: seats(0, 90, 180, 270),
   },
-  // ── Диваны (у левой стены, друг над другом) ──
+  // ── Диваны (левая стена, вытянутые прямоугольники) ──
   {
     id: 'B1', num: 1, zone: 'Диваны', zoneShort: 'Диван', type: 'booth',
-    x: 1000, y: 4600, w: 4600, h: 5800,
+    x: 1000, y: 4900, w: 4100, h: 6900,
     depositPrice: 0,
     seats: seats(0, 60, 120, 180, 240, 300),
   },
   {
     id: 'B2', num: 2, zone: 'Диваны', zoneShort: 'Диван', type: 'booth',
-    x: 1000, y: 11200, w: 4600, h: 5800,
+    x: 1000, y: 12600, w: 4100, h: 6900,
     depositPrice: 0,
     seats: seats(0, 60, 120, 180, 240, 300),
   },
@@ -80,26 +83,23 @@ export const TABLES = [
 
 /** Подписи зон на плане (координаты — мировые единицы; «У окна» — у обеих групп) */
 export const ZONE_LABELS = [
-  { key: 'zoneSofas', x: 3300, y: 3900, ru: 'ДИВАНЫ' },
-  { key: 'zoneMain', x: 17000, y: 7400, ru: 'ОСНОВНОЙ ЗАЛ' },
-  { key: 'zoneWindow', x: 11500, y: 16300, ru: 'У ОКНА' },
-  { key: 'zoneWindow', x: 25900, y: 16300, ru: 'У ОКНА' },
+  { key: 'zoneSofas', x: 3050, y: 4400, ru: 'ДИВАНЫ' },
+  { key: 'zoneMain', x: 18600, y: 8600, ru: 'ОСНОВНОЙ ЗАЛ' },
+  { key: 'zoneWindow', x: 7850, y: 19900, ru: 'У ОКНА' },
+  { key: 'zoneWindow', x: 26150, y: 19900, ru: 'У ОКНА' },
 ];
 
 /** Окна на нижней стене (декор — поясняют зону «У окна») */
 export const WINDOWS = [
-  { x: 4100, y: 21450, w: 11800, h: 250 },
-  { x: 19700, y: 21450, w: 11900, h: 250 },
+  { x: 2600, y: 25700, w: 10600, h: 250 },
+  { x: 20800, y: 25700, w: 10600, h: 250 },
 ];
 
 /** Барная стойка (общая геометрия для FloorPlanSvg и planImage) */
-export const BAR_GEO = { x: 10500, y: 300, w: 13000, h: 3200, rx: 200 };
-
-/** Декоративная дуга-сцена под стойкой */
-export const ARC_D = 'M31800 4000 C 24000 6300, 10000 6300, 1800 4000';
+export const BAR_GEO = { x: 9500, y: 400, w: 15000, h: 3900, rx: 240 };
 
 /** ViewBox плана v3 (общий для сайта и PNG в Telegram) */
-export const PLAN_VB = { x: 400, y: 0, w: 32000, h: 21900 };
+export const PLAN_VB = { x: 600, y: 0, w: 31400, h: 26600 };
 
 /** Барных стульев в брони больше нет; константы оставлены для совместимости. */
 export const BAR_STOOL_W = 1148;
