@@ -45,7 +45,7 @@ const UNIQUE = {
 const PK = { otps: 'phone', app_config: 'key', web_login_tokens: 'token' };
 
 const DEFAULTS = {
-  users: r => ({ name: '', phone: '', telegram_id: null, role: 'guest', loyalty_points: 0, bot_blocked: false, created_at: now(), ...r }),
+  users: r => ({ name: '', phone: '', telegram_id: null, telegram_username: null, role: 'guest', level_override: null, bot_blocked: false, created_at: now(), ...r }),
   reservations: r => ({ staff_message_id: null, staff_reminder_count: 0, attendance_prompt_sent_at: null, cancelled_at: null, cancellation_reason: null, note: '', guest_phone: '', created_at: now(), updated_at: now(), ...r }),
   table_occupancy: r => ({ source: 'walk_in', reservation_id: null, occupied_since: now(), freed_at: null, ...r }),
   app_config: r => ({ value: {}, updated_at: now(), ...r }),

@@ -111,6 +111,17 @@
   cursor: pointer;
 }
 .adm-select:focus { border-color: rgba(212,168,67,0.45); }
+.adm-select--sm { font-size: 10px; padding: 4px 8px; }
+
+/* ─── Вкладка ГОСТИ ─── */
+.adm-guests-count { font-size: 11px; color: rgba(242,237,228,0.4); white-space: nowrap; }
+.adm-guest-level { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.adm-guest-level__badge {
+  color: #D4A843;
+  background: rgba(212,168,67,0.09);
+  border-color: rgba(212,168,67,0.27);
+  font-size: 10px;
+}
 
 /* ─── Buttons ─── */
 .adm-btn {
@@ -278,6 +289,7 @@
   font-size: 14px; cursor: pointer; padding: 0;
 }
 .adm-modal--sm { max-width: 380px; }
+.adm-modal--wide { max-width: 680px; } /* история броней гостя — таблице нужна ширина */
 .adm-confirm {
   padding: 20px;
   display: flex; flex-direction: column; gap: 18px;

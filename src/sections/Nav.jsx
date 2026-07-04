@@ -43,6 +43,9 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
   // that just happened in AuthModal (which re-renders this via App.jsx's
   // authOpen state closing) without needing a page reload.
   const loggedIn = AuthService.isAuthenticated();
+  // Ссылка в админку видна только админам; сервер всё равно проверяет роль
+  // на каждом запросе — скрытие здесь только чтобы не смущать гостей.
+  const isAdmin = AuthService.isAdmin();
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
@@ -88,6 +91,16 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
           <a href="#" style={linkStyle('contacts')} className={linkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
         </div>
 
+        {isAdmin && (
+          <a href="/admin" className="nav__admin nav__shimmer" aria-label={tx.navAdmin}>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" />
+              <path d="M2 14h4M10 8h4M18 16h4" />
+            </svg>
+            {tx.navAdmin}
+          </a>
+        )}
+
         <div className="nav__actions">
           <TelegramNavLink loggedIn={loggedIn} onRequestAuth={onRequestAuth} tx={tx} />
           <button className="nav__lang nav__shimmer" onClick={onLangToggle}>{tx.langBtn}</button>
@@ -111,6 +124,11 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
         <a href="#" className={mobileLinkCls('gallery')}  onClick={nav('gallery')}>{tx.navGallery}</a>
         <a href="#" className={mobileLinkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
         <a href="#" className={mobileLinkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
+        {isAdmin && (
+          <a href="/admin" className="nav__mobile-link nav__mobile-link--admin nav__shimmer" onClick={close}>
+            {tx.navAdmin}
+          </a>
+        )}
         <div className="nav__mobile-actions">
           <TelegramNavLink loggedIn={loggedIn} onClick={close} onRequestAuth={onRequestAuth} tx={tx} />
           <button className="nav__lang nav__shimmer" onClick={() => { onLangToggle(); close(); }}>{tx.langBtn}</button>

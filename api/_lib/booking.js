@@ -4,7 +4,6 @@ import { BOOKING_RULES } from '../../src/booking/bookingRules.js';
 import {
   timeToMin, minToTime, reservationInstant, barEveningDate,
 } from '../../src/booking/barTime.js';
-import { awardAttendancePoints } from './loyalty.js';
 import { notifyStaff, notifyStaffPhoto, editStaffMessage } from './staffNotify.js';
 import { notifyGuestTg } from './telegramNotify.js';
 import { renderPlanPng } from './planImage.js';
@@ -472,8 +471,8 @@ export async function updateReservationStatus(id, newStatus, { fromStatus } = {}
   const { data: existing } = await supabase.from('reservations').select('status, guest_id, table_id').eq('id', id).maybeSingle();
   if (!existing) throw new Error('Бронь не найдена');
   // Гость мог отменить бронь, пока у бармена на экране висит старый статус —
-  // guard от «Подтвердить»/«Завершить» на брони в финальном статусе (в т.ч.
-  // от повторного начисления баллов). Финальные: cancelled/completed/no_show.
+  // guard от «Подтвердить»/«Завершить» на брони в финальном статусе.
+  // Финальные: cancelled/completed/no_show.
   if (FINAL_STATUSES.includes(existing.status)) {
     throw new Error('Бронь уже в финальном статусе — обновите список');
   }
@@ -496,13 +495,8 @@ export async function updateReservationStatus(id, newStatus, { fromStatus } = {}
     closeOccupancyForReservation(id).catch(() => {});
   }
 
-  // Баллы лояльности — за реальный визит, ровно один раз: переход в 'completed'
-  // (гард финальных статусов выше не даёт начислить повторно). Walk-in столы
-  // броней не имеют и сюда не попадают — баллов не дают.
-  if (newStatus === 'completed' && existing.status !== 'completed' && existing.guest_id) {
-    awardAttendancePoints(existing.guest_id, { sourceId: id, reason: 'Визит подтверждён (бронь)' })
-      .catch(e => console.error('[loyalty] award failed:', e.message));
-  }
+  // Уровень гостя вычисляется из подтверждённых броней на лету (см.
+  // _lib/loyalty.js) — отдельного начисления при 'completed' больше нет.
   return rowToRes(data);
 }
 

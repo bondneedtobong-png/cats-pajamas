@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import QRCode from 'qrcode';
 import AuthService from '../auth/AuthService.js';
 import BookingService from '../booking/BookingService.js';
 import LoyaltyService from '../loyalty/LoyaltyService.js';
@@ -274,140 +273,42 @@ function ReservationsTab() {
   );
 }
 
-// Карточка QR-кода + текстовый код после успешного обмена — гость показывает
-// этот экран бармену, тот сканирует QR или вводит код вручную (fallback без
-// сканера). Код и QR несут одну и ту же строку — избыточность намеренная.
-function RedeemResultModal({ result, onClose }) {
-  const [qrUrl, setQrUrl] = useState('');
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    QRCode.toDataURL(result.code, { width: 220, margin: 1, color: { dark: '#0C0A18', light: '#F2EDE4' } })
-      .then(setQrUrl).catch(() => {});
-  }, [result.code]);
-
-  function handleCopy() {
-    navigator.clipboard?.writeText(result.code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  }
-
-  return (
-    <div className="prof-modal-overlay" onClick={onClose}>
-      <div className="prof-modal" onClick={e => e.stopPropagation()}>
-        <div className="prof-modal__head">
-          <span className="prof-modal__title">{result.reward.title}</span>
-          <button className="prof-modal__close" onClick={onClose}>✕</button>
-        </div>
-        <div className="prof-redeem">
-          {qrUrl && <img src={qrUrl} alt="QR-код для погашения" className="prof-redeem__qr" />}
-          <div className="prof-redeem__code">{result.code}</div>
-          <button className="prof-cta" onClick={handleCopy}>{copied ? '✓ Скопировано' : 'Скопировать код'}</button>
-          <p className="prof-redeem__hint">Покажите этот экран бармену — он отсканирует QR или введёт код вручную.</p>
-          {result.expiresAt && (
-            <p className="prof-redeem__expiry">Действует до {new Date(result.expiresAt).toLocaleDateString('ru-RU')}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const TIER_SHORT_LABEL = { kitten: 'Котёнок', jazzcat: 'Кот джаза', oldpaw: 'Мурлыка-старожил', boss: 'Хозяин клуба' };
-
-function RewardCard({ reward, onRedeem, redeeming }) {
-  return (
-    <div className={`prof-reward-card${reward.available ? '' : ' prof-reward-card--locked'}`}>
-      <div className="prof-reward-card__top">
-        <span className="prof-reward-card__title">{reward.title}</span>
-        <span className="prof-reward-card__cost">{reward.costPoints} ★</span>
-      </div>
-      {reward.description && <p className="prof-reward-card__desc">{reward.description}</p>}
-      {reward.tierRequired && (
-        <span className="prof-reward-card__tier">от уровня «{TIER_SHORT_LABEL[reward.tierRequired] || reward.tierRequired}»</span>
-      )}
-      <button
-        className="prof-reward-card__btn"
-        disabled={!reward.available || redeeming}
-        onClick={() => onRedeem(reward)}
-      >
-        {redeeming ? 'Обмениваем…' : !reward.tierOk ? 'Недоступно на вашем уровне' : !reward.available ? 'Не хватает баллов' : 'Обменять'}
-      </button>
-    </div>
-  );
-}
-
 // ─────────────────────────── Tab: Уровень ───────────────────────────
-function LoyaltyTab() {
-  const { toast, confirm } = useFeedback();
-  const [status,     setStatus]     = useState(null);
-  const [todaySpin,  setTodaySpin]  = useState(null);
-  const [loading,    setLoading]    = useState(true);
-  const [loadError,  setLoadError]  = useState(false);
-  const [spinning,   setSpinning]   = useState(false);
+// 9 уровней по числу подтверждённых броней — зеркало LEVELS из
+// api/_lib/loyalty.js (сервер — источник истины, тут только подписи лестницы).
+const LEVELS = [
+  { num: 1, label: 'Шампанское', emoji: '🍾', min: 0 },
+  { num: 2, label: 'Вино',       emoji: '🍷', min: 1 },
+  { num: 3, label: 'Вермут',     emoji: '🫒', min: 3 },
+  { num: 4, label: 'Джин',       emoji: '🍸', min: 5 },
+  { num: 5, label: 'Ром',        emoji: '🍹', min: 10 },
+  { num: 6, label: 'Текила',     emoji: '🌵', min: 15 },
+  { num: 7, label: 'Виски',      emoji: '🥃', min: 20 },
+  { num: 8, label: 'Коньяк',     emoji: '👑', min: 25 },
+  { num: 9, label: 'Абсент',     emoji: '🧚', min: 50 },
+];
 
-  const [catalog,     setCatalog]     = useState([]);
-  const [catalogLoad, setCatalogLoad] = useState(true);
-  const [redeemingId, setRedeemingId] = useState(null);
-  const [redeemResult, setRedeemResult] = useState(null);
+function pluralBookings(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'бронь';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'брони';
+  return 'броней';
+}
+
+function LoyaltyTab() {
+  const [status,    setStatus]    = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   function load() {
     setLoading(true);
     setLoadError(false);
     LoyaltyService.getStatus()
-      .then(d => { setStatus(d.status); setTodaySpin(d.todaySpin); })
+      .then(d => setStatus(d.status))
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }
-
-  function loadCatalog() {
-    setCatalogLoad(true);
-    LoyaltyService.getCatalog()
-      .then(setCatalog)
-      .catch(() => setCatalog([]))
-      .finally(() => setCatalogLoad(false));
-  }
-
   useEffect(load, []);
-  useEffect(loadCatalog, []);
-
-  async function handleRedeem(reward) {
-    const ok = await confirm({
-      title: 'Обменять на баллы?',
-      message: `«${reward.title}» за ${reward.costPoints} баллов. Баллы спишутся сразу.`,
-      confirmLabel: 'Обменять',
-    });
-    if (!ok) return;
-    setRedeemingId(reward.id);
-    try {
-      const result = await LoyaltyService.redeem(reward.id);
-      setRedeemResult(result);
-      setStatus(s => s && ({ ...s, points: s.points - reward.costPoints }));
-      loadCatalog();
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setRedeemingId(null);
-    }
-  }
-
-  async function handleSpin() {
-    setSpinning(true);
-    try {
-      const result = await LoyaltyService.spin();
-      await new Promise(r => setTimeout(r, 1500)); // let the spin animation play out
-      setTodaySpin({ prize_label: result.prize.label, redeemed: !result.prize.redeem });
-      if (result.prize.points) {
-        setStatus(s => s && ({ ...s, points: s.points + result.prize.points }));
-      }
-      toast.success(result.prize.label);
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setSpinning(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -434,70 +335,65 @@ function LoyaltyTab() {
     );
   }
 
-  const { points, tier, next } = status;
-  const span = next ? Math.max(1, next.min - tier.min) : 1;
-  const progressPct = next ? Math.min(100, Math.round(((points - tier.min) / span) * 100)) : 100;
+  const { level, bookings, next } = status;
+  const segStart = LEVELS[level.num - 1]?.min ?? 0;
+  const progressPct = next
+    ? Math.max(0, Math.min(100, Math.round(((bookings - segStart) / Math.max(1, next.minBookings - segStart)) * 100)))
+    : 100;
 
   return (
     <>
-    <section className="prof-section">
-      <div className="prof-section__head">
-        <span className="prof-section__title">УРОВЕНЬ</span>
-      </div>
-
-      <div className="prof-loyalty">
-        <div className="prof-loyalty__tier-row">
-          <span className="prof-loyalty__tier-label">{tier.label}</span>
-          <span className="prof-loyalty__points">{points} баллов</span>
+      <section className="prof-section">
+        <div className="prof-section__head">
+          <span className="prof-section__title">УРОВЕНЬ</span>
         </div>
-        <div className="prof-loyalty__bar">
-          <div className="prof-loyalty__bar-fill" style={{ width: progressPct + '%' }} />
-        </div>
-        <p className="prof-loyalty__next">
-          {next ? `До «${next.label}» — ${next.min - points} баллов` : 'Вы достигли максимального уровня 👑'}
-        </p>
 
-        <div className="prof-wheel">
-          <div className={`prof-wheel__dial${spinning ? ' prof-wheel__dial--spinning' : ''}`}>🎡</div>
-          {todaySpin ? (
-            <div className="prof-wheel__result">
-              <div className="prof-wheel__result-label">Сегодняшний приз</div>
-              <div className="prof-wheel__result-prize">{todaySpin.prize_label}</div>
-              {!todaySpin.redeemed && <div className="prof-wheel__result-hint">Покажите это барменам, чтобы получить приз</div>}
+        <div className="prof-loyalty">
+          <div className="prof-level-hero">
+            <span className="prof-level-hero__emoji">{level.emoji}</span>
+            <div className="prof-level-hero__text">
+              <span className="prof-level-hero__num">Уровень {level.num} из 9</span>
+              <span className="prof-loyalty__tier-label">{level.label}</span>
             </div>
-          ) : (
-            <button className="prof-wheel__btn" onClick={handleSpin} disabled={spinning}>
-              {spinning ? 'Крутим…' : '🎡 Крутить колесо дня'}
-            </button>
-          )}
+          </div>
+          <div className="prof-loyalty__bar">
+            <div className="prof-loyalty__bar-fill" style={{ width: progressPct + '%' }} />
+          </div>
+          <p className="prof-loyalty__next">
+            Подтверждённых броней: {bookings}.{' '}
+            {next
+              ? `До уровня «${next.label}» ${next.emoji} — ещё ${next.remaining} ${pluralBookings(next.remaining)}.`
+              : 'Вы на вершине лестницы 🥂'}
+          </p>
+          <p className="prof-loyalty__next">
+            Уровень растёт сам: бронируйте стол и приходите — подтверждённая барменом бронь засчитывается автоматически.
+          </p>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section className="prof-section">
-      <div className="prof-section__head">
-        <span className="prof-section__title">КАТАЛОГ НАГРАД</span>
-      </div>
-
-      {catalogLoad ? (
-        <div className="prof-skeleton-list">
-          <div className="prof-skeleton-card"><div className="prof-skeleton-line" style={{ width: '70%' }} /></div>
+      <section className="prof-section">
+        <div className="prof-section__head">
+          <span className="prof-section__title">ЛЕСТНИЦА УРОВНЕЙ</span>
         </div>
-      ) : catalog.length === 0 ? (
-        <div className="prof-empty">
-          <div className="prof-empty__icon">🎁</div>
-          <p>Наград пока нет — загляните позже.</p>
+        <div className="prof-ladder">
+          {LEVELS.map(l => {
+            const current = l.num === level.num;
+            const reached = l.num <= level.num;
+            return (
+              <div
+                key={l.num}
+                className={`prof-ladder__row${current ? ' prof-ladder__row--current' : ''}${reached ? ' prof-ladder__row--reached' : ''}`}
+              >
+                <span className="prof-ladder__emoji">{l.emoji}</span>
+                <span className="prof-ladder__label">{l.num}. {l.label}</span>
+                <span className="prof-ladder__req">
+                  {l.min === 0 ? 'за регистрацию' : `${l.min} ${pluralBookings(l.min)}`}
+                </span>
+              </div>
+            );
+          })}
         </div>
-      ) : (
-        <div className="prof-reward-grid">
-          {catalog.map(reward => (
-            <RewardCard key={reward.id} reward={reward} onRedeem={handleRedeem} redeeming={redeemingId === reward.id} />
-          ))}
-        </div>
-      )}
-    </section>
-
-    {redeemResult && <RedeemResultModal result={redeemResult} onClose={() => setRedeemResult(null)} />}
+      </section>
     </>
   );
 }

@@ -76,9 +76,3 @@ export async function deleteEvent(id) {
   const { error } = await supabase.from('events').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
-
-// Ставится поллером (attendancePoller.js) после отправки списка RSVP на
-// подтверждение в группу персонала — дедуп-метка, как у reservations.
-export async function markEventAttendancePromptSent(id) {
-  await supabase.from('events').update({ attendance_prompt_sent_at: new Date().toISOString() }).eq('id', id);
-}

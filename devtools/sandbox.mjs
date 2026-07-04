@@ -21,8 +21,20 @@ import { createDb, startPgrestMock } from './pgrest-mock.mjs';
 // нового CRUD (например cocktails: [...], events: [...]).
 const db = createDb({
   users: [
-    { id: 'u_admin', name: 'Админ', phone: '79990000001', telegram_id: '1186493444', role: 'admin' },
-    { id: 'u_guest', name: 'Гость Тестовый', phone: '79990000002', telegram_id: '424242', role: 'guest', loyalty_points: 20 },
+    { id: 'u_admin', name: 'Админ', phone: '79990000001', telegram_id: '1186493444', telegram_username: 'bond_admin', role: 'admin' },
+    { id: 'u_guest', name: 'Гость Тестовый', phone: '79990000002', telegram_id: '424242', telegram_username: 'test_guest', role: 'guest' },
+    { id: 'u_maria', name: 'Мария', phone: '79990000003', telegram_id: '333222', telegram_username: 'maria_jazz', role: 'guest' },
+    { id: 'u_petr',  name: 'Пётр', phone: '79990000004', role: 'guest' },
+  ],
+  // Прошлые брони — чтобы вкладка ГОСТИ показывала разные уровни:
+  // у Гостя Тестового 4 подтверждённых (уровень 3 «Вермут»), у Марии 1 («Вино»).
+  reservations: [
+    { id: 'r_s1', table_id: 'T2', guest_id: 'u_guest', status: 'completed', date: '2026-06-01', time_from: '19:00', time_to: '21:00', guests_count: 2, guest_name: 'Гость Тестовый', source: 'web' },
+    { id: 'r_s2', table_id: 'T3', guest_id: 'u_guest', status: 'completed', date: '2026-06-08', time_from: '20:00', time_to: '22:00', guests_count: 3, guest_name: 'Гость Тестовый', source: 'telegram_bot' },
+    { id: 'r_s3', table_id: 'T2', guest_id: 'u_guest', status: 'completed', date: '2026-06-15', time_from: '19:30', time_to: '21:30', guests_count: 2, guest_name: 'Гость Тестовый', source: 'web' },
+    { id: 'r_s4', table_id: 'T5', guest_id: 'u_guest', status: 'confirmed', date: '2026-07-20', time_from: '19:00', time_to: '21:00', guests_count: 2, guest_name: 'Гость Тестовый', source: 'web' },
+    { id: 'r_s5', table_id: 'T6', guest_id: 'u_guest', status: 'no_show',   date: '2026-05-20', time_from: '19:00', time_to: '21:00', guests_count: 2, guest_name: 'Гость Тестовый', source: 'phone_manual' },
+    { id: 'r_s6', table_id: 'T4', guest_id: 'u_maria', status: 'completed', date: '2026-06-20', time_from: '21:00', time_to: '23:00', guests_count: 2, guest_name: 'Мария', source: 'telegram_bot' },
   ],
 });
 globalThis.__sandboxDb = db;

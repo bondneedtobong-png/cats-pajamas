@@ -16,6 +16,7 @@ import reviewsHandler       from './api/reviews.js';
 import teamHandler          from './api/team.js';
 import applicationsHandler  from './api/applications.js';
 import loyaltyHandler       from './api/loyalty.js';
+import guestsHandler        from './api/guests.js';
 
 const app = express();
 app.use(express.json());
@@ -30,6 +31,7 @@ const routes = {
   '/api/team': teamHandler,
   '/api/applications': applicationsHandler,
   '/api/loyalty': loyaltyHandler,
+  '/api/guests': guestsHandler,
 };
 
 for (const [path, handler] of Object.entries(routes)) {

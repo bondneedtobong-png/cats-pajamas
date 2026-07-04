@@ -17,16 +17,15 @@ export async function getBroadcastRecipients() {
   return data || [];
 }
 
-/** @param api ctx.api (grammY Api instance) */
-export async function sendBroadcast(api, text, { replyMarkup } = {}) {
+// Общий прогон по получателям: sendOne(user) шлёт одно сообщение; 403 от
+// Telegram = гость заблокировал бота → bot_blocked, больше не пишем.
+async function deliverToAll(sendOne) {
   const recipients = await getBroadcastRecipients();
   let sent = 0, blocked = 0;
 
   for (let i = 0; i < recipients.length; i += CHUNK_SIZE) {
     const batch = recipients.slice(i, i + CHUNK_SIZE);
-    const results = await Promise.allSettled(
-      batch.map(u => api.sendMessage(u.telegram_id, text, { parse_mode: 'Markdown', reply_markup: replyMarkup })),
-    );
+    const results = await Promise.allSettled(batch.map(sendOne));
     for (let j = 0; j < results.length; j++) {
       const r = results[j];
       if (r.status === 'fulfilled') { sent++; continue; }
@@ -38,4 +37,19 @@ export async function sendBroadcast(api, text, { replyMarkup } = {}) {
     if (i + CHUNK_SIZE < recipients.length) await sleep(CHUNK_DELAY_MS);
   }
   return { total: recipients.length, sent, blocked };
+}
+
+/** Текстовая рассылка. parseMode: null — «как написано», без Markdown-разметки
+ *  (для произвольного текста админа, где незакрытая * валила бы отправку).
+ *  @param api ctx.api (grammY Api instance) */
+export async function sendBroadcast(api, text, { replyMarkup, parseMode = 'Markdown' } = {}) {
+  const opts = { reply_markup: replyMarkup };
+  if (parseMode) opts.parse_mode = parseMode;
+  return deliverToAll(u => api.sendMessage(u.telegram_id, text, opts));
+}
+
+/** Пересылка поста (например, из канала) всем подписчикам бота — гость видит
+ *  «Переслано из <канал>», как и просил владелец для анонсов событий. */
+export async function forwardBroadcast(api, fromChatId, messageId) {
+  return deliverToAll(u => api.forwardMessage(u.telegram_id, fromChatId, messageId));
 }

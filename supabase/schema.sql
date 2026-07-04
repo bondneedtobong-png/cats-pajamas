@@ -22,13 +22,19 @@ create table if not exists public.users (
 create index if not exists users_phone_idx       on public.users (phone);
 create index if not exists users_telegram_id_idx on public.users (telegram_id);
 
--- Лояльность + рассылки бота (добавлено к уже существующей таблице — ALTER, а не
--- CREATE, т.к. `users` уже есть в бою). Баллы начисляются ботом/сайтом, когда
--- бронь переходит в статус 'completed' (см. booking.js/updateReservationStatus).
+-- loyalty_points — история старой системы баллов (выведена 2026-07-04, колонка
+-- остаётся, код её больше не читает). Уровень гостя теперь вычисляется из
+-- числа подтверждённых броней (см. api/_lib/loyalty.js), в БД не хранится.
 alter table public.users add column if not exists loyalty_points integer not null default 0;
 -- true, если Telegram вернул 403 при рассылке (гость заблокировал бота) — такие
 -- пропускаются в следующих рассылках, чтобы не долбить в закрытую дверь.
 alter table public.users add column if not exists bot_blocked boolean not null default false;
+-- @username из Telegram (без @, null если не задан) — обновляется ботом при
+-- каждом контакте (ensureTelegramUser), показывается в админке «Гости».
+alter table public.users add column if not exists telegram_username text;
+-- Ручная правка уровня админом: null = уровень считается автоматически из
+-- подтверждённых броней; 1..9 = выставлено вручную (побеждает большее из двух).
+alter table public.users add column if not exists level_override integer;
 
 -- ─── Брони ──────────────────────────────────────────────────────────────────
 create table if not exists public.reservations (
@@ -109,9 +115,8 @@ create unique index if not exists table_occupancy_open_idx
   on public.table_occupancy (table_id) where freed_at is null;
 create index if not exists table_occupancy_table_idx on public.table_occupancy (table_id);
 
--- Уведомления персоналу с подтверждением явки (см. api/_lib/attendancePoller.js):
--- метка, что напоминание «Гость был?» уже отправлено в группу персонала — не
--- даёт поллеру слать его повторно на каждом цикле, пока бармен не нажал кнопку.
+-- Метка «напоминание "Гость был?" уже отправлено» — колонка времён поллера
+-- подтверждения явки (сам поллер удалён вместе с баллами 2026-07-04).
 alter table public.reservations add column if not exists attendance_prompt_sent_at timestamptz;
 
 -- ─── Конфиг столов и прочие настройки приложения ────────────────────────────
@@ -266,12 +271,11 @@ create table if not exists public.team_applications (
 );
 create index if not exists team_applications_created_idx on public.team_applications (created_at);
 
--- ─── Колесо дня (лояльность, только бот) ────────────────────────────────────
--- Один спин в календарный день на гостя — гарантируется UNIQUE(guest_id, spin_date)
--- на уровне БД (а не только проверкой в коде), пул призов зависит от уровня
--- (см. TIERS/PRIZE_POOLS в api/_lib/loyalty.js). redeemed=false для призов,
--- которые бармен должен выдать физически (скидка/десерт/коктейль); призы
--- «только баллы» и «не повезло» сразу отмечаются выданными.
+-- ─── ⚠️ ВЫВЕДЕНО ИЗ ПРОДУКТА 2026-07-04: колесо дня и баллы ─────────────────
+-- Таблицы wheel_spins / loyalty_transactions / loyalty_rewards /
+-- loyalty_redemptions и функция redeem_loyalty_reward остаются в схеме только
+-- как история прода — код к ним больше не обращается. Уровень гостя теперь
+-- вычисляется из подтверждённых броней (api/_lib/loyalty.js).
 create table if not exists public.wheel_spins (
   id           text primary key,        -- 'ws_...'
   guest_id     text        not null references public.users (id) on delete cascade,

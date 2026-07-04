@@ -45,6 +45,7 @@ export function rowToUser(r) {
     name: r.name || '',
     phone: r.phone || '',
     telegramId: r.telegram_id || null,
+    telegramUsername: r.telegram_username || null,
     role: r.role || 'guest',
     createdAt: r.created_at,
   };

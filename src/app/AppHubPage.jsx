@@ -12,7 +12,7 @@ import './apphub.css';
 const TILES = [
   { to: '/booking',               icon: '🪑', label: 'План зала',   hint: 'Выбрать стол и время' },
   { to: '/profile?tab=reservations', icon: '📋', label: 'Мои брони',  hint: 'Что уже забронировано' },
-  { to: '/profile?tab=loyalty',   icon: '🎖', label: 'Мой уровень', hint: 'Баллы и колесо дня' },
+  { to: '/profile?tab=loyalty',   icon: '🎖', label: 'Мой уровень', hint: 'Растёт с каждой бронью' },
   { to: '/',                      icon: '📅', label: 'События',     hint: 'Афиша заведения' },
 ];
 

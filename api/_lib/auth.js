@@ -56,20 +56,28 @@ const ADMIN_TG_IDS = (process.env.TELEGRAM_ADMIN_IDS || '').split(',').map(s => 
 export async function ensureTelegramUser(tgUser) {
   const tgId = String(tgUser.id);
   const role = ADMIN_TG_IDS.includes(tgId) ? 'admin' : 'guest';
+  const username = tgUser.username || null;
   let { data: existing } = await supabase.from('users')
     .select('*').eq('telegram_id', tgId).maybeSingle();
   if (!existing) {
     const row = {
       id: genId(), name: tgUser.first_name || '', phone: '',
-      telegram_id: tgId, role, created_at: new Date().toISOString(),
+      telegram_id: tgId, telegram_username: username,
+      role, created_at: new Date().toISOString(),
     };
     const { data, error } = await supabase.from('users').insert(row).select().single();
     if (error) throw new Error(error.message);
     existing = data;
-  } else if (existing.role !== role && role === 'admin') {
-    // promote to admin if listed
-    const { data } = await supabase.from('users').update({ role }).eq('id', existing.id).select().single();
-    existing = data || existing;
+  } else {
+    // Поддерживаем актуальность: повышение до admin (если id добавили в env)
+    // и смена @username гостем — он показывается в админке «Гости».
+    const patch = {};
+    if (role === 'admin' && existing.role !== 'admin') patch.role = role;
+    if ((existing.telegram_username || null) !== username) patch.telegram_username = username;
+    if (Object.keys(patch).length) {
+      const { data } = await supabase.from('users').update(patch).eq('id', existing.id).select().single();
+      existing = data || existing;
+    }
   }
   return rowToUser(existing);
 }

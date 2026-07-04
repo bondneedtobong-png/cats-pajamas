@@ -11,7 +11,7 @@ process.env.TELEGRAM_ADMIN_IDS = '111';
 process.env.TELEGRAM_STAFF_IDS = '555';
 process.env.TELEGRAM_STAFF_CHAT_ID = '-100500';
 process.env.TELEGRAM_STAFF_BOOKINGS_THREAD_ID = '7';
-delete process.env.TELEGRAM_CHANNEL; // isSubscribed → true, гейт не мешает
+process.env.TELEGRAM_CHANNEL = '@catstest'; // getChatMember в перехвате отвечает member — гейт подписки проходит
 
 // ── Перехват Telegram API ──
 const tgCalls = [];
@@ -32,8 +32,10 @@ function tgIntercept(url, opts) {
   tgCalls.push({ method, body });
   let result = true;
   if (method === 'getMe') result = { id: 999, is_bot: true, first_name: 'bot', username: 'cats_pajama_bot' };
+  if (method === 'getChatMember') result = { status: 'member', user: { id: 0, is_bot: false, first_name: 'x' } };
   if (method === 'sendMessage') result = { message_id: ++tgMsgId, chat: { id: body.chat_id }, date: 0, text: body.text || '' };
   if (method === 'sendPhoto') result = { message_id: ++tgMsgId, chat: { id: body.chat_id }, date: 0 };
+  if (method === 'forwardMessage') result = { message_id: ++tgMsgId, chat: { id: body.chat_id }, date: 0 };
   if (method === 'editMessageText') result = { message_id: body.message_id, chat: { id: body.chat_id }, date: 0, text: body.text || '' };
   return new Response(JSON.stringify({ ok: true, result }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }
@@ -68,6 +70,7 @@ await startPgrestMock(db, 54322);
 const P = new URL('../', import.meta.url).href; // корень проекта (devtools на уровень ниже)
 const bk = await import(P + 'api/_lib/booking.js');
 const bt = await import(P + 'src/booking/barTime.js');
+const loy = await import(P + 'api/_lib/loyalty.js');
 const { buildBot } = await import(P + 'api/bot.js');
 
 const bot = buildBot();
@@ -103,10 +106,35 @@ async function groupText(text, fromId, replyToId) {
     },
   });
 }
+// Личный чат с ботом (гость/админ): callback и текст — для панели и мастеров
+async function cbPriv(data, fromId, { messageId = 9, text = 'msg', username = 'user' } = {}) {
+  tgCalls.length = 0;
+  await bot.handleUpdate({
+    update_id: updId++,
+    callback_query: {
+      id: 'cbq' + updId, chat_instance: 'ci',
+      from: { id: fromId, is_bot: false, first_name: 'Юзер', username },
+      message: { message_id: messageId, date: 0, text, chat: { id: fromId, type: 'private' } },
+      data,
+    },
+  });
+}
+async function privText(text, fromId, { username = 'user' } = {}) {
+  tgCalls.length = 0;
+  await bot.handleUpdate({
+    update_id: updId++,
+    message: {
+      message_id: ++tgMsgId, date: Math.floor(Date.now() / 1000), text,
+      from: { id: fromId, is_bot: false, first_name: 'Юзер', username },
+      chat: { id: fromId, type: 'private' },
+    },
+  });
+}
+
 const calls = (m) => tgCalls.filter(c => c.method === m);
 const res = (id) => db.t('reservations').find(r => r.id === id);
-const guestPoints = (uid) => db.t('users').find(u => u.id === uid).loyalty_points;
 const openOcc = (tableId) => db.t('table_occupancy').find(o => o.table_id === tableId && o.freed_at == null);
+const confirmedCount = (uid) => loy.countConfirmedBookings(uid);
 
 let fails = 0;
 function ok(name, cond, extra = '') {
@@ -157,11 +185,10 @@ ok('A13 «Гости ушли» → completed', res(rA.id).status === 'completed
 ok('A14 occupancy закрыта', !openOcc('T2'));
 plan = await bk.getTablesWithStatus(evening);
 ok('A15 план: стол vacant', plan.find(t => t.id === 'T2').status === 'vacant');
-const ptsAfter = guestPoints('u_g1');
-ok('A16 баллы начислены', ptsAfter > 0, 'points=' + ptsAfter);
+const lvlAfter = await loy.getGuestLevel('u_g1');
+ok('A16 уровень: 1 подтверждённая бронь → 2 «Вино»', lvlAfter.level.num === 2 && lvlAfter.bookings === 1, JSON.stringify(lvlAfter));
 await cb(`tbldone:${rA.id}`, 555); // повторно
-ok('A17 повторное «Гости ушли» → отказ, баллы не задвоились', guestPoints('u_g1') === ptsAfter);
-ok('A18 транзакция visit ровно одна', db.t('loyalty_transactions').filter(t => t.source_type === 'visit' && t.source_id === rA.id).length === 1);
+ok('A17 повторное «Гости ушли» → отказ, счётчик броней не задвоился', (await confirmedCount('u_g1')) === 1);
 
 // ═══ B. Отклонение с причиной ═══
 console.log('\n── B. Отклонение ──');
@@ -223,7 +250,7 @@ try { await bk.createReservation({ tableId: 'T6', date: evening, timeFrom: slot,
 ok('D4 бронь walk-in-стола на сегодня отбита', evErr.includes('занят'), evErr);
 await cb('tblfree:T6', 555);
 ok('D5 стол освобождён', !openOcc('T6'));
-ok('D6 баллы за walk-in не начислялись', db.t('loyalty_transactions').filter(t => t.source_type === 'visit').length === 1);
+ok('D6 walk-in не влияет на уровень (нет брони — нет счётчика)', (await confirmedCount('u_g1')) === 1);
 
 // ═══ E. Гонка: два гостя ловят один стол ═══
 console.log('\n── E. Гонка ──');
@@ -243,11 +270,11 @@ await new Promise(r => setTimeout(r, 120));
 await cb(`stok:${rE.id}`, 555, { messageId: res(rE.id).staff_message_id });
 await cb(`tblseat:${rE.id}`, 555); // бармен вручную «пришли»
 ok('F1 вручную seated', res(rE.id).status === 'seated' && openOcc('T4')?.source === 'reservation');
-const ptsBeforeF = guestPoints(res(rE.id).guest_id);
+const cntBeforeF = await confirmedCount(res(rE.id).guest_id);
 await cb(`tblno:${rE.id}`, 555);
 ok('F2 «Не пришли» → no_show', res(rE.id).status === 'no_show');
 ok('F3 occupancy закрыта, стол свободен', !openOcc('T4'));
-ok('F4 баллов нет', guestPoints(res(rE.id).guest_id) === ptsBeforeF);
+ok('F4 неявка выпала из счётчика подтверждённых броней', (await confirmedCount(res(rE.id).guest_id)) === cntBeforeF - 1);
 
 // ═══ G. Напоминания и протухание ═══
 console.log('\n── G. Напоминания/протухание ──');
@@ -303,6 +330,99 @@ const rBot = db.t('reservations').find(r => r.table_id === 'T5' && r.source === 
 ok('H2 бот-заявка создана как pending', rBot?.status === 'pending');
 ok('H3 гостю «Заявка отправлена», не «подтверждена»', [...calls('editMessageCaption'), ...calls('editMessageText')].some(c => (c.body.text || '').includes('Заявка отправлена')));
 ok('H4 стафф-уведомление по бот-заявке ушло', [...calls('sendPhoto'), ...calls('sendMessage')].some(c => String(c.body.chat_id) === '-100500' && JSON.stringify(c.body.reply_markup || {}).includes('stok:')));
+
+// ═══ I. Админ-панель в боте ═══
+console.log('\n── I. Админ-панель ──');
+tgCalls.length = 0;
+await bot.handleUpdate({
+  update_id: updId++,
+  message: {
+    message_id: ++tgMsgId, date: Math.floor(Date.now() / 1000), text: '/admin',
+    entities: [{ type: 'bot_command', offset: 0, length: 6 }],
+    from: { id: 555, is_bot: false, first_name: 'Стафф', username: 'bar_staff' },
+    chat: { id: 555, type: 'private' },
+  },
+});
+const panelMsg = calls('sendMessage').find(c => (c.body.text || '').includes('Админ-панель'));
+const panelKb = JSON.stringify(panelMsg?.body.reply_markup || {});
+ok('I1 /admin (стафф): панель с 4 разделами', !!panelMsg && panelKb.includes('"tbl"') && panelKb.includes('"adm"') && panelKb.includes('"ev"') && panelKb.includes('"bc"'), panelKb);
+
+await privText('🏠 Меню', 555, { username: 'bar_staff' });
+const staffMenu = calls('sendMessage').find(c => (c.body.text || '').includes('Выберите действие'));
+const staffMenuKb = JSON.stringify(staffMenu?.body.reply_markup || {});
+ok('I2 меню персонала: кнопка админ-панели вместо «Столы сейчас»', staffMenuKb.includes('"adminmenu"') && !staffMenuKb.includes('"tbl"'), staffMenuKb);
+
+await privText('🏠 Меню', 424242, { username: 'anya_jazz' });
+const guestMenuMsg = calls('sendMessage').find(c => (c.body.text || '').includes('Выберите действие'));
+ok('I3 у гостя админ-кнопки нет', !JSON.stringify(guestMenuMsg?.body.reply_markup || {}).includes('adminmenu'));
+
+await cbPriv('adminmenu', 424242);
+ok('I4 гостю панель не открывается', !calls('editMessageText').some(c => (c.body.text || '').includes('Админ-панель')));
+
+const rI = await bk.createReservation({ tableId: 'T7', date: evening, timeFrom: slot, guestName: 'Борис', guestPhone: '+79994445566', source: 'web', guestId: 'u_g2' });
+await new Promise(r => setTimeout(r, 120));
+db.t('users').find(u => u.id === 'u_g2').telegram_username = 'boris_bar';
+await cbPriv('adm', 555);
+const admList = calls('editMessageText')[0];
+ok('I5 «Текущие брони»: бронь — кнопка admv', JSON.stringify(admList?.body.reply_markup || {}).includes(`admv:${rI.id}`), JSON.stringify(admList?.body.reply_markup || {}).slice(0, 300));
+
+await cbPriv(`admv:${rI.id}`, 555);
+const card = calls('editMessageText')[0];
+const cardKb = JSON.stringify(card?.body.reply_markup || {});
+ok('I6 карточка: имя гостя + действия по статусу', (card?.body.text || '').includes('Борис') && cardKb.includes(`admok:${rI.id}`) && cardKb.includes(`admno:${rI.id}`), card?.body.text);
+ok('I7 карточка: телефон и @username гостя', (card?.body.text || '').includes('79994445566') && (card?.body.text || '').includes('boris'), card?.body.text);
+ok('I8 карточка: кнопка «К списку»', cardKb.includes('"adm"'), cardKb);
+
+await cbPriv(`admok:${rI.id}`, 555);
+await new Promise(r => setTimeout(r, 150));
+ok('I9 подтверждена из карточки, гость получил ЛС', res(rI.id).status === 'confirmed'
+  && [...calls('sendMessage'), ...calls('sendPhoto')].some(c => String(c.body.chat_id) === '515151'));
+ok('I10 карточка перерисована с новым статусом', calls('editMessageText').some(c => (c.body.text || '').includes('подтверждена')));
+
+// ═══ J. Событие (сайт+канал+рассылка) и произвольная рассылка ═══
+console.log('\n── J. Событие и рассылка ──');
+await cbPriv('ev', 111);
+ok('J1 меню событий открылось', calls('editMessageText').some(c => (c.body.text || '').includes('Событ')));
+await cbPriv('evadd', 111);
+await privText('Вечер джаза', 111);
+ok('J2 мастер спросил дату', calls('sendMessage').some(c => (c.body.text || '').includes('ДД.ММ')));
+await privText('31.12.2026', 111);
+await privText('20:00', 111);
+await privText('Живой квартет и старые пластинки', 111);
+const preview = calls('sendMessage').find(c => (c.body.text || '').includes('Проверьте событие'));
+const previewKb = JSON.stringify(preview?.body.reply_markup || {});
+ok('J3 превью: переключатель рассылки + публикация', !!preview && previewKb.includes('evnotify') && previewKb.includes('evsave'), previewKb);
+
+await cbPriv('evnotify', 111);
+ok('J4 переключатель: рассылка выключилась', calls('editMessageText').some(c => JSON.stringify(c.body.reply_markup || {}).includes('НЕТ')));
+await cbPriv('evnotify', 111); // включить обратно
+
+await cbPriv('evsave', 111);
+await new Promise(r => setTimeout(r, 250));
+const evRow = db.t('events').find(e => e.title === 'Вечер джаза');
+ok('J5 событие в БД → видно на сайте', !!evRow && evRow.event_date === '2026-12-31' && evRow.active === true, JSON.stringify(evRow || {}));
+const chPost = calls('sendMessage').find(c => c.body.chat_id === '@catstest');
+ok('J6 пост в канале с кнопкой «Я приду»', !!chPost && JSON.stringify(chPost.body.reply_markup || {}).includes('rsvp:'), JSON.stringify(chPost?.body || {}).slice(0, 300));
+const fwds = calls('forwardMessage');
+ok('J7 пост переслан подписчикам из канала', fwds.length >= 2 && fwds.every(c => String(c.body.from_chat_id) === '@catstest'), JSON.stringify(fwds));
+ok('J8 отчёт админу: сайт+канал+рассылка', calls('editMessageText').some(c => (c.body.text || '').includes('сайте') && (c.body.text || '').includes('канале') && (c.body.text || '').includes('доставлено')), JSON.stringify(calls('editMessageText').map(c => c.body.text)));
+
+await cbPriv('bc', 111);
+ok('J9 промпт рассылки', calls('editMessageText').some(c => (c.body.text || '').includes('Рассылка')));
+await privText('Сегодня скидка на джин *для своих*!', 111);
+const bcPrev = calls('sendMessage').find(c => (c.body.text || '').includes('Гости получат'));
+ok('J10 превью рассылки с подтверждением', !!bcPrev && JSON.stringify(bcPrev.body.reply_markup || {}).includes('bcsend'), JSON.stringify(bcPrev?.body || {}).slice(0, 300));
+await cbPriv('bcsend', 111);
+await new Promise(r => setTimeout(r, 200));
+const bcMsgs = calls('sendMessage').filter(c => (c.body.text || '').includes('скидка на джин'));
+ok('J11 текст ушёл гостям как есть (без Markdown-парсинга)', bcMsgs.length >= 2 && bcMsgs.every(c => !c.body.parse_mode), JSON.stringify(bcMsgs.map(c => c.body)));
+
+await cbPriv('loy', 424242, { username: 'anya_jazz' });
+const loyMsg = calls('editMessageText')[0];
+ok('J12 «Мой уровень»: уровень по подтверждённым броням, без баллов/колеса',
+  (loyMsg?.body.text || '').includes('Ваш уровень') && (loyMsg?.body.text || '').includes('Вино')
+  && !(loyMsg?.body.text || '').includes('колес') && !(loyMsg?.body.text || '').includes('Баллы'),
+  loyMsg?.body.text);
 
 console.log(fails ? `\n${fails} FAILED` : '\nALL SCENARIOS PASS');
 process.exit(fails ? 1 : 0);

@@ -373,191 +373,56 @@
   margin: 0;
 }
 
-/* ─── Wheel of the day ─── */
-.prof-wheel {
-  margin-top: 10px;
-  padding-top: 22px;
-  border-top: 1px solid rgba(212,168,67,0.08);
+/* ─── Уровень: карточка + лестница 9 уровней ─── */
+.prof-level-hero {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  text-align: center;
+  gap: 16px;
 }
-.prof-wheel__dial {
-  font-size: 40px;
+.prof-level-hero__emoji {
+  font-size: 44px;
   line-height: 1;
 }
-.prof-wheel__dial--spinning {
-  animation: profWheelSpin 1.5s cubic-bezier(0.2, 0.8, 0.3, 1);
-}
-@keyframes profWheelSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(1080deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .prof-wheel__dial--spinning { animation: none; }
-}
-.prof-wheel__btn {
-  background: #D4A843;
-  color: #0C0A18;
-  border: none;
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  padding: 12px 26px;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.15s;
-}
-.prof-wheel__btn:hover:not(:disabled) { background: #e0b855; transform: translateY(-1px); }
-.prof-wheel__btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.prof-wheel__result {
+.prof-level-hero__text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
-.prof-wheel__result-label {
-  font-size: 9px;
+.prof-level-hero__num {
+  font-size: 10px;
   letter-spacing: 2px;
-  color: rgba(212,168,67,0.55);
+  text-transform: uppercase;
+  color: rgba(212,168,67,0.6);
 }
-.prof-wheel__result-prize {
+
+.prof-ladder {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 20px 20px;
+}
+.prof-ladder__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  opacity: 0.45;
+}
+.prof-ladder__row--reached { opacity: 1; }
+.prof-ladder__row--current {
+  background: rgba(212,168,67,0.07);
+  border: 1px solid rgba(212,168,67,0.25);
+  border-radius: 6px;
+}
+.prof-ladder__emoji { font-size: 20px; line-height: 1; }
+.prof-ladder__label {
   font-family: 'Baskerville', serif;
-  font-size: 17px;
+  font-size: 15px;
   color: #F2EDE4;
 }
-.prof-wheel__result-hint {
+.prof-ladder__req {
+  margin-left: auto;
   font-size: 11px;
-  color: rgba(242,237,228,0.4);
-  font-style: italic;
-}
-
-/* ─── Reward catalog ─── */
-.prof-reward-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  padding: 4px 20px 20px;
-}
-.prof-reward-card {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(212,168,67,0.12);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.prof-reward-card--locked { opacity: 0.5; }
-.prof-reward-card__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-}
-.prof-reward-card__title {
-  font-family: 'Baskerville', serif;
-  font-size: 15px;
-}
-.prof-reward-card__cost {
-  font-size: 12px;
-  color: #D4A843;
-  white-space: nowrap;
-}
-.prof-reward-card__desc {
-  font-size: 12px;
-  color: rgba(242,237,228,0.5);
-  margin: 0;
-}
-.prof-reward-card__tier {
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  color: #9B5DE5;
-}
-.prof-reward-card__btn {
-  margin-top: 4px;
-  background: transparent;
-  border: 1px solid #D4A843;
-  color: #D4A843;
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 9px 12px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.prof-reward-card__btn:hover:not(:disabled) { background: #D4A843; color: #0C0A18; }
-.prof-reward-card__btn:disabled {
-  border-color: rgba(242,237,228,0.15);
-  color: rgba(242,237,228,0.3);
-  cursor: not-allowed;
-}
-
-/* ─── Modal (redeem QR) ─── */
-.prof-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 20px;
-}
-.prof-modal {
-  background: #0E0B1E;
-  border: 1px solid rgba(212,168,67,0.2);
-  width: 100%;
-  max-width: 340px;
-}
-.prof-modal__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(212,168,67,0.1);
-}
-.prof-modal__title {
-  font-family: 'Baskerville', serif;
-  font-size: 15px;
-}
-.prof-modal__close {
-  background: none;
-  border: none;
-  color: rgba(242,237,228,0.5);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 4px;
-}
-.prof-redeem {
-  padding: 24px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  text-align: center;
-}
-.prof-redeem__qr {
-  width: 180px;
-  height: 180px;
-  background: #F2EDE4;
-  padding: 8px;
-}
-.prof-redeem__code {
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 6px;
-  color: #D4A843;
-}
-.prof-redeem__hint {
-  font-size: 12px;
   color: rgba(242,237,228,0.45);
-  margin: 0;
-}
-.prof-redeem__expiry {
-  font-size: 11px;
-  color: rgba(242,237,228,0.3);
-  margin: 0;
+  white-space: nowrap;
 }
