@@ -8,7 +8,9 @@ function rowToMember(r) {
     name: r.name,
     role: r.role || '',
     spec: r.spec || '',
+    bio: r.bio || '',
     quote: r.quote || '',
+    quoteSource: r.quote_source || '',
     photoUrl: r.photo_url || '',
     sortOrder: r.sort_order,
     active: r.active,
@@ -36,7 +38,9 @@ export async function createTeamMember(input) {
     name: input.name.trim(),
     role: input.role?.trim() || '',
     spec: input.spec?.trim() || '',
+    bio: input.bio?.trim() || '',
     quote: input.quote?.trim() || '',
+    quote_source: input.quoteSource?.trim() || '',
     photo_url: input.photoUrl?.trim() || '',
     sort_order: nextOrder,
     active: input.active !== false,
@@ -48,12 +52,14 @@ export async function createTeamMember(input) {
 
 export async function updateTeamMember(id, input) {
   const patch = {};
-  if ('name' in input)     patch.name      = input.name?.trim() || '';
-  if ('role' in input)     patch.role      = input.role?.trim() || '';
-  if ('spec' in input)     patch.spec      = input.spec?.trim() || '';
-  if ('quote' in input)    patch.quote     = input.quote?.trim() || '';
-  if ('photoUrl' in input) patch.photo_url = input.photoUrl?.trim() || '';
-  if ('active' in input)   patch.active    = !!input.active;
+  if ('name' in input)        patch.name         = input.name?.trim() || '';
+  if ('role' in input)        patch.role         = input.role?.trim() || '';
+  if ('spec' in input)        patch.spec         = input.spec?.trim() || '';
+  if ('bio' in input)         patch.bio          = input.bio?.trim() || '';
+  if ('quote' in input)       patch.quote        = input.quote?.trim() || '';
+  if ('quoteSource' in input) patch.quote_source = input.quoteSource?.trim() || '';
+  if ('photoUrl' in input)    patch.photo_url    = input.photoUrl?.trim() || '';
+  if ('active' in input)      patch.active       = !!input.active;
 
   const { data, error } = await supabase.from('team_members').update(patch).eq('id', id).select().single();
   if (error) throw new Error('Участник не найден');

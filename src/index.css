@@ -1486,6 +1486,217 @@ html { scroll-behavior: smooth; }
   margin: 0 0 32px;
 }
 
+/* ── Бармены v2 (.tm2): портрет слева, имя+био+цитата в центре, справа
+   кнопки-сотрудники с фото-фоном и анкета (макет владельца, 2026-07-05).
+   Desktop: секция влезает в экран, длинная био скроллится внутри своей
+   колонки. Grid-areas, чтобы на мобиле переставить блоки в нужный порядок. ── */
+.team__inner--profile {
+  max-width: 1460px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.tm2 {
+  flex: 1;
+  min-height: 0;
+  margin-top: clamp(10px, 2vh, 24px);
+  display: grid;
+  grid-template-areas:
+    'photo head side'
+    'photo body side';
+  grid-template-columns: minmax(260px, 400px) minmax(0, 1fr) 250px;
+  grid-template-rows: auto 1fr;
+  gap: clamp(14px, 2vw, 30px);
+  text-align: left;
+}
+.tm2 > * { min-height: 0; }
+
+.tm2__photo {
+  grid-area: photo;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+.tm2__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tm2__head { grid-area: head; }
+.tm2__name {
+  font-family: 'Baskerville', serif;
+  font-weight: 700;
+  font-size: clamp(30px, 5.8vh, 56px);
+  line-height: 1.05;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+.tm2__role {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.tm2__spec {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.tm2__body {
+  grid-area: body;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--gold-rgb), .25) transparent;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 2.4vh, 24px);
+  padding-right: 6px;
+}
+.tm2__bio {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: clamp(13px, 1.9vh, 15px);
+  line-height: 1.75;
+  color: var(--text-mid, rgba(242,237,228,.78));
+  margin: 0;
+  max-width: 62ch;
+}
+.tm2__quote { margin: 0; }
+/* Jar Binks рукописный и мелким нечитаем — держим крупно (правило ≥28px,
+   здесь ещё крупнее по прямой просьбе владельца) */
+.tm2__quote-text {
+  font-family: 'Jar Binks', cursive;
+  font-size: clamp(30px, 4.8vh, 44px);
+  line-height: 1.3;
+  color: var(--gold);
+  margin: 0;
+}
+.tm2__quote-src {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: clamp(12px, 1.8vh, 14px);
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+/* Правая колонка: кнопки-сотрудники (фото-фон, кадр по глазам) + анкета */
+.tm2__side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+.tm2__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--gold-rgb), .25) transparent;
+}
+.tm2__nav-btn {
+  flex-shrink: 0; /* не сжиматься в переполненной колонке (см. .mbk__nav-btn) */
+  position: relative;
+  height: 56px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--bg2);
+  background-size: cover;
+  /* кадрируем по верхней трети портрета — в кнопку попадают глаза */
+  background-position: 50% 22%;
+  color: var(--text);
+  font-family: 'Baskerville', serif;
+  font-size: 16px;
+  letter-spacing: .5px;
+  text-align: left;
+  padding: 0 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1), border-color .2s, opacity .2s;
+  opacity: .82;
+  animation: mbkBtnIn 0.45s ease backwards;
+  animation-delay: calc(var(--i) * 60ms);
+}
+.tm2__nav-btn:hover { transform: translateX(5px); opacity: 1; border-color: rgba(var(--gold-rgb), .45); }
+.tm2__nav-btn--active {
+  opacity: 1;
+  border-color: rgba(var(--gold-rgb), .7);
+  box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb), .35);
+}
+.tm2__nav-name { position: relative; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+
+.tm2__join {
+  margin-top: auto;
+  border: 1px dashed rgba(var(--gold-rgb), .35);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.tm2__join-text {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin: 0;
+}
+.tm2__join-btn {
+  border: 1px solid rgba(var(--gold-rgb), .5);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gold);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10.5px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color .2s, transform .2s;
+}
+.tm2__join-btn:hover { border-color: var(--gold); transform: translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tm2__nav-btn { animation: none; transition: border-color .2s, opacity .2s; }
+  .tm2__nav-btn:hover { transform: none; }
+  .tm2__join-btn:hover { transform: none; }
+}
+
+/* Мобильный порядок: имя → фото → био+цитата → кнопки лентой → анкета */
+@media (max-width: 900px) {
+  .team { height: auto; overflow: visible; } /* страница скроллится — не резать */
+  .team__inner--profile { height: auto; }
+  .tm2 { display: flex; flex-direction: column; gap: 16px; }
+  .tm2__head { order: 1; text-align: center; }
+  .tm2__photo { order: 2; max-height: 46vh; aspect-ratio: 3 / 4; margin: 0 auto; width: min(100%, 340px); }
+  .tm2__body { order: 3; overflow: visible; padding-right: 0; }
+  .tm2__bio { max-width: none; }
+  .tm2__side { order: 4; }
+  .tm2__nav {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tm2__nav-btn { width: 150px; height: 52px; flex-shrink: 0; }
+  .tm2__join { margin-top: 4px; }
+}
+
 /* ── Team carousel (one member in view + side arrows) ─────────── */
 /* Arrows sit outside the card (left/right, vertically centered on it) so
    the card itself — photo, name, quote — stays the sole focal point;

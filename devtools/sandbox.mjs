@@ -36,6 +36,12 @@ const db = createDb({
     { id: 'r_s5', table_id: 'T6', guest_id: 'u_guest', status: 'no_show',   date: '2026-05-20', time_from: '19:00', time_to: '21:00', guests_count: 2, guest_name: 'Гость Тестовый', source: 'phone_manual' },
     { id: 'r_s6', table_id: 'T4', guest_id: 'u_maria', status: 'completed', date: '2026-06-20', time_from: '21:00', time_to: '23:00', guests_count: 2, guest_name: 'Мария', source: 'telegram_bot' },
   ],
+  // Бармены — для проверки секции «Бармены» v2 (портрет+био+цитата+кнопки)
+  team_members: [
+    { id: 'tm_s1', name: 'Шамусар', role: 'Старший бартендер', spec: 'Более 20 лет за стойкой', bio: 'Бар-менеджер Cat’s Pajamas и, возможно, самый необычный эксперт по напиткам в Самаре: сам не пьёт по религиозным соображениям — и больше двадцати лет собирает вкусы для других. В профессию попал в Германии: зашёл в бар и попросил взять его барменом; полгода учился, прежде чем ему доверили налить даже пиво. Говорит, что именно там нашёл себя.', quote: 'Пейте быстро, пока коктейль смеётся над вами!', quote_source: 'Гарри Крэддок, «The Savoy Cocktail Book»', photo_url: '/uploads/team/shamusar.jpg', sort_order: 0, active: true, created_at: '2026-06-01T12:00:00Z', updated_at: '2026-06-01T12:00:00Z' },
+    { id: 'tm_s2', name: 'Алексей', role: 'Винный эксперт', spec: 'Вино, аперитивы и дижестивы', bio: '', quote: '', quote_source: '', photo_url: '/uploads/team/aleksey.jpg', sort_order: 1, active: true, created_at: '2026-06-01T12:00:00Z', updated_at: '2026-06-01T12:00:00Z' },
+    { id: 'tm_s3', name: 'Денис', role: 'Бармен', spec: 'Тропические и фруктовые коктейли', bio: '', quote: '', quote_source: '', photo_url: '/uploads/team/denis.jpg', sort_order: 2, active: true, created_at: '2026-06-01T12:00:00Z', updated_at: '2026-06-01T12:00:00Z' },
+  ],
   // Пара коктейлей — чтобы карусель «Напитков» на лендинге была не пустой
   cocktails: [
     { id: 'ck_s1', name: 'Clover Club Special', category: 'signature', ingredients: 'джин, малина, лайм, белок', story: 'Фирменный твист на классику 1900-х.', taste: 'ягодный, шелковистый', price: '750 ₽', image_url: '', sort_order: 0, active: true, created_at: '2026-06-01T12:00:00Z', updated_at: '2026-06-01T12:00:00Z' },

@@ -882,21 +882,23 @@ function TabReviews() {
 
 // ─── Tab: КОМАНДА ─────────────────────────────────────────────────
 function TeamModal({ initial, onSave, onClose }) {
-  const [name,     setName]     = useState(initial?.name || '');
-  const [role,     setRole]     = useState(initial?.role || '');
-  const [spec,     setSpec]     = useState(initial?.spec || '');
-  const [quote,    setQuote]    = useState(initial?.quote || '');
-  const [photoUrl, setPhotoUrl] = useState(initial?.photoUrl || '');
-  const [active,   setActive]   = useState(initial?.active !== false);
-  const [err,      setErr]      = useState('');
-  const [saving,   setSaving]   = useState(false);
+  const [name,        setName]        = useState(initial?.name || '');
+  const [role,        setRole]        = useState(initial?.role || '');
+  const [spec,        setSpec]        = useState(initial?.spec || '');
+  const [bio,         setBio]         = useState(initial?.bio || '');
+  const [quote,       setQuote]       = useState(initial?.quote || '');
+  const [quoteSource, setQuoteSource] = useState(initial?.quoteSource || '');
+  const [photoUrl,    setPhotoUrl]    = useState(initial?.photoUrl || '');
+  const [active,      setActive]      = useState(initial?.active !== false);
+  const [err,         setErr]         = useState('');
+  const [saving,      setSaving]      = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setErr('');
     setSaving(true);
     try {
-      await onSave({ name, role, spec, quote, photoUrl, active });
+      await onSave({ name, role, spec, bio, quote, quoteSource, photoUrl, active });
     } catch (ex) {
       setErr(ex.message);
       setSaving(false);
@@ -926,8 +928,16 @@ function TeamModal({ initial, onSave, onClose }) {
             <input className="adm-form-input" type="text" value={spec} onChange={e => setSpec(e.target.value)} placeholder="Более 20 лет за стойкой" />
           </div>
           <div className="adm-form-field">
-            <label className="adm-form-lbl">ЦИТАТА (в кавычках)</label>
-            <textarea className="adm-form-input adm-form-textarea" rows={2} value={quote} onChange={e => setQuote(e.target.value)} placeholder="«Коктейль — это точная наука с душой импровизации»" />
+            <label className="adm-form-lbl">БИОГРАФИЯ (показывается на сайте, можно пусто)</label>
+            <textarea className="adm-form-input adm-form-textarea" rows={3} value={bio} onChange={e => setBio(e.target.value)} placeholder="Как попал в профессию, чем известен…" />
+          </div>
+          <div className="adm-form-field">
+            <label className="adm-form-lbl">ЦИТАТА ИЗ КНИГИ (о баре/алкоголе)</label>
+            <textarea className="adm-form-input adm-form-textarea" rows={2} value={quote} onChange={e => setQuote(e.target.value)} placeholder="Пейте быстро, пока коктейль смеётся над вами!" />
+          </div>
+          <div className="adm-form-field">
+            <label className="adm-form-lbl">ИСТОЧНИК ЦИТАТЫ (автор, книга)</label>
+            <input className="adm-form-input" type="text" value={quoteSource} onChange={e => setQuoteSource(e.target.value)} placeholder="Гарри Крэддок, «The Savoy Cocktail Book»" />
           </div>
           <div className="adm-form-field">
             <label className="adm-form-lbl">ССЫЛКА НА ФОТО</label>

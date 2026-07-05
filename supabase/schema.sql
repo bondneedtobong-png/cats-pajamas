@@ -257,6 +257,12 @@ create table if not exists public.team_members (
 );
 create index if not exists team_members_sort_idx on public.team_members (sort_order);
 
+-- Секция «Бармены» v2 (2026-07-05): биография + книжная цитата с указанием
+-- источника (quote теперь книжная цитата о философии бара, quote_source —
+-- «Автор, „Книга“»; персональные цитаты барменов выведены по макету владельца).
+alter table public.team_members add column if not exists bio text default '';
+alter table public.team_members add column if not exists quote_source text default '';
+
 -- ─── Заявки «стать барменом» ─────────────────────────────────────────────────
 -- Сохраняются в БД И пушатся в Telegram админам (TELEGRAM_ADMIN_IDS) — best-effort,
 -- сбой отправки не блокирует сохранение самой заявки.
