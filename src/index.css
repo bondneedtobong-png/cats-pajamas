@@ -38,7 +38,9 @@
 
 /* ── Reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; padding: 0; overflow-x: hidden; }
+/* Фон и на body: при пинч-зуме/оверскролле за границами страниц (мобильная
+   админка и пр.) не должно проглядывать белое тело браузера */
+body { margin: 0; padding: 0; overflow-x: hidden; background: #0C0A18; }
 button { cursor: pointer; }
 a { text-decoration: none; }
 section { scroll-margin-top: 80px; }
@@ -851,9 +853,13 @@ html { scroll-behavior: smooth; }
   text-transform: uppercase;
   color: rgba(var(--gold-rgb), .6);
   margin: 12px 0 3px;
+  flex-shrink: 0;
 }
 .mbk__nav-label:first-child { margin-top: 0; }
 .mbk__nav-btn {
+  /* flex-shrink: 0 обязателен: в переполненной flex-колонке кнопки иначе
+     сжимаются по высоте и текст обрезается (баг с прода, 2026-07-05) */
+  flex-shrink: 0;
   text-align: left;
   border: 1px solid transparent;
   border-radius: 8px;

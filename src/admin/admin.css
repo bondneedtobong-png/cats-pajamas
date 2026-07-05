@@ -529,3 +529,38 @@
 }
 .adm-tablecard__head { display: flex; align-items: center; gap: 10px; }
 .adm-tablecard__name { font-size: 12px; color: rgba(242, 237, 228, 0.55); }
+
+/* ─── Мобильная админка (≤700px): бармены заходят с телефона ─── */
+@media (max-width: 700px) {
+  .adm-header {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    row-gap: 6px;
+  }
+  /* «Кабинет администратора» на телефоне лишний — место дороже */
+  .adm-header__title, .adm-header__divider { display: none; }
+
+  .adm-tabs {
+    padding: 0 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .adm-tabs::-webkit-scrollbar { display: none; }
+  .adm-tab-btn { padding: 12px 11px; flex-shrink: 0; white-space: nowrap; }
+
+  .adm-tab { padding: 14px 12px; }
+  .adm-filters { gap: 8px; }
+  .adm-filters .adm-select { flex: 1 1 44%; min-width: 0; }
+  .adm-filters .adm-btn { flex: 1 1 auto; }
+
+  .adm-table { font-size: 12px; }
+  .adm-table th, .adm-table td { padding: 8px 8px; }
+
+  .adm-modal-overlay { padding: 10px; }
+  .adm-modal { max-width: calc(100vw - 20px); }
+
+  .adm-guest-level { align-items: flex-start; }
+  .adm-guests-count { display: none; }
+}
