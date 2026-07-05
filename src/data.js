@@ -40,7 +40,8 @@ export const translations = {
     menuCta: 'Забронировать столик',
     menuLoading: 'Загружаем меню…',
     menuEmpty: 'Меню скоро пополнится.',
-    menuFullBtn: 'Открыть полное меню бара',
+    menuStoryLabel: 'О разделе',
+    menuPrintLink: 'Открыть карту отдельной страницей',
 
     eventsLabel: 'Глава III · Вечерняя афиша', eventsTitle: 'Джазовая программа',
     eventsLoading: 'Загружаем события…',
@@ -144,7 +145,8 @@ export const translations = {
     menuCta: 'Reserve a Table',
     menuLoading: 'Loading the menu…',
     menuEmpty: 'The menu is coming soon.',
-    menuFullBtn: 'Open the full bar menu',
+    menuStoryLabel: 'About this section',
+    menuPrintLink: 'Open the menu as a separate page',
 
     eventsLabel: 'Chapter III · Evening Bill', eventsTitle: 'The Jazz Program',
     eventsLoading: 'Loading events…',

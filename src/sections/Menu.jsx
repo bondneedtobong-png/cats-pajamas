@@ -1,109 +1,80 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState } from 'react';
 import { useReveal } from '../useReveal.js';
-import CocktailsService from '../menu/CocktailsService.js';
+import { BAR_MENU, CATEGORY_STORIES } from '../menu/barMenuData.js';
+import { CategoryCard } from '../menu/MenuCard.jsx';
 
-// Empty glass shown when a cocktail has no photo yet — keeps the layout
-// intact instead of a broken <img>, and still gets the zoom-loop animation.
-function GlassPlaceholder() {
-  return (
-    <svg className="menu-carousel__placeholder-icon" viewBox="0 0 64 64" width="120" height="120" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M14 10h36l-15 22v20h8M31 52v-20L16 10" strokeLinejoin="round" strokeLinecap="round" />
-      <path d="M23 62h18" strokeLinecap="round" />
-    </svg>
-  );
-}
+// Страница книги «Напитки» — интерактивное бар-меню (переделка 2026-07-05 по
+// макету владельца): слева вертикальные кнопки категорий (по одной на каждый
+// раздел бумажного меню), в центре «разворот» из одной-двух карточек выбранной
+// категории, справа — короткая история раздела. Карусель коктейлей из БД
+// убрана с этой страницы. Полная карта одной простынёй живёт на /menu
+// (пререндерится для SEO) — сюда ведёт мелкая ссылка из панели истории.
+// Категории длиннее SPLIT_AT позиций делятся на два листа, как разворот.
+const SPLIT_AT = 9;
 
-export default function Menu({ tx, onBooking }) {
-  const [cocktails, setCocktails] = useState([]);
-  const [idx,       setIdx]       = useState(0);
-  const [loading,   setLoading]   = useState(true);
+const FLAT_CATS = BAR_MENU.flatMap(g => g.categories);
 
+export default function Menu({ tx }) {
   const r0 = useReveal(0);
   const r1 = useReveal(100);
-  const r2 = useReveal(200);
+  const [activeTitle, setActiveTitle] = useState(FLAT_CATS[0].title);
+  const cat = FLAT_CATS.find(c => c.title === activeTitle) || FLAT_CATS[0];
+  const story = CATEGORY_STORIES[cat.title] || '';
 
-  useEffect(() => {
-    let alive = true;
-    CocktailsService.getPublic()
-      .then(list => { if (alive) setCocktails(list); })
-      .catch(() => { if (alive) setCocktails([]); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, []);
+  const split = cat.items.length > SPLIT_AT;
+  const half = Math.ceil(cat.items.length / 2);
 
-  const CATEGORY_LABEL = { classics: tx.menuClassics, signature: tx.menuSignature };
-  const current = cocktails[idx];
-  const go = (delta) => setIdx(i => (i + delta + cocktails.length) % cocktails.length);
-  const ingredients = current?.ingredients
-    ? current.ingredients.split(',').map(s => s.trim()).filter(Boolean)
-    : [];
+  let btnIndex = 0; // сквозной индекс для каскадной анимации появления кнопок
 
   return (
     <section id="menu" className="menu">
-      <div className="menu__inner">
-        <div ref={r0} className="reveal mb-10" style={{ textAlign: 'center' }}>
+      <div className="menu__inner menu__inner--book">
+        <div ref={r0} className="reveal" style={{ textAlign: 'center' }}>
           <span className="sec-label">{tx.menuLabel}</span>
         </div>
         <h2 ref={r1} className="reveal menu__title" style={{ textAlign: 'center' }}>{tx.menuTitle}</h2>
 
-        {loading && <p className="menu__note">{tx.menuLoading}</p>}
-        {!loading && !current && <p className="menu__note">{tx.menuEmpty}</p>}
+        <div className="mbk">
+          {/* Кнопки категорий — по одной на каждый раздел бумажного меню */}
+          <nav className="mbk__nav" aria-label="Разделы меню">
+            {BAR_MENU.map((group) => (
+              <Fragment key={group.id}>
+                <span className="mbk__nav-label">{group.title}</span>
+                {group.categories.map((c) => (
+                  <button
+                    key={c.title}
+                    type="button"
+                    className={`mbk__nav-btn nav__shimmer${c.title === cat.title ? ' mbk__nav-btn--active' : ''}`}
+                    style={{ '--i': btnIndex++ }}
+                    onClick={() => setActiveTitle(c.title)}
+                  >
+                    {c.title}
+                  </button>
+                ))}
+              </Fragment>
+            ))}
+          </nav>
 
-        {!loading && current && (
-          <div ref={r2} className="reveal menu-carousel">
-            <div className="menu-carousel__image">
-              {current.imageUrl ? (
-                <img key={current.id} src={current.imageUrl} alt={current.name} className="menu-carousel__photo" loading="lazy" />
-              ) : (
-                <div key={current.id} className="menu-carousel__placeholder"><GlassPlaceholder /></div>
-              )}
-              <div className="menu-carousel__image-overlay" />
-            </div>
-
-            <div className="menu-carousel__content">
-              {CATEGORY_LABEL[current.category] && (
-                <span className="menu-carousel__cat">{CATEGORY_LABEL[current.category]}</span>
-              )}
-              <h3 className="menu-carousel__name">{current.name}</h3>
-              {current.taste && <p className="menu-carousel__taste">{current.taste}</p>}
-
-              {ingredients.length > 0 && (
-                <ul className="menu-carousel__ing">
-                  {ingredients.map((ing) => (
-                    <li key={ing}><span className="menu-carousel__ing-dot" />{ing}</li>
-                  ))}
-                </ul>
-              )}
-
-              {current.story && <p className="menu-carousel__story">{current.story}</p>}
-
-              <div className="menu-carousel__footer">
-                {current.price && <span className="menu-carousel__price">{current.price}</span>}
-                <button type="button" className="menu-carousel__btn" onClick={onBooking}>{tx.menuCta}</button>
-              </div>
-
-              {cocktails.length > 1 && (
-                <div className="menu-carousel__nav">
-                  <button className="menu-carousel__arrow" onClick={() => go(-1)} aria-label="Предыдущий коктейль">‹</button>
-                  <div className="menu-carousel__dots">
-                    {cocktails.map((c, i) => (
-                      <button
-                        key={c.id}
-                        className={`menu-carousel__dot${i === idx ? ' menu-carousel__dot--active' : ''}`}
-                        onClick={() => setIdx(i)}
-                        aria-label={c.name}
-                      />
-                    ))}
-                  </div>
-                  <button className="menu-carousel__arrow" onClick={() => go(1)} aria-label="Следующий коктейль">›</button>
-                </div>
-              )}
-            </div>
+          {/* Разворот: длинная категория раскладывается на два листа */}
+          <div className={`mbk__spread${split ? '' : ' mbk__spread--single'}`}>
+            {split ? (
+              <>
+                <CategoryCard cat={{ ...cat, items: cat.items.slice(0, half), quote: null }} />
+                <CategoryCard cat={{ ...cat, items: cat.items.slice(half) }} showHead={false} />
+              </>
+            ) : (
+              <CategoryCard cat={cat} />
+            )}
           </div>
-        )}
 
-        {/* Полное бар-меню живёт на /menu (26 карточек в страницу книги не влезают) */}
-        <a className="menu__full-link" href="/menu">{tx.menuFullBtn} ›</a>
+          {/* Немного истории про выбранный раздел */}
+          <aside className="mbk__story">
+            <span className="mbk__story-label">{tx.menuStoryLabel}</span>
+            <h3 className="mbk__story-title">{cat.title}</h3>
+            <p className="mbk__story-text">{story}</p>
+            <a className="mbk__story-link" href="/menu">{tx.menuPrintLink} ›</a>
+          </aside>
+        </div>
       </div>
     </section>
   );

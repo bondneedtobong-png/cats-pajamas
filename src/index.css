@@ -806,25 +806,173 @@ html { scroll-behavior: smooth; }
   font-style: italic;
 }
 
-/* Ссылка на полную барную карту (/menu) — вместо бывшей заглушки-сноски */
-.menu__full-link {
-  display: block;
-  width: fit-content;
-  margin: clamp(10px, 2vh, 26px) auto 0;
-  border: 1px solid rgba(var(--gold-rgb), .4);
-  border-radius: 999px;
-  padding: 10px 22px;
+/* ── Бар-меню на странице «Напитки» (.mbk): кнопки категорий слева,
+   «разворот» из карточек в центре, история раздела справа (макет владельца,
+   2026-07-05). Карточки — те же .bmn-* из barmenu.css; локальные --bmn-*
+   переводят их на токены темы книги. Desktop: страница не скроллится —
+   переполнение уходит во внутренние скроллы колонок. ── */
+.menu__inner--book {
+  max-width: 1460px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.mbk {
+  --bmn-card: var(--bg2);
+  --bmn-gold-rgb: var(--gold-rgb);
+  --bmn-cream: var(--text);
+  --bmn-dim: var(--text-dim);
+  --bmn-faint: rgba(242, 237, 228, 0.38);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 215px minmax(0, 1fr) 240px;
+  gap: clamp(12px, 1.6vw, 26px);
+  text-align: left;
+}
+.mbk > * { min-height: 0; }
+
+/* Кнопки категорий: сверху вниз, каскадное появление (однократное, только
+   transform/opacity), hover — общий .nav__shimmer (сдвиг + перелив) */
+.mbk__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+  padding: 2px 6px 8px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--gold-rgb), .25) transparent;
+}
+.mbk__nav-label {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 11px;
+  font-size: 9px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--gold);
-  transition: border-color .2s, transform .2s;
+  color: rgba(var(--gold-rgb), .6);
+  margin: 12px 0 3px;
 }
-.menu__full-link:hover { border-color: var(--gold); transform: translateY(-1px); }
+.mbk__nav-label:first-child { margin-top: 0; }
+.mbk__nav-btn {
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 11.5px;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  cursor: pointer;
+  animation: mbkBtnIn 0.45s ease backwards;
+  animation-delay: calc(var(--i) * 35ms);
+}
+.mbk__nav-btn:hover { color: var(--text); border-color: rgba(var(--gold-rgb), .35); }
+.mbk__nav-btn--active {
+  color: var(--gold);
+  border-color: rgba(var(--gold-rgb), .55);
+  background: rgba(var(--gold-rgb), .07);
+}
+@keyframes mbkBtnIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .menu__full-link { transition: border-color .2s; }
-  .menu__full-link:hover { transform: none; }
+  .mbk__nav-btn { animation: none; }
+}
+
+/* Разворот: два листа рядом; короткая категория — один лист по центру */
+.mbk__spread {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-content: start;
+  overflow-y: auto;
+  padding: 2px 6px 8px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--gold-rgb), .25) transparent;
+}
+.mbk__spread--single {
+  grid-template-columns: minmax(0, 560px);
+  justify-content: center;
+}
+.mbk__spread .bmn-card { margin-bottom: 0; }
+
+/* История раздела */
+.mbk__story {
+  border: 1px solid rgba(var(--gold-rgb), .18);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg2) 72%, transparent);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--gold-rgb), .25) transparent;
+}
+.mbk__story-label {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(var(--gold-rgb), .6);
+}
+.mbk__story-title {
+  font-family: 'Baskerville', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 20px;
+  margin: 0;
+  color: var(--text);
+}
+.mbk__story-text {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-dim);
+  margin: 0;
+}
+.mbk__story-link {
+  margin-top: auto;
+  padding-top: 12px;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.7;
+  transition: opacity .2s;
+}
+.mbk__story-link:hover { opacity: 1; }
+
+/* Мобильный адаптив: кнопки становятся горизонтальной лентой чипов,
+   листы и история идут стеком; скроллится сама страница (правило ≤900px) */
+@media (max-width: 900px) {
+  /* На мобиле страница книги скроллится внутри себя — секция обязана расти
+     по контенту, иначе height:100% + overflow:hidden молча режут меню
+     (правило из CLAUDE.md, уже наступали) */
+  .menu { height: auto; min-height: 100%; overflow: visible; }
+  .menu__inner--book { height: auto; }
+  .mbk { display: flex; flex-direction: column; gap: 14px; }
+  .mbk__nav {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: visible;
+    gap: 8px;
+    padding: 2px 2px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mbk__nav-label { display: none; }
+  .mbk__nav-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    border-radius: 999px;
+    border-color: rgba(var(--gold-rgb), .3);
+  }
+  .mbk__spread { display: flex; flex-direction: column; overflow: visible; padding: 0; }
+  .mbk__story { overflow: visible; }
 }
 
 /* ── MENU CAROUSEL (one cocktail in view, arrows + dots) ─── */
