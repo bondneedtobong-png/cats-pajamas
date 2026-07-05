@@ -28,11 +28,14 @@ export const translations = {
 
     aboutLabel: 'Глава I · Легенда бара',
     aboutQuote: '«Здесь джаз звучит даже в тишине»',
-    // TODO: финальный текст и реальные факты (год открытия, точные часы) — уточнить у клиента
+    // Легенда: тон и факты сведены из статьи в прессе и отзывов гостей (2026-07-05).
+    // Намеренно без часов работы (они в «Как найти»), без числа позиций и без
+    // названий коктейлей/настоек — меню постоянно меняется. «Пижама Кота» —
+    // русское написание названия, по нему бар ищут в поиске (SEO).
     aboutText: [
-      'The Cat\'s Pajamas Club — джаз-бар в самом сердце Самары, на улице Куйбышева. Мы собрали под одной крышей дух нью-йоркских speakeasy эпохи Сухого закона: тёмный дуб, латунь, бархат и приглушённый свет, в котором каждый вечер звучит живая музыка.',
-      'Наша карта — больше полусотни авторских и классических коктейлей: от выверенной классики до сезонных миксов, которые бармены придумывают сами. Здесь напиток — это точка зрения, а не просто рецепт, а джаз на сцене превращает обычный вечер в историю.',
-      'Мы открыты каждый день до глубокой ночи: с воскресенья по четверг — до 02:00, в пятницу и субботу — до 04:00. Приходите послушать живой джаз, попробовать коктейль с характером и остаться до последнего аккорда.',
+      'The Cat\'s Pajamas Club, или просто «Пижама Кота», — камерный авторский коктейль-бар в самом сердце Самары, на улице Куйбышева. Атмосфера нью-йоркского бара 80-х: тёмный дуб, латунь и бархат, ретро-детали, которые хочется рассматривать, живой джаз и панорамное окно с видом на вечерний город.',
+      'Название говорит само за себя: мы устали от серьёзности и пафоса. Здесь каждый коктейль — маленькая пьеса со вкусом: непредсказуемая, характерная и по-настоящему запоминающаяся. Бармен расспросит о ваших вкусах и соберёт напиток лично под вас, а гостей у нас встречают фирменной авторской настойкой.',
+      'Сюда приходят не «в бар», а будто в гости к друзьям: медленно пить, говорить обо всём на свете и оставаться до тех пор, пока не насытишься — не только напитками, но и атмосферой. Это место для тех, кто ищет не просто выпить, а прожить вечер.',
     ],
 
     menuLabel: 'Глава II · Карта напитков', menuTitle: 'Коктейльная карта',
@@ -133,11 +136,12 @@ export const translations = {
 
     aboutLabel: 'Chapter I · The Legend',
     aboutQuote: '"Where jazz plays even in the silence"',
-    // TODO: final copy and real facts (opening year, exact hours) — confirm with client
+    // Mirror of the RU legend. Deliberately no opening hours (they live in "Find Us"),
+    // no item counts and no cocktail/infusion names — the menu changes constantly.
     aboutText: [
-      'The Cat\'s Pajamas Club is a jazz bar in the heart of Samara, on Kuybysheva Street. Under one roof we\'ve gathered the spirit of New York speakeasies from the Prohibition era: dark oak, brass, velvet, and dim light filled with live music every night.',
-      'Our menu holds over fifty signature and classic cocktails — from precise classics to seasonal mixes our bartenders invent themselves. Here a drink is a point of view, not just a recipe, and the jazz on stage turns an ordinary evening into a story.',
-      'We\'re open every night until late: Sunday through Thursday until 2 AM, Friday and Saturday until 4 AM. Come for live jazz, a cocktail with character, and stay until the last chord.',
+      'The Cat\'s Pajamas Club is an intimate craft cocktail bar in the very heart of Samara, on Kuybysheva Street. The mood of a 1980s New York bar: dark oak, brass and velvet, retro details you\'ll want to study, live jazz and a panoramic window over the evening city.',
+      'The name says it all — we grew tired of solemnity and pretense. Here every cocktail is a little play: unpredictable, full of character, and genuinely memorable. The bartender will ask about your taste and mix a drink just for you, and guests are welcomed with a signature house infusion.',
+      'People come here not "to a bar" but as if visiting friends: to sip slowly, talk about everything under the sun, and stay until you\'ve had your fill — not only of drinks, but of the atmosphere. A place for those looking not just for a drink, but for an evening to live through.',
     ],
 
     // NB: cocktail content itself is RU-only (owner's decision) — these are
