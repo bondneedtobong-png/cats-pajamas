@@ -131,7 +131,7 @@ export default function BarMenuPage() {
           <span className="bmn-header__logo-text">CAT'S PAJAMAS</span>
         </Link>
         <div className="bmn-header__divider" />
-        <span className="bmn-header__title">БАРНАЯ КАРТА</span>
+        <h1 className="bmn-header__title">БАРНАЯ КАРТА</h1>
         <div style={{ flex: 1 }} />
         <Link to="/" className="bmn-header__back">← На сайт</Link>
       </header>

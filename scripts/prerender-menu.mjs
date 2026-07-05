@@ -58,7 +58,7 @@ function pageHtml() {
   const groups = BAR_MENU.map(g =>
     `<section id="bmn-${g.id}" class="bmn-group"><h2 class="bmn-group__title">${esc(g.title)}</h2><div class="bmn-grid">${g.categories.map(cardHtml).join('')}</div></section>`
   ).join('');
-  return `<div class="bmn-root"><header class="bmn-header"><a class="bmn-header__logo" href="/"><img src="/uploads/logo-icon.svg" alt="" style="height:24px;width:auto;display:block"><span class="bmn-header__logo-text">CAT'S PAJAMAS</span></a><div class="bmn-header__divider"></div><span class="bmn-header__title">БАРНАЯ КАРТА</span><div style="flex:1"></div><a class="bmn-header__back" href="/">← На сайт</a></header><nav class="bmn-nav" aria-label="Разделы меню">${nav}</nav><main class="bmn-main">${groups}<p class="bmn-footnote">Цены действительны на момент публикации — уточняйте у барменов. Чрезмерное употребление алкоголя вредит вашему здоровью.</p></main></div>`;
+  return `<div class="bmn-root"><header class="bmn-header"><a class="bmn-header__logo" href="/"><img src="/uploads/logo-icon.svg" alt="" style="height:24px;width:auto;display:block"><span class="bmn-header__logo-text">CAT'S PAJAMAS</span></a><div class="bmn-header__divider"></div><h1 class="bmn-header__title">БАРНАЯ КАРТА</h1><div style="flex:1"></div><a class="bmn-header__back" href="/">← На сайт</a></header><nav class="bmn-nav" aria-label="Разделы меню">${nav}</nav><main class="bmn-main">${groups}<p class="bmn-footnote">Цены действительны на момент публикации — уточняйте у барменов. Чрезмерное употребление алкоголя вредит вашему здоровью.</p></main></div>`;
 }
 
 // ─── JSON-LD schema.org/Menu — цены из данных, без выдумок ──────────────────

@@ -34,7 +34,8 @@
   opacity: 0.75;
 }
 .bmn-header__divider { width: 1px; height: 20px; background: rgba(var(--bmn-gold-rgb), 0.2); }
-.bmn-header__title { font-size: 10px; letter-spacing: 2.5px; color: var(--bmn-gold); }
+/* h1 — для SEO (один на страницу); визуально остаётся строкой шапки */
+.bmn-header__title { font-size: 10px; font-weight: 400; letter-spacing: 2.5px; color: var(--bmn-gold); margin: 0; font-family: 'Avenir Next', sans-serif; }
 .bmn-header__back {
   font-size: 12px; color: var(--bmn-dim);
   transition: color 0.2s;
