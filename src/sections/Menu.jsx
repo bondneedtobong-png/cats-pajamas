@@ -102,7 +102,8 @@ export default function Menu({ tx, onBooking }) {
           </div>
         )}
 
-        <p className="menu__note">{tx.menuNote}</p>
+        {/* Полное бар-меню живёт на /menu (26 карточек в страницу книги не влезают) */}
+        <a className="menu__full-link" href="/menu">{tx.menuFullBtn} ›</a>
       </div>
     </section>
   );

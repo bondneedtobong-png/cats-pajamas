@@ -36,6 +36,11 @@ const db = createDb({
     { id: 'r_s5', table_id: 'T6', guest_id: 'u_guest', status: 'no_show',   date: '2026-05-20', time_from: '19:00', time_to: '21:00', guests_count: 2, guest_name: 'Гость Тестовый', source: 'phone_manual' },
     { id: 'r_s6', table_id: 'T4', guest_id: 'u_maria', status: 'completed', date: '2026-06-20', time_from: '21:00', time_to: '23:00', guests_count: 2, guest_name: 'Мария', source: 'telegram_bot' },
   ],
+  // Пара коктейлей — чтобы карусель «Напитков» на лендинге была не пустой
+  cocktails: [
+    { id: 'ck_s1', name: 'Clover Club Special', category: 'signature', ingredients: 'джин, малина, лайм, белок', story: 'Фирменный твист на классику 1900-х.', taste: 'ягодный, шелковистый', price: '750 ₽', image_url: '', sort_order: 0, active: true, created_at: '2026-06-01T12:00:00Z', updated_at: '2026-06-01T12:00:00Z' },
+    { id: 'ck_s2', name: 'Negroni', category: 'classics', ingredients: 'джин, красный вермут, биттер', story: 'Классика из Флоренции, 1919 год.', taste: 'горько-сладкий', price: '650 ₽', image_url: '', sort_order: 1, active: true, created_at: '2026-06-01T12:00:00Z', updated_at: '2026-06-01T12:00:00Z' },
+  ],
 });
 globalThis.__sandboxDb = db;
 

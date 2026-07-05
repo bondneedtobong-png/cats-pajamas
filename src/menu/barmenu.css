@@ -1,0 +1,244 @@
+/* Барная карта (/menu) — стиль бумажных карточек меню бара.
+   Standalone-страница с обычным скроллом (не книга). Анимаций нет вообще —
+   только цветовые transition на hover (правила web-polish соблюдены даром). */
+
+.bmn-root {
+  --bmn-bg: #0B0814;
+  --bmn-card: #150E1D;
+  --bmn-gold: #D4A843;
+  --bmn-gold-rgb: 212, 168, 67;
+  --bmn-cream: #F2EDE4;
+  --bmn-dim: rgba(242, 237, 228, 0.55);
+  --bmn-faint: rgba(242, 237, 228, 0.38);
+  min-height: 100svh;
+  background: var(--bmn-bg);
+  color: var(--bmn-cream);
+  font-family: 'Avenir Next', sans-serif;
+}
+/* Страница живёт вне [data-theme] — дефолтный синий у ссылок гасим сами */
+.bmn-root a { color: inherit; text-decoration: none; }
+
+/* ─── Шапка ─── */
+.bmn-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  border-bottom: 1px solid rgba(var(--bmn-gold-rgb), 0.12);
+}
+.bmn-header__logo { display: flex; align-items: center; gap: 8px; }
+.bmn-header__logo-text {
+  font-family: 'Baskerville', serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  opacity: 0.75;
+}
+.bmn-header__divider { width: 1px; height: 20px; background: rgba(var(--bmn-gold-rgb), 0.2); }
+.bmn-header__title { font-size: 10px; letter-spacing: 2.5px; color: var(--bmn-gold); }
+.bmn-header__back {
+  font-size: 12px; color: var(--bmn-dim);
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+.bmn-header__back:hover { color: var(--bmn-cream); }
+
+/* ─── Якорная навигация по группам (липкая) ─── */
+.bmn-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  padding: 12px clamp(14px, 3vw, 24px);
+  /* фон почти непрозрачный без blur — под навигацией скроллится контент */
+  background: rgba(11, 8, 20, 0.97);
+  border-bottom: 1px solid rgba(var(--bmn-gold-rgb), 0.12);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.bmn-nav::-webkit-scrollbar { display: none; }
+.bmn-nav__chip {
+  flex-shrink: 0;
+  border: 1px solid rgba(var(--bmn-gold-rgb), 0.3);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--bmn-dim);
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
+}
+.bmn-nav__chip:hover { color: var(--bmn-cream); border-color: var(--bmn-gold); }
+
+/* ─── Контент ─── */
+.bmn-main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 34px) clamp(14px, 3vw, 24px) 40px;
+}
+.bmn-group { scroll-margin-top: 84px; }
+.bmn-group + .bmn-group { margin-top: clamp(30px, 5vh, 54px); }
+.bmn-group__title {
+  font-family: 'Baskerville', serif;
+  font-weight: 400;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: 1px;
+  text-align: center;
+  margin: 0 0 clamp(16px, 2.5vh, 26px);
+}
+
+/* Масонри: карточки натуральной высоты, 3 колонки → 2 → 1 по ширине */
+.bmn-grid {
+  columns: 3 340px;
+  column-gap: 18px;
+}
+
+/* ─── Карточка категории (бумажная страница меню) ─── */
+.bmn-card {
+  break-inside: avoid;
+  margin-bottom: 18px;
+  background: var(--bmn-card);
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.bmn-card__inner {
+  position: relative;
+  border: 1px solid rgba(var(--bmn-gold-rgb), 0.32);
+  border-radius: 2px;
+  padding: 34px 22px 30px;
+  text-align: center;
+}
+
+/* Веера-орнаменты: врезаны в рамку сверху и снизу по центру */
+.bmn-card__fan {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  line-height: 0;
+  padding: 0 10px;
+  background: var(--bmn-card);
+  color: rgba(var(--bmn-gold-rgb), 0.7);
+}
+.bmn-card__fan--top { top: -6px; }
+.bmn-card__fan--bottom { bottom: -6px; }
+.bmn-fan--flip { transform: scaleY(-1); }
+
+/* Четверть-веера в углах рамки */
+.bmn-corner {
+  position: absolute;
+  line-height: 0;
+  color: rgba(var(--bmn-gold-rgb), 0.5);
+}
+.bmn-corner--tl { top: 5px; left: 5px; }
+.bmn-corner--tr { top: 5px; right: 5px; transform: scaleX(-1); }
+.bmn-corner--bl { bottom: 5px; left: 5px; transform: scaleY(-1); }
+.bmn-corner--br { bottom: 5px; right: 5px; transform: scale(-1, -1); }
+
+.bmn-card__title {
+  font-family: 'Baskerville', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 23px;
+  letter-spacing: 0.6px;
+  color: var(--bmn-cream);
+  margin: 12px 0 2px;
+}
+.bmn-card__unit {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--bmn-faint);
+  margin: 2px 0 0;
+}
+
+.bmn-card__list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+.bmn-item { display: flex; flex-direction: column; gap: 2px; }
+.bmn-item__name {
+  font-family: 'Baskerville', serif;
+  font-size: 16px;
+  line-height: 1.35;
+  color: var(--bmn-cream);
+}
+.bmn-item__origin {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--bmn-dim);
+}
+.bmn-item__line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.bmn-item__vol {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  color: var(--bmn-faint);
+  white-space: nowrap;
+}
+.bmn-item__leader {
+  flex: 1;
+  border-bottom: 1px dotted rgba(var(--bmn-gold-rgb), 0.3);
+  transform: translateY(-3px);
+  min-width: 24px;
+}
+.bmn-item__price {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  color: var(--bmn-cream);
+  white-space: nowrap;
+}
+
+/* ─── Цитата-афоризм с рукописной подписью ─── */
+.bmn-quote { margin: 26px 0 0; }
+.bmn-quote__text {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--bmn-dim);
+  margin: 0;
+}
+.bmn-quote__sign {
+  /* Jar Binks — рукописная подпись под цитатой; кегль ≥28px (мельче нечитаем) */
+  font-family: 'Jar Binks', cursive;
+  font-size: 30px;
+  line-height: 1.2;
+  color: rgba(var(--bmn-gold-rgb), 0.8);
+  margin-top: 8px;
+  transform: rotate(-3deg);
+}
+
+.bmn-footnote {
+  text-align: center;
+  font-size: 11px;
+  color: var(--bmn-faint);
+  margin: 36px auto 0;
+  max-width: 560px;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .bmn-header { flex-wrap: wrap; }
+  .bmn-card__inner { padding: 30px 16px 26px; }
+  .bmn-group { scroll-margin-top: 72px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bmn-nav__chip, .bmn-header__back { transition: none; }
+}

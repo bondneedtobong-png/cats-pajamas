@@ -806,6 +806,27 @@ html { scroll-behavior: smooth; }
   font-style: italic;
 }
 
+/* Ссылка на полную барную карту (/menu) — вместо бывшей заглушки-сноски */
+.menu__full-link {
+  display: block;
+  width: fit-content;
+  margin: clamp(10px, 2vh, 26px) auto 0;
+  border: 1px solid rgba(var(--gold-rgb), .4);
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  transition: border-color .2s, transform .2s;
+}
+.menu__full-link:hover { border-color: var(--gold); transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .menu__full-link { transition: border-color .2s; }
+  .menu__full-link:hover { transform: none; }
+}
+
 /* ── MENU CAROUSEL (one cocktail in view, arrows + dots) ─── */
 .menu-carousel {
   position: relative;

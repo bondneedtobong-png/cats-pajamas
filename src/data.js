@@ -40,7 +40,7 @@ export const translations = {
     menuCta: 'Забронировать столик',
     menuLoading: 'Загружаем меню…',
     menuEmpty: 'Меню скоро пополнится.',
-    menuNote: '* Полное меню доступно в баре',
+    menuFullBtn: 'Открыть полное меню бара',
 
     eventsLabel: 'Глава III · Вечерняя афиша', eventsTitle: 'Джазовая программа',
     eventsLoading: 'Загружаем события…',
@@ -144,7 +144,7 @@ export const translations = {
     menuCta: 'Reserve a Table',
     menuLoading: 'Loading the menu…',
     menuEmpty: 'The menu is coming soon.',
-    menuNote: '* Full menu available at the bar',
+    menuFullBtn: 'Open the full bar menu',
 
     eventsLabel: 'Chapter III · Evening Bill', eventsTitle: 'The Jazz Program',
     eventsLoading: 'Loading events…',

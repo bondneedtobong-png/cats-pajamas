@@ -13,6 +13,7 @@ import Contacts from './sections/Contacts.jsx';
 import Footer   from './sections/Footer.jsx';
 import PageBackdrop from './sections/PageBackdrop.jsx';
 import FloorPlanPage from './booking/FloorPlanPage.jsx';
+import BarMenuPage   from './menu/BarMenuPage.jsx';
 import AuthPage      from './auth/AuthPage.jsx';
 import AuthModal      from './auth/AuthModal.jsx';
 import ProfilePage   from './profile/ProfilePage.jsx';
@@ -149,6 +150,7 @@ export default function App() {
       <Routes>
         <Route path="/"        element={<MainSite />} />
         <Route path="/booking" element={<FloorPlanPage />} />
+        <Route path="/menu"    element={<BarMenuPage />} />
         <Route path="/auth"    element={<AuthPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/app"     element={<AppHubPage />} />
