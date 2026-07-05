@@ -1,8 +1,14 @@
 import { Link } from 'react-router-dom';
 import { BOOKING_RULES } from '../booking/bookingRules.js';
+import { usePageMeta } from '../usePageMeta.js';
 import '../booking/booking.css';
 
 export default function BookingRulesPage() {
+  usePageMeta({
+    title: "Правила бронирования — The Cat's Pajamas Club, Самара",
+    description: 'Правила бронирования столов, депозит и условия отмены брони в джаз-баре «Пижама Кота» (The Cat\'s Pajamas Club), Самара.',
+    canonical: 'https://cats-pajamas.ru/booking-rules',
+  });
   return (
     <div style={{ minHeight: '100vh', background: '#0C0A18', color: '#F2EDE4', fontFamily: "'Avenir Next', sans-serif", padding: '40px 24px' }}>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>

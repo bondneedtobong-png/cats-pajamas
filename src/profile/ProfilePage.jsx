@@ -4,6 +4,7 @@ import AuthService from '../auth/AuthService.js';
 import BookingService from '../booking/BookingService.js';
 import LoyaltyService from '../loyalty/LoyaltyService.js';
 import { useFeedback } from '../ui/FeedbackProvider.jsx';
+import { usePageMeta } from '../usePageMeta.js';
 import './profile.css';
 
 const STATUS_LABELS = {
@@ -443,6 +444,7 @@ function LoyaltyTab() {
 
 // ─────────────────────────────── Page ───────────────────────────────
 export default function ProfilePage() {
+  usePageMeta({ title: "Профиль — The Cat's Pajamas Club", noindex: true });
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [user, setUser] = useState(null);

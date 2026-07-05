@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import BookingWidget from './BookingWidget.jsx';
 import { translations } from '../data.js';
 import { useTelegramWebApp } from '../useTelegramWebApp.js';
+import { usePageMeta } from '../usePageMeta.js';
 import './booking.css';
 
 // /booking — тонкая standalone-обёртка того же виджета брони, что живёт на
@@ -10,6 +11,11 @@ import './booking.css';
 // ссылок. TG SDK грузится ТОЛЬКО здесь (useTelegramWebApp) — глобально он
 // конфликтует с fixed-шапкой лендинга (уже чинили, см. HANDOFF_VPS_MIGRATION).
 export default function FloorPlanPage() {
+  usePageMeta({
+    title: "Бронирование столика — The Cat's Pajamas Club, джаз-бар в Самаре",
+    description: 'Забронируйте столик в джаз-баре «Пижама Кота» (The Cat\'s Pajamas Club) в Самаре: план зала, выбор стола и времени. Ул. Куйбышева, 100.',
+    canonical: 'https://cats-pajamas.ru/booking',
+  });
   const tx = translations.ru; // Mini App и прямые ссылки — русскоязычные
   const [authTick, setAuthTick] = useState(0);
   // Тихий вход по initData при открытии как Mini App; пинаем виджет

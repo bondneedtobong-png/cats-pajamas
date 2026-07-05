@@ -3,5 +3,6 @@ Allow: /
 Disallow: /admin
 Disallow: /profile
 Disallow: /auth
+Disallow: /app
 
 Sitemap: https://cats-pajamas.ru/sitemap.xml

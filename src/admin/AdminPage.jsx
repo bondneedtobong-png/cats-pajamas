@@ -12,6 +12,7 @@ import TeamService from '../team/TeamService.js';
 import ApplicationsService from '../team/ApplicationsService.js';
 import GuestsService from './GuestsService.js';
 import { useFeedback } from '../ui/FeedbackProvider.jsx';
+import { usePageMeta } from '../usePageMeta.js';
 import './admin.css';
 
 const SOURCE_LABELS = {
@@ -1510,6 +1511,7 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onClose }) {
 
 // ─── Page ────────────────────────────────────────────────────────
 export default function AdminPage() {
+  usePageMeta({ title: "Админ-панель — The Cat's Pajamas Club", noindex: true });
   const navigate  = useNavigate();
   const [user,    setUser]    = useState(null);
   const [tab,     setTab]     = useState('reservations');

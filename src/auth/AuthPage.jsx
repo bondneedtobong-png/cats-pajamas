@@ -1,5 +1,6 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthFlow from './AuthFlow.jsx';
+import { usePageMeta } from '../usePageMeta.js';
 import './auth.css';
 
 // Full-page /auth — kept for entry points with nowhere sensible to render
@@ -7,6 +8,7 @@ import './auth.css';
 // logged out). The landing page and the booking flow use <AuthModal>
 // instead so the guest never loses their place — see AuthModal.jsx.
 export default function AuthPage() {
+  usePageMeta({ title: "Вход — The Cat's Pajamas Club", noindex: true });
   const navigate       = useNavigate();
   const [searchParams] = useSearchParams();
   const nextUrl        = searchParams.get('next') || '/booking';

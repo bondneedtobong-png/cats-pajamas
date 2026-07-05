@@ -1,6 +1,12 @@
 import { Link } from 'react-router-dom';
+import { usePageMeta } from '../usePageMeta.js';
 
 export default function PrivacyPage() {
+  usePageMeta({
+    title: "Политика конфиденциальности — The Cat's Pajamas Club",
+    description: 'Политика обработки персональных данных и использования cookie на сайте джаз-бара The Cat\'s Pajamas Club («Пижама Кота»), Самара.',
+    canonical: 'https://cats-pajamas.ru/privacy',
+  });
   return (
     <div style={{ minHeight: '100vh', background: '#0C0A18', color: '#F2EDE4', fontFamily: "'Avenir Next', sans-serif", padding: '40px 24px' }}>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>

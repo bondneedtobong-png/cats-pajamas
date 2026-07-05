@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { usePageMeta } from '../usePageMeta.js';
 import { BAR_MENU } from './barMenuData.js';
 import { CategoryCard } from './MenuCard.jsx';
 import './barmenu.css';
@@ -12,24 +12,14 @@ import './barmenu.css';
 // страницу-разворот не помещаются, а здесь у меню свой URL и обычный скролл.
 
 export default function BarMenuPage() {
-  // Мета per-route (title/description/canonical) — для ботов, исполняющих JS;
-  // основной SEO-путь — статический пререндер dist/menu/index.html при сборке
-  // (scripts/prerender-menu.mjs), там та же мета зашита в сырой HTML.
-  useEffect(() => {
-    const prevTitle = document.title;
-    const desc = document.querySelector('meta[name="description"]');
-    const canonical = document.querySelector('link[rel="canonical"]');
-    const prevDesc = desc?.getAttribute('content');
-    const prevCanonical = canonical?.getAttribute('href');
-    document.title = "Барная карта — The Cat's Pajamas Club, джаз-бар в Самаре";
-    desc?.setAttribute('content', 'Полное меню бара: авторские коктейли, вина, виски, ром, джин, настойки и закуски. Джаз-бар The Cat\'s Pajamas Club, Самара.');
-    canonical?.setAttribute('href', 'https://cats-pajamas.ru/menu/');
-    return () => {
-      document.title = prevTitle;
-      if (prevDesc) desc?.setAttribute('content', prevDesc);
-      if (prevCanonical) canonical?.setAttribute('href', prevCanonical);
-    };
-  }, []);
+  // Мета per-route — для ботов, исполняющих JS; основной SEO-путь — статический
+  // пререндер dist/menu/index.html при сборке (scripts/prerender-menu.mjs),
+  // там та же мета зашита в сырой HTML.
+  usePageMeta({
+    title: "Барная карта — The Cat's Pajamas Club, джаз-бар в Самаре",
+    description: 'Полное меню бара: авторские коктейли, вина, виски, ром, джин, настойки и закуски. Джаз-бар The Cat\'s Pajamas Club, Самара.',
+    canonical: 'https://cats-pajamas.ru/menu/',
+  });
 
   const scrollTo = (id) => (e) => {
     e.preventDefault();

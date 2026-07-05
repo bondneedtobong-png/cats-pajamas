@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AuthService from '../auth/AuthService.js';
 import { useTelegramWebApp } from '../useTelegramWebApp.js';
+import { usePageMeta } from '../usePageMeta.js';
 import './apphub.css';
 
 // Mini App home screen — opened from the bot's «🪑 Открыть» кнопка. One tap,
@@ -17,6 +18,7 @@ const TILES = [
 ];
 
 export default function AppHubPage() {
+  usePageMeta({ title: "The Cat's Pajamas Club", noindex: true });
   const [user, setUser] = useState(() => AuthService.getCurrentUser());
   useTelegramWebApp(setUser);
 
