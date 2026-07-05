@@ -28,7 +28,7 @@ const PHOTO_FOCUS = {
   'aleksey.jpg':   { size: '210% auto', pos: '58% 30%' },
   'vladislav.jpg': { size: '190% auto', pos: '58% 34%' },
   'denis.jpg':     { size: '115% auto', pos: '50% 26%' },
-  'dmitriy.jpg':   { size: '210% auto', pos: '54% 24%' },
+  'dmitriy.jpg':   { size: '210% auto', pos: '54% 20%' },
   'egor.jpg':      { size: '230% auto', pos: '32% 39%' },
 };
 const DEFAULT_FOCUS = { size: 'cover', pos: '50% 22%' };
