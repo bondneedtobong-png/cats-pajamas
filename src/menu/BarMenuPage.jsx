@@ -109,7 +109,7 @@ export default function BarMenuPage() {
     const prevCanonical = canonical?.getAttribute('href');
     document.title = "Барная карта — The Cat's Pajamas Club, джаз-бар в Самаре";
     desc?.setAttribute('content', 'Полное меню бара: авторские коктейли, вина, виски, ром, джин, настойки и закуски. Джаз-бар The Cat\'s Pajamas Club, Самара.');
-    canonical?.setAttribute('href', 'https://cats-pajamas.ru/menu');
+    canonical?.setAttribute('href', 'https://cats-pajamas.ru/menu/');
     return () => {
       document.title = prevTitle;
       if (prevDesc) desc?.setAttribute('content', prevDesc);

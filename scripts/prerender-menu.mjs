@@ -67,7 +67,7 @@ const menuSchema = {
   '@context': 'https://schema.org',
   '@type': 'Menu',
   name: "Барная карта The Cat's Pajamas Club",
-  url: 'https://cats-pajamas.ru/menu',
+  url: 'https://cats-pajamas.ru/menu/',
   inLanguage: 'ru',
   hasMenuSection: BAR_MENU.flatMap(g => g.categories.map(c => ({
     '@type': 'MenuSection',
@@ -89,8 +89,9 @@ let html = readFileSync(distIndex, 'utf8');
 html = html
   .replace(/<title>[\s\S]*?<\/title>/, `<title>${TITLE}</title>`)
   .replace(/(<meta name="description" content=")[^"]*(")/, `$1${DESC}$2`)
-  .replace(/(<link rel="canonical" href=")[^"]*(")/, '$1https://cats-pajamas.ru/menu$2')
-  .replace(/(<meta property="og:url" content=")[^"]*(")/, '$1https://cats-pajamas.ru/menu$2')
+  // canonical со слэшем: nginx 301-ит /menu → /menu/, canonical не должен вести на редирект
+  .replace(/(<link rel="canonical" href=")[^"]*(")/, '$1https://cats-pajamas.ru/menu/$2')
+  .replace(/(<meta property="og:url" content=")[^"]*(")/, '$1https://cats-pajamas.ru/menu/$2')
   .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${TITLE}$2`)
   .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${DESC}$2`)
   .replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${TITLE}$2`)
