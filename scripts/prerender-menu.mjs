@@ -1,16 +1,38 @@
-// Пререндер /menu при сборке (SEO): Яндекс плохо исполняет JS, а барная карта —
-// статичные данные (src/menu/barMenuData.js), поэтому дешевле всего собрать
-// готовый dist/menu/index.html со всем текстом, метой и JSON-LD прямо здесь.
-// nginx через try_files отдаст его по адресу /menu, дальше React смонтируется
-// поверх (createRoot перерисует #root тем же самым маркапом — стили совпадают,
-// глазу перерисовка не видна). Запускается из `npm run build`.
+// Пререндер /menu при сборке (SEO): Яндекс плохо исполняет JS, поэтому дешевле
+// всего собрать готовый dist/menu/index.html со всем текстом, метой и JSON-LD
+// прямо здесь. nginx через try_files отдаст его по адресу /menu, дальше React
+// смонтируется поверх (createRoot перерисует #root тем же самым маркапом —
+// стили совпадают, глазу перерисовка не видна). Запускается из `npm run build`.
+//
+// Источник данных: карта владельца из БД (app_config['bar_menu']) — на VPS при
+// билде Supabase доступна на 127.0.0.1:8000. Если БД/env недоступны (локальная
+// сборка) — фолбэк на статику из репозитория. Правки владельца попадают в этот
+// SEO-снапшот только на следующем деплое (снапшот пересобирается при build).
+import 'dotenv/config';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { BAR_MENU } from '../src/menu/barMenuData.js';
+import { BAR_MENU as STATIC_MENU } from '../src/menu/barMenuData.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const distIndex = join(root, 'dist', 'index.html');
+
+async function loadMenu() {
+  try {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('нет SUPABASE env');
+    }
+    const { getBarMenu } = await import('../api/_lib/barMenu.js');
+    const { menu } = await getBarMenu();
+    if (Array.isArray(menu) && menu.length) {
+      console.log('[prerender-menu] источник: БД (app_config.bar_menu)');
+      return menu;
+    }
+  } catch (e) {
+    console.warn('[prerender-menu] БД недоступна → статический фолбэк:', e.message);
+  }
+  return STATIC_MENU;
+}
 
 const esc = (s) => String(s)
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -53,9 +75,9 @@ function cardHtml(cat) {
   return `<article class="bmn-card"><div class="bmn-card__inner">${corners}${fans}<h3 class="bmn-card__title">${esc(cat.title)}</h3>${cat.unit ? `<p class="bmn-card__unit">${esc(cat.unit)}</p>` : ''}<ul class="bmn-card__list">${cat.items.map(i => itemHtml(i, cat.unit)).join('')}</ul>${quote}</div></article>`;
 }
 
-function pageHtml() {
-  const nav = BAR_MENU.map(g => `<a class="bmn-nav__chip" href="#bmn-${g.id}">${esc(g.title)}</a>`).join('');
-  const groups = BAR_MENU.map(g =>
+function pageHtml(menu) {
+  const nav = menu.map(g => `<a class="bmn-nav__chip" href="#bmn-${g.id}">${esc(g.title)}</a>`).join('');
+  const groups = menu.map(g =>
     `<section id="bmn-${g.id}" class="bmn-group"><h2 class="bmn-group__title">${esc(g.title)}</h2><div class="bmn-grid">${g.categories.map(cardHtml).join('')}</div></section>`
   ).join('');
   return `<div class="bmn-root"><header class="bmn-header"><a class="bmn-header__logo" href="/"><img src="/uploads/logo-icon.svg" alt="" style="height:24px;width:auto;display:block"><span class="bmn-header__logo-text">CAT'S PAJAMAS</span></a><div class="bmn-header__divider"></div><h1 class="bmn-header__title">БАРНАЯ КАРТА</h1><div style="flex:1"></div><a class="bmn-header__back" href="/">← На сайт</a></header><nav class="bmn-nav" aria-label="Разделы меню">${nav}</nav><main class="bmn-main">${groups}<p class="bmn-footnote">Цены действительны на момент публикации — уточняйте у барменов. Чрезмерное употребление алкоголя вредит вашему здоровью.</p></main></div>`;
@@ -63,13 +85,13 @@ function pageHtml() {
 
 // ─── JSON-LD schema.org/Menu — цены из данных, без выдумок ──────────────────
 const priceOf = (p) => (String(p).split('/')[0].match(/[\d\s]+/) || [''])[0].replace(/\s/g, '');
-const menuSchema = {
+const buildSchema = (menu) => ({
   '@context': 'https://schema.org',
   '@type': 'Menu',
   name: "Барная карта The Cat's Pajamas Club",
   url: 'https://cats-pajamas.ru/menu/',
   inLanguage: 'ru',
-  hasMenuSection: BAR_MENU.flatMap(g => g.categories.map(c => ({
+  hasMenuSection: menu.flatMap(g => g.categories.map(c => ({
     '@type': 'MenuSection',
     name: c.title,
     hasMenuItem: c.items.map(i => ({
@@ -79,27 +101,33 @@ const menuSchema = {
       offers: { '@type': 'Offer', priceCurrency: 'RUB', price: priceOf(i.price) },
     })),
   }))),
-};
+});
 
 // ─── Сборка dist/menu/index.html из dist/index.html ─────────────────────────
 const TITLE = "Барная карта — The Cat's Pajamas Club, джаз-бар в Самаре";
 const DESC = "Полное меню бара: авторские коктейли, вина, виски, ром, джин, настойки и закуски с ценами. Джаз-бар The Cat's Pajamas Club, Самара, ул. Куйбышева, 100.";
 
-let html = readFileSync(distIndex, 'utf8');
-html = html
-  .replace(/<title>[\s\S]*?<\/title>/, `<title>${TITLE}</title>`)
-  .replace(/(<meta name="description" content=")[^"]*(")/, `$1${DESC}$2`)
-  // canonical со слэшем: nginx 301-ит /menu → /menu/, canonical не должен вести на редирект
-  .replace(/(<link rel="canonical" href=")[^"]*(")/, '$1https://cats-pajamas.ru/menu/$2')
-  .replace(/(<meta property="og:url" content=")[^"]*(")/, '$1https://cats-pajamas.ru/menu/$2')
-  .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${TITLE}$2`)
-  .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${DESC}$2`)
-  .replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${TITLE}$2`)
-  .replace(/(<meta name="twitter:description" content=")[^"]*(")/, `$1${DESC}$2`)
-  .replace('</head>', `<script type="application/ld+json">${JSON.stringify(menuSchema)}</script>\n</head>`)
-  .replace('<div id="root"></div>', `<div id="root">${pageHtml()}</div>`);
+async function main() {
+  const menu = await loadMenu();
 
-mkdirSync(join(root, 'dist', 'menu'), { recursive: true });
-writeFileSync(join(root, 'dist', 'menu', 'index.html'), html);
-const items = BAR_MENU.reduce((n, g) => n + g.categories.reduce((m, c) => m + c.items.length, 0), 0);
-console.log(`[prerender-menu] dist/menu/index.html: ${BAR_MENU.length} групп, ${items} позиций, ${(html.length / 1024).toFixed(0)} КБ`);
+  let html = readFileSync(distIndex, 'utf8');
+  html = html
+    .replace(/<title>[\s\S]*?<\/title>/, `<title>${TITLE}</title>`)
+    .replace(/(<meta name="description" content=")[^"]*(")/, `$1${DESC}$2`)
+    // canonical со слэшем: nginx 301-ит /menu → /menu/, canonical не должен вести на редирект
+    .replace(/(<link rel="canonical" href=")[^"]*(")/, '$1https://cats-pajamas.ru/menu/$2')
+    .replace(/(<meta property="og:url" content=")[^"]*(")/, '$1https://cats-pajamas.ru/menu/$2')
+    .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${TITLE}$2`)
+    .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${DESC}$2`)
+    .replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${TITLE}$2`)
+    .replace(/(<meta name="twitter:description" content=")[^"]*(")/, `$1${DESC}$2`)
+    .replace('</head>', `<script type="application/ld+json">${JSON.stringify(buildSchema(menu))}</script>\n</head>`)
+    .replace('<div id="root"></div>', `<div id="root">${pageHtml(menu)}</div>`);
+
+  mkdirSync(join(root, 'dist', 'menu'), { recursive: true });
+  writeFileSync(join(root, 'dist', 'menu', 'index.html'), html);
+  const items = menu.reduce((n, g) => n + g.categories.reduce((m, c) => m + c.items.length, 0), 0);
+  console.log(`[prerender-menu] dist/menu/index.html: ${menu.length} групп, ${items} позиций, ${(html.length / 1024).toFixed(0)} КБ`);
+}
+
+main().catch((e) => { console.error('[prerender-menu] ошибка:', e); process.exit(1); });

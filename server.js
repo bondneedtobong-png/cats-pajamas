@@ -11,6 +11,7 @@ import authHandler          from './api/auth.js';
 import reservationsHandler  from './api/reservations.js';
 import tablesHandler        from './api/tables.js';
 import cocktailsHandler     from './api/cocktails.js';
+import barMenuHandler       from './api/bar-menu.js';
 import eventsHandler        from './api/events.js';
 import reviewsHandler       from './api/reviews.js';
 import teamHandler          from './api/team.js';
@@ -26,6 +27,7 @@ const routes = {
   '/api/reservations': reservationsHandler,
   '/api/tables': tablesHandler,
   '/api/cocktails': cocktailsHandler,
+  '/api/bar-menu': barMenuHandler,
   '/api/events': eventsHandler,
   '/api/reviews': reviewsHandler,
   '/api/team': teamHandler,

@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { usePageMeta } from '../usePageMeta.js';
 import { BAR_MENU } from './barMenuData.js';
+import BarMenuService from './BarMenuService.js';
 import { CategoryCard } from './MenuCard.jsx';
 import './barmenu.css';
 
@@ -20,6 +22,15 @@ export default function BarMenuPage() {
     description: 'Полное меню бара: авторские коктейли, вина, виски, ром, джин, настойки и закуски. Джаз-бар The Cat\'s Pajamas Club, Самара.',
     canonical: 'https://cats-pajamas.ru/menu/',
   });
+
+  // Пререндер уже отдал статику в #root; React инициализируется той же статикой
+  // (ноль мигания) и подменяет на карту из БД, когда она приедет.
+  const [menu, setMenu] = useState(BAR_MENU);
+  useEffect(() => {
+    let alive = true;
+    BarMenuService.getPublic().then((d) => { if (alive) setMenu(d.menu); });
+    return () => { alive = false; };
+  }, []);
 
   const scrollTo = (id) => (e) => {
     e.preventDefault();
@@ -41,7 +52,7 @@ export default function BarMenuPage() {
       </header>
 
       <nav className="bmn-nav" aria-label="Разделы меню">
-        {BAR_MENU.map((group) => (
+        {menu.map((group) => (
           <a key={group.id} className="bmn-nav__chip" href={`#bmn-${group.id}`} onClick={scrollTo(group.id)}>
             {group.title}
           </a>
@@ -49,7 +60,7 @@ export default function BarMenuPage() {
       </nav>
 
       <main className="bmn-main">
-        {BAR_MENU.map((group) => (
+        {menu.map((group) => (
           <section key={group.id} id={`bmn-${group.id}`} className="bmn-group">
             <h2 className="bmn-group__title">{group.title}</h2>
             <div className="bmn-grid">

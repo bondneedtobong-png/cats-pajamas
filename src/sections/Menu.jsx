@@ -1,6 +1,9 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { useReveal } from '../useReveal.js';
 import { BAR_MENU, CATEGORY_STORIES } from '../menu/barMenuData.js';
+import BarMenuService from '../menu/BarMenuService.js';
+import BarMenuEditor from '../menu/BarMenuEditor.jsx';
+import AuthService from '../auth/AuthService.js';
 import { CategoryCard } from '../menu/MenuCard.jsx';
 
 // Страница книги «Напитки» — интерактивное бар-меню (переделка 2026-07-05 по
@@ -12,14 +15,28 @@ import { CategoryCard } from '../menu/MenuCard.jsx';
 // Категории длиннее SPLIT_AT позиций делятся на два листа, как разворот.
 const SPLIT_AT = 9;
 
-const FLAT_CATS = BAR_MENU.flatMap(g => g.categories);
-
 export default function Menu({ tx }) {
   const r0 = useReveal(0);
   const r1 = useReveal(100);
-  const [activeTitle, setActiveTitle] = useState(FLAT_CATS[0].title);
-  const cat = FLAT_CATS.find(c => c.title === activeTitle) || FLAT_CATS[0];
-  const story = CATEGORY_STORIES[cat.title] || '';
+  // Инициализируемся статикой (мгновенный рендер, ноль мигания) и подменяем на
+  // карту из БД, когда она приедет. При недоступном API остаётся статика.
+  const [menu, setMenu] = useState(BAR_MENU);
+  const [stories, setStories] = useState(CATEGORY_STORIES);
+  const [activeTitle, setActiveTitle] = useState(BAR_MENU[0].categories[0].title);
+  const [editing, setEditing] = useState(false);
+  const isAdmin = AuthService.isAdmin();
+
+  useEffect(() => {
+    let alive = true;
+    BarMenuService.getPublic().then((d) => {
+      if (alive) { setMenu(d.menu); setStories(d.stories); }
+    });
+    return () => { alive = false; };
+  }, []);
+
+  const flatCats = menu.flatMap(g => g.categories);
+  const cat = flatCats.find(c => c.title === activeTitle) || flatCats[0];
+  const story = stories[cat.title] || '';
 
   const split = cat.items.length > SPLIT_AT;
   const half = Math.ceil(cat.items.length / 2);
@@ -33,11 +50,18 @@ export default function Menu({ tx }) {
           <span className="sec-label">{tx.menuLabel}</span>
         </div>
         <h2 ref={r1} className="reveal menu__title" style={{ textAlign: 'center' }}>{tx.menuTitle}</h2>
+        {isAdmin && (
+          <div style={{ textAlign: 'center' }}>
+            <button className="mbk-edit-btn" type="button" onClick={() => setEditing(true)}>
+              ✏️ Редактировать карту
+            </button>
+          </div>
+        )}
 
         <div className="mbk">
           {/* Кнопки категорий — по одной на каждый раздел бумажного меню */}
           <nav className="mbk__nav" aria-label="Разделы меню">
-            {BAR_MENU.map((group) => (
+            {menu.map((group) => (
               <Fragment key={group.id}>
                 <span className="mbk__nav-label">{group.title}</span>
                 {group.categories.map((c) => (
@@ -76,6 +100,18 @@ export default function Menu({ tx }) {
           </aside>
         </div>
       </div>
+
+      {editing && (
+        <BarMenuEditor
+          initial={{ menu, stories }}
+          onClose={() => setEditing(false)}
+          onSaved={(saved) => {
+            setMenu(saved.menu);
+            setStories(saved.stories);
+            setEditing(false);
+          }}
+        />
+      )}
     </section>
   );
 }
