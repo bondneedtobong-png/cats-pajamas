@@ -16,6 +16,21 @@ const FALLBACK_QUOTES = [
   { text: 'Вино — одна из самых цивилизованных вещей на свете.', source: 'Эрнест Хемингуэй, «Смерть после полудня»' },
 ];
 
+// Кадрирование фото в кнопках навигации: единый шаблон «глаза + верх головы»
+// (референс владельца — кадр Дениса). Портреты сняты с разного расстояния,
+// поэтому у каждого свой зум (size) и точка фокуса (pos) — подобраны по
+// реальным фото. Ключ — имя файла: смена фото в админке вернёт дефолт.
+const PHOTO_FOCUS = {
+  'shamusar.jpg':  { size: '210% auto', pos: '31% 16%' },
+  'aleksey.jpg':   { size: '210% auto', pos: '58% 30%' },
+  'vladislav.jpg': { size: '190% auto', pos: '58% 34%' },
+  'denis.jpg':     { size: '115% auto', pos: '50% 26%' },
+  'dmitriy.jpg':   { size: '210% auto', pos: '54% 19%' },
+  'egor.jpg':      { size: '230% auto', pos: '32% 39%' },
+};
+const DEFAULT_FOCUS = { size: 'cover', pos: '50% 22%' };
+const focusFor = (url) => PHOTO_FOCUS[(url || '').split('/').pop()] || DEFAULT_FOCUS;
+
 export default function Team({ tx }) {
   const [members,  setMembers]  = useState([]);
   const [idx,      setIdx]      = useState(0);
@@ -75,22 +90,27 @@ export default function Team({ tx }) {
             {/* Навигация по сотрудникам + анкета */}
             <aside className="tm2__side">
               <nav className="tm2__nav" aria-label="Наши бармены">
-                {members.map((m, i) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    className={`tm2__nav-btn${i === idx ? ' tm2__nav-btn--active' : ''}`}
-                    style={{
-                      '--i': i,
-                      backgroundImage: m.photoUrl
-                        ? `linear-gradient(90deg, rgba(9,7,18,.86) 34%, rgba(9,7,18,.30)), url(${m.photoUrl})`
-                        : undefined,
-                    }}
-                    onClick={() => setIdx(i)}
-                  >
-                    <span className="tm2__nav-name">{m.name}</span>
-                  </button>
-                ))}
+                {members.map((m, i) => {
+                  const focus = focusFor(m.photoUrl);
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className={`tm2__nav-btn${i === idx ? ' tm2__nav-btn--active' : ''}`}
+                      style={{
+                        '--i': i,
+                        backgroundImage: m.photoUrl
+                          ? `linear-gradient(90deg, rgba(9,7,18,.86) 34%, rgba(9,7,18,.30)), url(${m.photoUrl})`
+                          : undefined,
+                        backgroundSize: focus.size,
+                        backgroundPosition: focus.pos,
+                      }}
+                      onClick={() => setIdx(i)}
+                    >
+                      <span className="tm2__nav-name">{m.name}</span>
+                    </button>
+                  );
+                })}
               </nav>
 
               <div className="tm2__join">

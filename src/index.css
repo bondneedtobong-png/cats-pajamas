@@ -1570,12 +1570,13 @@ html { scroll-behavior: smooth; }
 }
 .tm2__quote { margin: 0; }
 /* Jar Binks рукописный и мелким нечитаем — держим крупно (правило ≥28px,
-   здесь ещё крупнее по прямой просьбе владельца) */
+   размер и светлота подняты по прямой просьбе владельца: на тёмном фоне
+   тонкий рукописный штрих читается только крупным и светлым) */
 .tm2__quote-text {
   font-family: 'Jar Binks', cursive;
-  font-size: clamp(30px, 4.8vh, 44px);
-  line-height: 1.3;
-  color: var(--gold);
+  font-size: clamp(36px, 5.6vh, 54px);
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--gold) 72%, #fff);
   margin: 0;
 }
 .tm2__quote-src {
@@ -1695,6 +1696,9 @@ html { scroll-behavior: smooth; }
   }
   .tm2__nav-btn { width: 150px; height: 52px; flex-shrink: 0; }
   .tm2__join { margin-top: 4px; }
+  /* Цитата на телефоне: крупно, но по ширине экрана (375–414px проверено) */
+  .tm2__quote-text { font-size: clamp(32px, 9.2vw, 44px); line-height: 1.5; }
+  .tm2__bio { font-size: 14px; line-height: 1.75; }
 }
 
 /* ── Team carousel (one member in view + side arrows) ─────────── */
