@@ -28,14 +28,19 @@ export const translations = {
 
     aboutLabel: 'Глава I · Легенда бара',
     aboutQuote: '«Здесь джаз звучит даже в тишине»',
-    // Легенда: тон и факты сведены из статьи в прессе и отзывов гостей (2026-07-05).
-    // Намеренно без часов работы (они в «Как найти»), без числа позиций и без
-    // названий коктейлей/настоек — меню постоянно меняется. «Пижама Кота» —
-    // русское написание названия, по нему бар ищут в поиске (SEO).
+    // Легенда: тон и факты сведены из статьи в прессе и отзывов гостей.
+    // Намеренно БЕЗ часов работы (они в «Как найти»), без числа позиций и без
+    // названий коктейлей/настоек — меню постоянно меняется, хвастаемся качеством
+    // и мастерством, а не количеством. Концепция: гость рассказывает о своём
+    // вкусе — бармен уже знает, что делать. «Пижама Кота» — русское написание,
+    // по нему бар ищут в поиске (SEO). Секция листается (см. .about в index.css).
     aboutText: [
-      'The Cat\'s Pajamas Club, или просто «Пижама Кота», — камерный авторский коктейль-бар в самом сердце Самары, на улице Куйбышева. Атмосфера нью-йоркского бара 80-х: тёмный дуб, латунь и бархат, ретро-детали, которые хочется рассматривать, живой джаз и панорамное окно с видом на вечерний город.',
-      'Название говорит само за себя: мы устали от серьёзности и пафоса. Здесь каждый коктейль — маленькая пьеса со вкусом: непредсказуемая, характерная и по-настоящему запоминающаяся. Бармен расспросит о ваших вкусах и соберёт напиток лично под вас, а гостей у нас встречают фирменной авторской настойкой.',
-      'Сюда приходят не «в бар», а будто в гости к друзьям: медленно пить, говорить обо всём на свете и оставаться до тех пор, пока не насытишься — не только напитками, но и атмосферой. Это место для тех, кто ищет не просто выпить, а прожить вечер.',
+      'The Cat\'s Pajamas Club, для своих просто «Пижама Кота», — камерный авторский коктейль-бар в центре Самары, на улице Куйбышева. Гости не раз называли его лучшим баром города, и мы стараемся держать эту планку каждый вечер. Внутри — атмосфера нью-йоркского бара 80-х: тёмное дерево, латунь и бархат, приглушённый свет, живой джаз и панорамное окно с видом на вечерний город.',
+      'Название говорит само за себя: мы сознательно отказались от снобизма и лишнего пафоса. Каждый коктейль здесь мы собираем как маленький спектакль — со своим характером, неожиданным поворотом и вкусом, который хочется вспоминать. И чтобы получить свой, не нужно разбираться в барной карте: просто расскажите, что вам по душе, — а бармен уже знает, что делать.',
+      'Бармен у нас — главный герой вечера. Он расспросит о ваших привычках и настроении и соберёт напиток лично под вас, иногда с личным, только вашим названием. Гости называют это то волшебством, то искусством, а мы просто точно попадаем во вкус. Мы гордимся не длиной карты, а мастерством за стойкой — каждый рецепт рождается здесь, у гостя на глазах.',
+      'Отдельная гордость — авторские настойки: их неспешно настаивают прямо за стойкой, и каждого гостя мы встречаем угощением из этой коллекции. За качеством следим всерьёз: крепкий алкоголь уровня лучших мировых баров и продуманная винная карта — от редких находок до достойных отечественных вин. А безалкогольные коктейли собираем так же тщательно, как остальные, — чтобы вечер удался и у тех, кто сегодня за рулём.',
+      'Но приходят сюда не только за напитками. «Пижама Кота» — это когда заходишь не в бар, а будто в гости к друзьям: тёплая обстановка, персональное внимание и разговоры по душам. В интерьере полно деталей, которые хочется рассматривать, а вода на столе не заканчивается весь вечер. По будням у нас тихо и камерно, по выходным звучит живая музыка.',
+      'Это место для тех, кто ценит вкус и чувствует разницу между хорошим и посредственным, — для неспешного вечера с любимым человеком или близкими по духу. Сюда приходят не торопясь: медленно потягивать бокал, говорить обо всём на свете и уходить лишь тогда, когда по-настоящему насытишься — и напитками, и самим вечером. Загляните — и просто расскажите, что вам по вкусу.',
     ],
 
     menuLabel: 'Глава II · Карта напитков', menuTitle: 'Коктейльная карта',
@@ -139,9 +144,12 @@ export const translations = {
     // Mirror of the RU legend. Deliberately no opening hours (they live in "Find Us"),
     // no item counts and no cocktail/infusion names — the menu changes constantly.
     aboutText: [
-      'The Cat\'s Pajamas Club is an intimate craft cocktail bar in the very heart of Samara, on Kuybysheva Street. The mood of a 1980s New York bar: dark oak, brass and velvet, retro details you\'ll want to study, live jazz and a panoramic window over the evening city.',
-      'The name says it all — we grew tired of solemnity and pretense. Here every cocktail is a little play: unpredictable, full of character, and genuinely memorable. The bartender will ask about your taste and mix a drink just for you, and guests are welcomed with a signature house infusion.',
-      'People come here not "to a bar" but as if visiting friends: to sip slowly, talk about everything under the sun, and stay until you\'ve had your fill — not only of drinks, but of the atmosphere. A place for those looking not just for a drink, but for an evening to live through.',
+      'The Cat\'s Pajamas Club — Pizhama Kota to its regulars — is an intimate craft cocktail bar in the heart of Samara, on Kuybysheva Street. Guests have more than once called it the best bar in town, and we work to earn that every night. Inside: the mood of a 1980s New York bar — dark wood, brass and velvet, low light, live jazz and a panoramic window over the evening city.',
+      'The name says it all: we deliberately left snobbery and pretense at the door. We build every cocktail like a short play — with its own character, an unexpected turn, and a taste worth remembering. And to get yours, you don\'t need to know the menu: just tell us what you like, and the bartender already knows what to do.',
+      'The bartender is the hero of the evening. They\'ll ask about your habits and your mood and mix a drink made just for you, sometimes with a private name that\'s yours alone. Guests call it magic, or art; we simply hit the taste right. We take pride not in the length of the list, but in the craft behind the bar — every recipe is born right here, in front of you.',
+      'Our house infusions are a point of pride: steeped slowly right behind the bar, and we welcome every guest with a taste from that collection. We take quality seriously — spirits on a par with the world\'s best bars and a thoughtful wine list, from rare finds to fine local wines. And the alcohol-free cocktails are made with the same care as the rest, so the evening lands even for those who are driving tonight.',
+      'But people don\'t come here for the drinks alone. Pizhama Kota is where you walk in not to a bar, but as if visiting friends: a warm room, personal attention, and conversations that matter. The interior is full of details you\'ll want to study, and the water on your table never runs out all evening. Weeknights are quiet and intimate; weekends bring live music.',
+      'This is a place for those who value taste and feel the difference between good and ordinary — for an unhurried evening with someone you love or people close in spirit. You come here to take your time: to sip slowly, talk about anything, and leave only when you\'ve truly had your fill — of the drinks and of the evening itself. Drop by, and just tell us what you like.',
     ],
 
     // NB: cocktail content itself is RU-only (owner's decision) — these are
