@@ -724,7 +724,9 @@ html { scroll-behavior: smooth; }
 @media (max-height: 715px) { .hero__logo-svg { max-height: 33vh; } }
 .hero__tagline {
   font-family: 'Baskerville', serif;
-  font-size: 26px;
+  /* Слоган стал короче — крупнее, но по высоте вьюпорта (как остальной hero),
+     чтобы на низких экранах не наезжать на нижние контролы книги. */
+  font-size: clamp(24px, 3.8vh, 40px);
   font-style: italic;
   font-weight: 300;
   color: var(--text);
@@ -2358,7 +2360,7 @@ html { scroll-behavior: smooth; }
   .hero__content { padding: 0 20px; }
   .hero__logo-svg { max-width: min(420px, 90vw); max-height: 35vh; }
   .hero__edition { font-size: 14px; letter-spacing: 3px; }
-  .hero__tagline { font-size: 20px; }
+  .hero__tagline { font-size: 24px; }
   .hero__sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 22px; }
   .hero__btn { font-size: 10px; letter-spacing: 2px; padding: 14px 32px; }
   .hero__drape { width: 7%; bottom: 0; }

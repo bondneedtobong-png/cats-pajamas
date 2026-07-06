@@ -22,7 +22,7 @@ export const translations = {
     navAdmin: 'Админ-панель',
     heroEdition: 'Добро пожаловать',
     heroCta: 'Забронировать стол',
-    heroTagline: 'Место, где джаз не заканчивается',
+    heroTagline: 'Бар безупречного вкуса',
     heroSub: 'Самара · Коктейли · Живая музыка',
     heroNext: 'Открыть карту',
 
@@ -135,7 +135,7 @@ export const translations = {
     navAdmin: 'Admin Panel',
     heroEdition: 'Welcome',
     heroCta: 'Reserve a Table',
-    heroTagline: 'Where the Jazz Never Stops',
+    heroTagline: 'A Bar of Impeccable Taste',
     heroSub: 'Samara · Cocktails · Live Music',
     heroNext: 'Open the Menu',
 
