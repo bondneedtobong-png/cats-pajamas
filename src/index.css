@@ -715,15 +715,13 @@ html { scroll-behavior: smooth; }
      «крупнее». Высота-кэп страхует, чтобы на низких экранах лого не съедало
      место над контентом и .book-controls. */
   max-width: min(880px, 92vw);
-  max-height: 44vh;
+  /* Кэп высоты = «сколько осталось под лого» после текста hero и нижних контролов:
+     44vh не даёт лого разрастись на высоких экранах, а calc() плавно ужимает его на
+     низких — без ступенчатых @media и без наездов на .book-controls (см. историю
+     этого блока: раньше был набор max-height по брейкпоинтам высоты). */
+  max-height: min(44vh, calc(100vh - 540px));
   display: block;
 }
-/* На низких экранах ужимаем лого, чтобы контенту хватило места над .book-controls
-   (правило ниже базового — иначе перебивалось им из-за порядка каскада) */
-@media (max-height: 900px) { .hero__logo-svg { max-height: 42vh; } }
-@media (max-height: 820px) { .hero__logo-svg { max-height: 37vh; } }
-@media (max-height: 760px) { .hero__logo-svg { max-height: 33vh; } }
-@media (max-height: 710px) { .hero__logo-svg { max-height: 29vh; } }
 .hero__tagline {
   font-family: 'Baskerville', serif;
   /* Слоган стал короче — крупнее, но по высоте вьюпорта (как остальной hero),
@@ -2363,7 +2361,7 @@ html { scroll-behavior: smooth; }
   /* Hero */
   .hero { padding: 68px 0 80px; }
   .hero__content { padding: 0 20px; }
-  .hero__logo-svg { max-width: min(420px, 90vw); max-height: 35vh; }
+  .hero__logo-svg { max-width: min(480px, 92vw); max-height: 34vh; }
   .hero__edition { font-size: 14px; letter-spacing: 3px; }
   .hero__tagline { font-size: 24px; }
   .hero__sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 22px; }
