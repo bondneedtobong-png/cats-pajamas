@@ -1,5 +1,22 @@
 import { useReveal } from '../useReveal.js';
 
+// Виджет 2ГИС для организации «The Cat's Pajamas Club» (карточка владельца,
+// код получен через «Поделиться» → «Виджет для сайта» на 2gis.ru). ВАЖНО:
+// готовый embed-код 2ГИС — это <script>, который вызывает new DGWidgetLoader()
+// и сам вставляет <iframe> через document.write(). document.write() после
+// загрузки страницы (а у нас SPA — всегда после) либо тихо игнорируется
+// браузером, либо в худшем случае стирает всю страницу. Поэтому вместо
+// скрипта строим тот же URL виджета вручную (алгоритм взят из самого
+// DGWidgetLoader.js) и рендерим обычным <iframe>, как и раньше с Яндексом —
+// безопасно для React, тот же визуальный результат.
+const GIS_WIDGET_SRC = `https://widgets.2gis.com/widget?type=firmsonmap&options=${encodeURIComponent(
+  JSON.stringify({
+    pos: { lat: 53.19053685426516, lon: 50.09037137031556, zoom: 16 },
+    opt: { city: 'samara' },
+    org: '70000001101561088',
+  })
+)}`;
+
 export default function Contacts({ tx }) {
   const r0   = useReveal(0);
   const r1   = useReveal(100);
@@ -58,22 +75,12 @@ export default function Contacts({ tx }) {
           </div>
 
           <div ref={rMap} className="reveal contacts__map">
-            {/* Встроенная карта временно осталась Яндекс-виджетом: у Яндекса в
-                их собственной карточке организации ошибка в номере дома (100
-                вместо 98) — это баг геоданных на их стороне, не в нашем коде.
-                У 2ГИС в их карточке адрес правильный (2gis.ru/samara/firm/
-                70000001101561088), поэтому кнопка ниже уже ведёт туда. Сам
-                виджет 2ГИС встраивается не простой iframe-ссылкой, а их
-                JS-виджетом с кодом, который генерируется на странице
-                организации (кнопка «Поделиться» → «Виджет для сайта») —
-                нужно получить этот код от владельца и подставить сюда. */}
             <iframe
-              src="https://yandex.ru/map-widget/v1/?ol=biz&oid=36093402806"
-              title="Cat's Pajamas Club на Яндекс.Картах"
+              src={GIS_WIDGET_SRC}
+              title="The Cat's Pajamas Club на 2ГИС"
               width="100%"
               height="100%"
               frameBorder="0"
-              allowFullScreen
               loading="lazy"
               style={{ display: 'block', minHeight: '300px', border: 'none', flex: 1 }}
             />
