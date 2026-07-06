@@ -2027,44 +2027,65 @@ html { scroll-behavior: smooth; }
   flex: 1;
   min-height: 0;
   display: flex;
-  align-items: center;
-  padding: clamp(24px, 6vh, 70px) 6%;
+  align-items: stretch; /* контент заполняет страницу по высоте, как в «Бармены» */
+  padding: clamp(20px, 4vh, 60px) 5%;
   position: relative;
   overflow: hidden;
 }
-.contacts__inner { max-width: 980px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
+/* max-width поднят до ширины «Бармены» (1460), inner — колонка: заголовок сверху,
+   сетка снизу растягивается на всю оставшуюся высоту (см. .contacts__grid). */
+.contacts__inner {
+  max-width: 1460px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 .contacts__title {
   font-family: 'Baskerville', serif;
-  font-size: clamp(24px, 3.8vh, 46px);
+  font-size: clamp(28px, 5vh, 54px);
   font-weight: 900;
   text-align: center;
-  margin: 0 0 clamp(16px, 2.8vh, 44px);
+  margin: 0 0 clamp(18px, 3vh, 44px);
   color: var(--text);
   line-height: 1;
+  flex-shrink: 0;
 }
-.contacts__grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 4vh, 80px); align-items: start; }
-.contacts__info { display: flex; flex-direction: column; gap: clamp(14px, 2.2vh, 42px); }
+/* Сетка тянется на всю высоту секции; обе колонки (инфо и карта) заполняют её */
+.contacts__grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 72px);
+  align-items: stretch;
+}
+.contacts__info { display: flex; flex-direction: column; justify-content: center; gap: clamp(18px, 3.2vh, 48px); }
 .contacts__block-label {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: clamp(4px, 1vh, 14px);
+  margin-bottom: clamp(6px, 1.2vh, 16px);
 }
 .contacts__block-value {
   font-family: 'Baskerville', serif;
-  font-size: clamp(16px, 2vh, 22px);
+  font-size: clamp(19px, 2.6vh, 30px);
   font-style: italic;
   color: var(--text);
   line-height: 1.4;
   font-weight: 300;
 }
-.contacts__hours { font-family: 'Baskerville', serif; font-size: clamp(13px, 1.8vh, 19px); font-style: italic; color: var(--text); line-height: 1.35; font-weight: 300; }
+.contacts__hours { font-family: 'Baskerville', serif; font-size: clamp(15px, 2.1vh, 23px); font-style: italic; color: var(--text); line-height: 1.4; font-weight: 300; }
 .contacts__hours-dim { color: var(--text-dim); font-size: 16px; }
 .contacts__phone {
   font-family: 'Baskerville', serif;
-  font-size: clamp(19px, 2.6vh, 26px);
+  font-size: clamp(23px, 3.2vh, 34px);
   color: var(--text);
   font-style: italic;
   transition: color .2s;
@@ -2143,9 +2164,11 @@ html { scroll-behavior: smooth; }
   animation: none;
 }
 .contacts__map {
-  height: clamp(200px, 34vh, 360px);
+  height: 100%;
+  min-height: clamp(280px, 40vh, 560px); /* карта крупная и заполняет колонку по высоте */
   background: var(--bg);
   border: 1px solid var(--border);
+  border-radius: 14px; /* как рамка портрета в «Бармены» */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2385,10 +2408,19 @@ html { scroll-behavior: smooth; }
   .team-modal  { padding: 32px 24px; }
 
   /* Contacts — single column, so info+map stack instead of sitting
-     side by side; both need to shrink more aggressively to still fit. */
-  .contacts__grid { grid-template-columns: 1fr; gap: clamp(8px, 2vh, 28px); }
-  .contacts__info { gap: clamp(6px, 1.4vh, 20px); }
-  .contacts__map  { height: clamp(70px, 16vh, 220px); }
+     side by side; сбрасываем десктопное «заполнение по высоте» (иначе
+     единственная строка-1fr растянула бы инфо и оставила пустоту). */
+  .contacts { align-items: flex-start; }
+  .contacts__inner { display: block; }
+  .contacts__grid {
+    flex: none;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    gap: clamp(8px, 2vh, 28px);
+    align-items: start;
+  }
+  .contacts__info { justify-content: flex-start; gap: clamp(6px, 1.4vh, 20px); }
+  .contacts__map  { height: clamp(70px, 16vh, 220px); min-height: 0; }
   .contacts__social { padding: 10px 18px; }
   .contacts__socials { margin-top: 0; }
 
