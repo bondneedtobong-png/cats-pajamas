@@ -16,14 +16,6 @@ const Ornament = ({ width = 72 }) => (
   </div>
 );
 
-// Small corner flourish — the printed-cover detail on a real menu booklet.
-const CornerMark = ({ className }) => (
-  <svg className={className} viewBox="0 0 40 40" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M2 16V4a2 2 0 0 1 2-2h12" />
-    <circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none" />
-  </svg>
-);
-
 export default function Hero({ tx, onNext, onBooking }) {
   const [curtainDone, setCurtainDone] = useState(false);
 
@@ -57,15 +49,6 @@ export default function Hero({ tx, onNext, onBooking }) {
           <div className="hero__curtain-r" />
         </div>
       )}
-
-      {/* Cover frame — a double rule inset from the screen edge, like the
-          board of a bound menu, with a corner mark in each corner. */}
-      <div className="hero__frame" aria-hidden="true">
-        <CornerMark className="hero__corner hero__corner--tl" />
-        <CornerMark className="hero__corner hero__corner--tr" />
-        <CornerMark className="hero__corner hero__corner--bl" />
-        <CornerMark className="hero__corner hero__corner--br" />
-      </div>
 
       <div className="hero__content">
         <p className="hero__edition">{tx.heroEdition}</p>

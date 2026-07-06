@@ -630,7 +630,10 @@ html { scroll-behavior: smooth; }
    плюс мягкая внутренняя подсветка тенью. */
 .hero__drape {
   position: absolute;
-  top: 0; bottom: 0;
+  /* bottom:-90px дотягивает шторки до самого низа экрана — .hero короче
+     .book__page на 90px (резерв под .book-controls), а book__page overflow:hidden
+     обрезает ровно по вьюпорту. На мобиле переопределяем на 0 (страница скроллит). */
+  top: 0; bottom: -90px;
   width: 11%;
   max-width: 200px;
   z-index: 3;
@@ -678,30 +681,6 @@ html { scroll-behavior: smooth; }
   animation: curtainRight 1.3s .15s cubic-bezier(.77,0,.175,1) forwards;
   will-change: transform;
 }
-/* Cover frame — a thin double rule inset from the edge + a corner mark in
-   each corner, like the board of a bound bar menu. */
-.hero__frame {
-  position: absolute;
-  inset: 18px;
-  z-index: 4;
-  pointer-events: none;
-  border: 1px solid var(--border);
-  box-shadow: inset 0 0 0 6px transparent, inset 0 0 0 7px var(--border);
-}
-.hero__corner {
-  position: absolute;
-  color: var(--gold);
-  opacity: .55;
-}
-.hero__corner--tl { top: -1px; left: -1px; }
-.hero__corner--tr { top: -1px; right: -1px; transform: scaleX(-1); }
-.hero__corner--bl { bottom: -1px; left: -1px; transform: scaleY(-1); }
-.hero__corner--br { bottom: -1px; right: -1px; transform: scale(-1, -1); }
-@media (max-width: 900px) {
-  .hero__frame { inset: 10px; }
-  .hero__corner { width: 22px; height: 22px; }
-}
-
 .hero__edition {
   font-family: 'Avenir Next', sans-serif;
   font-size: 11px;
@@ -730,8 +709,8 @@ html { scroll-behavior: smooth; }
 .hero__logo-svg {
   width: auto;
   height: auto;
-  max-width: min(560px, 92vw);
-  max-height: 32vh;
+  max-width: min(700px, 94vw);
+  max-height: 40vh;
   display: block;
 }
 .hero__tagline {
@@ -2345,12 +2324,12 @@ html { scroll-behavior: smooth; }
   /* Hero */
   .hero { padding: 68px 0 80px; }
   .hero__content { padding: 0 20px; }
-  .hero__logo-svg { max-width: min(340px, 84vw); max-height: 28vh; }
+  .hero__logo-svg { max-width: min(400px, 88vw); max-height: 33vh; }
   .hero__edition { font-size: 10px; letter-spacing: 4px; }
   .hero__tagline { font-size: 20px; }
   .hero__sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 22px; }
   .hero__btn { font-size: 10px; letter-spacing: 2px; padding: 14px 32px; }
-  .hero__drape { width: 7%; }
+  .hero__drape { width: 7%; bottom: 0; }
   .hero__rays { top: 40%; }
   .hero__next { margin-top: 18px; font-size: 9px; letter-spacing: 2px; }
 
