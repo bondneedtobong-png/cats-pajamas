@@ -58,6 +58,15 @@ export default function Contacts({ tx }) {
           </div>
 
           <div ref={rMap} className="reveal contacts__map">
+            {/* Встроенная карта временно осталась Яндекс-виджетом: у Яндекса в
+                их собственной карточке организации ошибка в номере дома (100
+                вместо 98) — это баг геоданных на их стороне, не в нашем коде.
+                У 2ГИС в их карточке адрес правильный (2gis.ru/samara/firm/
+                70000001101561088), поэтому кнопка ниже уже ведёт туда. Сам
+                виджет 2ГИС встраивается не простой iframe-ссылкой, а их
+                JS-виджетом с кодом, который генерируется на странице
+                организации (кнопка «Поделиться» → «Виджет для сайта») —
+                нужно получить этот код от владельца и подставить сюда. */}
             <iframe
               src="https://yandex.ru/map-widget/v1/?ol=biz&oid=36093402806"
               title="Cat's Pajamas Club на Яндекс.Картах"
@@ -69,7 +78,7 @@ export default function Contacts({ tx }) {
               style={{ display: 'block', minHeight: '300px', border: 'none', flex: 1 }}
             />
             <a
-              href="https://yandex.com/maps/org/pizhama_kota/36093402806/"
+              href="https://2gis.ru/samara/firm/70000001101561088"
               target="_blank"
               rel="noopener noreferrer"
               className="contacts__map-link"
