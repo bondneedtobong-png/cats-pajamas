@@ -119,7 +119,7 @@ export const translations = {
     bkTgFallbackBtn: 'Написать в Telegram',
 
     contactsLabel: 'Глава VI · Как нас найти', contactsTitle: 'Найти бар',
-    addressLabel: 'Адрес', address: 'г. Самара, ул. Куйбышева, 100',
+    addressLabel: 'Адрес', address: 'г. Самара, ул. Куйбышева, 98',
     hoursLabel: 'Часы работы',
     daysWeek: 'Пн – Чт, Вс', daysWend: 'Пт – Сб',
     mapLabel: 'Открыть на Яндекс.Картах',
@@ -230,7 +230,7 @@ export const translations = {
     bkTgFallbackBtn: 'Message us on Telegram',
 
     contactsLabel: 'Chapter VI · Find Us', contactsTitle: 'Find The Bar',
-    addressLabel: 'Address', address: 'Samara, Kuybysheva St, 100',
+    addressLabel: 'Address', address: 'Samara, Kuybysheva St, 98',
     hoursLabel: 'Hours',
     daysWeek: 'Mon – Thu, Sun', daysWend: 'Fri – Sat',
     mapLabel: 'Open on Yandex Maps',

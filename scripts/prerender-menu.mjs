@@ -105,7 +105,7 @@ const buildSchema = (menu) => ({
 
 // ─── Сборка dist/menu/index.html из dist/index.html ─────────────────────────
 const TITLE = "Барная карта — The Cat's Pajamas Club, джаз-бар в Самаре";
-const DESC = "Полное меню бара: авторские коктейли, вина, виски, ром, джин, настойки и закуски с ценами. Джаз-бар The Cat's Pajamas Club, Самара, ул. Куйбышева, 100.";
+const DESC = "Полное меню бара: авторские коктейли, вина, виски, ром, джин, настойки и закуски с ценами. Джаз-бар The Cat's Pajamas Club, Самара, ул. Куйбышева, 98.";
 
 async function main() {
   const menu = await loadMenu();

@@ -711,17 +711,19 @@ html { scroll-behavior: smooth; }
 .hero__logo-svg {
   width: auto;
   height: auto;
-  max-width: min(780px, 94vw);
-  max-height: 45vh;
+  /* Лого альбомное (~1.54:1) — обычно упирается в ширину, она и главный рычаг
+     «крупнее». Высота-кэп страхует, чтобы на низких экранах лого не съедало
+     место над контентом и .book-controls. */
+  max-width: min(880px, 92vw);
+  max-height: 44vh;
   display: block;
 }
 /* На низких экранах ужимаем лого, чтобы контенту хватило места над .book-controls
    (правило ниже базового — иначе перебивалось им из-за порядка каскада) */
-@media (max-height: 960px) { .hero__logo-svg { max-height: 43vh; } }
-@media (max-height: 910px) { .hero__logo-svg { max-height: 41vh; } }
-@media (max-height: 850px) { .hero__logo-svg { max-height: 39vh; } }
-@media (max-height: 780px) { .hero__logo-svg { max-height: 36vh; } }
-@media (max-height: 715px) { .hero__logo-svg { max-height: 33vh; } }
+@media (max-height: 900px) { .hero__logo-svg { max-height: 42vh; } }
+@media (max-height: 820px) { .hero__logo-svg { max-height: 37vh; } }
+@media (max-height: 760px) { .hero__logo-svg { max-height: 33vh; } }
+@media (max-height: 710px) { .hero__logo-svg { max-height: 29vh; } }
 .hero__tagline {
   font-family: 'Baskerville', serif;
   /* Слоган стал короче — крупнее, но по высоте вьюпорта (как остальной hero),
@@ -2046,9 +2048,12 @@ html { scroll-behavior: smooth; }
   flex-direction: column;
   min-height: 0;
 }
+/* Эйбрроу «ГЛАВА VI...» крупнее только на этой странице (не трогаем общий
+   .sec-label — он тюнингован под остальные главы книги). */
+.contacts .sec-label { font-size: 15px; letter-spacing: 4px; }
 .contacts__title {
   font-family: 'Baskerville', serif;
-  font-size: clamp(28px, 5vh, 54px);
+  font-size: clamp(34px, 6vh, 64px);
   font-weight: 900;
   text-align: center;
   margin: 0 0 clamp(18px, 3vh, 44px);
@@ -2066,28 +2071,28 @@ html { scroll-behavior: smooth; }
   gap: clamp(28px, 4vw, 72px);
   align-items: stretch;
 }
-.contacts__info { display: flex; flex-direction: column; justify-content: center; gap: clamp(18px, 3.2vh, 48px); }
+.contacts__info { display: flex; flex-direction: column; justify-content: center; gap: clamp(24px, 4vh, 56px); }
 .contacts__block-label {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: clamp(6px, 1.2vh, 16px);
+  margin-bottom: clamp(8px, 1.4vh, 18px);
 }
 .contacts__block-value {
   font-family: 'Baskerville', serif;
-  font-size: clamp(19px, 2.6vh, 30px);
+  font-size: clamp(24px, 3.4vh, 40px);
   font-style: italic;
   color: var(--text);
   line-height: 1.4;
   font-weight: 300;
 }
-.contacts__hours { font-family: 'Baskerville', serif; font-size: clamp(15px, 2.1vh, 23px); font-style: italic; color: var(--text); line-height: 1.4; font-weight: 300; }
+.contacts__hours { font-family: 'Baskerville', serif; font-size: clamp(19px, 2.7vh, 30px); font-style: italic; color: var(--text); line-height: 1.4; font-weight: 300; }
 .contacts__hours-dim { color: var(--text-dim); font-size: 16px; }
 .contacts__phone {
   font-family: 'Baskerville', serif;
-  font-size: clamp(23px, 3.2vh, 34px);
+  font-size: clamp(28px, 4vh, 44px);
   color: var(--text);
   font-style: italic;
   transition: color .2s;
@@ -2104,13 +2109,13 @@ html { scroll-behavior: smooth; }
 .contacts__social {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-family: 'Avenir Next', sans-serif;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 2.5px;
   color: var(--text-dim);
   border: 1px solid var(--border);
-  padding: 14px 24px;
+  padding: 17px 28px;
   text-transform: uppercase;
   position: relative;
   overflow: hidden;
@@ -2143,8 +2148,8 @@ html { scroll-behavior: smooth; }
 }
 
 .contacts__social-icon {
-  width: 16px;
-  height: 16px;
+  width: 19px;
+  height: 19px;
   flex-shrink: 0;
   transition: transform .3s;
 }
@@ -2198,12 +2203,12 @@ html { scroll-behavior: smooth; }
 /* ── FOOTER ────────────────────────────────────────────── */
 .footer {
   flex-shrink: 0;
-  padding: clamp(16px, 2.6vh, 32px) 6%;
+  padding: clamp(22px, 3.6vh, 46px) 6%;
   background: var(--bg3);
   border-top: 1px solid var(--border);
 }
 .footer__inner {
-  max-width: 1080px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -2211,27 +2216,27 @@ html { scroll-behavior: smooth; }
   flex-wrap: wrap;
   gap: 20px;
 }
-.footer__links { display: flex; gap: 24px; }
+.footer__links { display: flex; gap: 32px; }
 .footer__link {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 1px;
   color: var(--text-dim);
   text-decoration: none;
   transition: color .2s;
 }
 .footer__link:hover { color: var(--gold); }
-.footer__brand { display: flex; align-items: center; gap: 11px; opacity: .5; }
-.footer__glass-icon { width: auto; height: 22px; object-fit: contain; flex-shrink: 0; }
+.footer__brand { display: flex; align-items: center; gap: 13px; opacity: .6; }
+.footer__glass-icon { width: auto; height: 28px; object-fit: contain; flex-shrink: 0; }
 .footer__brand-text {
   font-family: 'Baskerville', serif;
-  font-size: 11px;
+  font-size: 15px;
   letter-spacing: 3px;
   color: var(--text);
 }
 .footer__copy {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 1px;
   color: var(--text-dim);
 }
@@ -2427,10 +2432,11 @@ html { scroll-behavior: smooth; }
   .contacts__socials { margin-top: 0; }
 
   /* Footer */
-  .footer { padding: clamp(10px, 2vh, 24px) 5%; }
-  .footer__inner { flex-direction: column; align-items: center; text-align: center; gap: 6px; }
-  .footer__links { gap: 14px; }
-  .footer__link, .footer__copy { font-size: 9px; }
+  .footer { padding: clamp(14px, 2.6vh, 28px) 5%; }
+  .footer__inner { flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+  .footer__links { gap: 18px; }
+  .footer__link, .footer__copy { font-size: 11px; }
+  .footer__brand-text { font-size: 13px; }
 }
 
 /* Short-viewport-height safety net for the Team card — catches both a

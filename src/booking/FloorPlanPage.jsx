@@ -13,7 +13,7 @@ import './booking.css';
 export default function FloorPlanPage() {
   usePageMeta({
     title: "Бронирование столика — The Cat's Pajamas Club, джаз-бар в Самаре",
-    description: 'Забронируйте столик в джаз-баре «Пижама Кота» (The Cat\'s Pajamas Club) в Самаре: план зала, выбор стола и времени. Ул. Куйбышева, 100.',
+    description: 'Забронируйте столик в джаз-баре «Пижама Кота» (The Cat\'s Pajamas Club) в Самаре: план зала, выбор стола и времени. Ул. Куйбышева, 98.',
     canonical: 'https://cats-pajamas.ru/booking',
   });
   const tx = translations.ru; // Mini App и прямые ссылки — русскоязычные
