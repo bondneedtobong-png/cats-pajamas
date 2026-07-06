@@ -695,7 +695,18 @@ html { scroll-behavior: smooth; }
   z-index: 5;
   text-align: center;
   padding: 0 32px;
+  /* Опускаем весь блок вниз, чтобы логотип сел в центр, откуда расходятся лучи
+     (.hero__rays top:43%). top (position:relative), а не transform — не конфликтует
+     с интро-анимацией heroUp. На коротких экранах уменьшаем ниже, чтобы контент
+     не наехал на .book-controls (см. @media max-height). */
+  top: 50px;
   animation: heroUp 1.2s 1.5s both;
+}
+/* Экраны пониже — меньше сдвиг (иначе низ контента упирается в .book-controls) */
+@media (max-height: 820px) { .hero__content { top: 38px; } }
+@media (max-height: 760px) { .hero__content { top: 24px; } }
+@media (max-height: 710px) {
+  .hero__content { top: 12px; }
 }
 .hero__logo {
   display: flex;
@@ -709,10 +720,15 @@ html { scroll-behavior: smooth; }
 .hero__logo-svg {
   width: auto;
   height: auto;
-  max-width: min(700px, 94vw);
-  max-height: 40vh;
+  max-width: min(740px, 94vw);
+  max-height: 43vh;
   display: block;
 }
+/* На низких экранах ужимаем лого, чтобы контенту хватило места над .book-controls
+   (правило ниже базового — иначе перебивалось им из-за порядка каскада) */
+@media (max-height: 820px) { .hero__logo-svg { max-height: 40vh; } }
+@media (max-height: 760px) { .hero__logo-svg { max-height: 38vh; } }
+@media (max-height: 710px) { .hero__logo-svg { max-height: 35vh; } }
 .hero__tagline {
   font-family: 'Baskerville', serif;
   font-size: 26px;
@@ -2324,7 +2340,8 @@ html { scroll-behavior: smooth; }
   /* Hero */
   .hero { padding: 68px 0 80px; }
   .hero__content { padding: 0 20px; }
-  .hero__logo-svg { max-width: min(400px, 88vw); max-height: 33vh; }
+  .hero__content { top: 0; } /* мобайл: держим по центру, без десктопного сдвига */
+  .hero__logo-svg { max-width: min(420px, 90vw); max-height: 35vh; }
   .hero__edition { font-size: 10px; letter-spacing: 4px; }
   .hero__tagline { font-size: 20px; }
   .hero__sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 22px; }
