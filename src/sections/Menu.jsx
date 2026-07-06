@@ -1,10 +1,13 @@
-import { Fragment, useState, useEffect } from 'react';
+import { Fragment, useState, useEffect, lazy, Suspense } from 'react';
 import { useReveal } from '../useReveal.js';
 import { BAR_MENU, CATEGORY_STORIES } from '../menu/barMenuData.js';
 import BarMenuService from '../menu/BarMenuService.js';
-import BarMenuEditor from '../menu/BarMenuEditor.jsx';
 import AuthService from '../auth/AuthService.js';
 import { CategoryCard } from '../menu/MenuCard.jsx';
+
+// Редактор нужен только админам — грузим его чанк лениво, при открытии,
+// чтобы не тащить в бандл лендинга для обычных гостей.
+const BarMenuEditor = lazy(() => import('../menu/BarMenuEditor.jsx'));
 
 // Страница книги «Напитки» — интерактивное бар-меню (переделка 2026-07-05 по
 // макету владельца): слева вертикальные кнопки категорий (по одной на каждый
@@ -102,15 +105,17 @@ export default function Menu({ tx }) {
       </div>
 
       {editing && (
-        <BarMenuEditor
-          initial={{ menu, stories }}
-          onClose={() => setEditing(false)}
-          onSaved={(saved) => {
-            setMenu(saved.menu);
-            setStories(saved.stories);
-            setEditing(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <BarMenuEditor
+            initial={{ menu, stories }}
+            onClose={() => setEditing(false)}
+            onSaved={(saved) => {
+              setMenu(saved.menu);
+              setStories(saved.stories);
+              setEditing(false);
+            }}
+          />
+        </Suspense>
       )}
     </section>
   );

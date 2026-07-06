@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { translations, pageImages } from './data.js';
 import Nav      from './sections/Nav.jsx';
@@ -12,18 +12,22 @@ import Booking  from './sections/Booking.jsx';
 import Contacts from './sections/Contacts.jsx';
 import Footer   from './sections/Footer.jsx';
 import PageBackdrop from './sections/PageBackdrop.jsx';
-import FloorPlanPage from './booking/FloorPlanPage.jsx';
-import BarMenuPage   from './menu/BarMenuPage.jsx';
-import AuthPage      from './auth/AuthPage.jsx';
-import AuthModal      from './auth/AuthModal.jsx';
-import ProfilePage   from './profile/ProfilePage.jsx';
-import AppHubPage    from './app/AppHubPage.jsx';
-import AdminPage        from './admin/AdminPage.jsx';
-import BookingRulesPage from './pages/BookingRulesPage.jsx';
-import PrivacyPage      from './pages/PrivacyPage.jsx';
-import NotFoundPage     from './pages/NotFoundPage.jsx';
+import AuthModal from './auth/AuthModal.jsx';
 import CookieBanner     from './CookieBanner.jsx';
 import ErrorBoundary    from './ErrorBoundary.jsx';
+
+// Не-лендинговые маршруты грузим лениво: они не нужны для первой отрисовки
+// главной (LCP), а /admin особенно тяжёлый. MainSite ниже остаётся eager.
+// Обёрнуто в <Suspense> в App().
+const FloorPlanPage    = lazy(() => import('./booking/FloorPlanPage.jsx'));
+const BarMenuPage      = lazy(() => import('./menu/BarMenuPage.jsx'));
+const AuthPage         = lazy(() => import('./auth/AuthPage.jsx'));
+const ProfilePage      = lazy(() => import('./profile/ProfilePage.jsx'));
+const AppHubPage       = lazy(() => import('./app/AppHubPage.jsx'));
+const AdminPage        = lazy(() => import('./admin/AdminPage.jsx'));
+const BookingRulesPage = lazy(() => import('./pages/BookingRulesPage.jsx'));
+const PrivacyPage      = lazy(() => import('./pages/PrivacyPage.jsx'));
+const NotFoundPage     = lazy(() => import('./pages/NotFoundPage.jsx'));
 
 // The landing is a "bar menu" of fixed full-screen pages that turn like
 // paper instead of scrolling. Every page stays mounted the whole time (not
@@ -144,21 +148,35 @@ function MainSite() {
   );
 }
 
+// Тёмный полноэкранный лоадер на время подгрузки ленивого чанка маршрута.
+function RouteFallback() {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: '#0C0A18', color: '#D4A843', fontFamily: "'Baskerville', serif", fontSize: 14, letterSpacing: 1,
+    }}>
+      Загрузка…
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <Routes>
-        <Route path="/"        element={<MainSite />} />
-        <Route path="/booking" element={<FloorPlanPage />} />
-        <Route path="/menu"    element={<BarMenuPage />} />
-        <Route path="/auth"    element={<AuthPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/app"     element={<AppHubPage />} />
-        <Route path="/admin"         element={<AdminPage />} />
-        <Route path="/booking-rules" element={<BookingRulesPage />} />
-        <Route path="/privacy"       element={<PrivacyPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/"        element={<MainSite />} />
+          <Route path="/booking" element={<FloorPlanPage />} />
+          <Route path="/menu"    element={<BarMenuPage />} />
+          <Route path="/auth"    element={<AuthPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/app"     element={<AppHubPage />} />
+          <Route path="/admin"         element={<AdminPage />} />
+          <Route path="/booking-rules" element={<BookingRulesPage />} />
+          <Route path="/privacy"       element={<PrivacyPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
       <CookieBanner />
     </ErrorBoundary>
   );
