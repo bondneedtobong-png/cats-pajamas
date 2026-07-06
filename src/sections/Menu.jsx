@@ -4,10 +4,11 @@ import { BAR_MENU, CATEGORY_STORIES } from '../menu/barMenuData.js';
 import BarMenuService from '../menu/BarMenuService.js';
 import AuthService from '../auth/AuthService.js';
 import { CategoryCard } from '../menu/MenuCard.jsx';
+import '../menu/barmenu-editor.css'; // стили кнопки/редактора — грузим сразу (крошечные), чтобы кнопка не была без стиля до первого открытия
 
-// Редактор нужен только админам — грузим его чанк лениво, при открытии,
-// чтобы не тащить в бандл лендинга для обычных гостей.
-const BarMenuEditor = lazy(() => import('../menu/BarMenuEditor.jsx'));
+// Редактор нужен только админам — грузим его JS-чанк лениво, при открытии,
+// чтобы не тащить логику правки в бандл лендинга для обычных гостей.
+const MenuInlineEditor = lazy(() => import('../menu/MenuInlineEditor.jsx'));
 
 // Страница книги «Напитки» — интерактивное бар-меню (переделка 2026-07-05 по
 // макету владельца): слева вертикальные кнопки категорий (по одной на каждый
@@ -53,70 +54,73 @@ export default function Menu({ tx }) {
           <span className="sec-label">{tx.menuLabel}</span>
         </div>
         <h2 ref={r1} className="reveal menu__title" style={{ textAlign: 'center' }}>{tx.menuTitle}</h2>
-        {isAdmin && (
-          <div style={{ textAlign: 'center' }}>
-            <button className="mbk-edit-btn" type="button" onClick={() => setEditing(true)}>
-              ✏️ Редактировать карту
-            </button>
-          </div>
-        )}
 
-        <div className="mbk">
-          {/* Кнопки категорий — по одной на каждый раздел бумажного меню */}
-          <nav className="mbk__nav" aria-label="Разделы меню">
-            {menu.map((group) => (
-              <Fragment key={group.id}>
-                <span className="mbk__nav-label">{group.title}</span>
-                {group.categories.map((c) => (
-                  <button
-                    key={c.title}
-                    type="button"
-                    className={`mbk__nav-btn nav__shimmer${c.title === cat.title ? ' mbk__nav-btn--active' : ''}`}
-                    style={{ '--i': btnIndex++ }}
-                    onClick={() => setActiveTitle(c.title)}
-                  >
-                    {c.title}
-                  </button>
-                ))}
-              </Fragment>
-            ))}
-          </nav>
-
-          {/* Разворот: длинная категория раскладывается на два листа */}
-          <div className={`mbk__spread${split ? '' : ' mbk__spread--single'}`}>
-            {split ? (
-              <>
-                <CategoryCard cat={{ ...cat, items: cat.items.slice(0, half), quote: null }} />
-                <CategoryCard cat={{ ...cat, items: cat.items.slice(half) }} showHead={false} />
-              </>
-            ) : (
-              <CategoryCard cat={cat} />
+        {editing ? (
+          <Suspense fallback={<div className="mbk-edit-emptyspread">Загрузка редактора…</div>}>
+            <MenuInlineEditor
+              initial={{ menu, stories }}
+              onCancel={() => setEditing(false)}
+              onSaved={(saved) => {
+                setMenu(saved.menu);
+                setStories(saved.stories);
+                setEditing(false);
+              }}
+            />
+          </Suspense>
+        ) : (
+          <>
+            {isAdmin && (
+              <div style={{ textAlign: 'center' }}>
+                <button className="mbk-edit-btn" type="button" onClick={() => setEditing(true)}>
+                  ✏️ Редактировать карту
+                </button>
+              </div>
             )}
-          </div>
 
-          {/* Немного истории про выбранный раздел */}
-          <aside className="mbk__story">
-            <span className="mbk__story-label">{tx.menuStoryLabel}</span>
-            <h3 className="mbk__story-title">{cat.title}</h3>
-            <p className="mbk__story-text">{story}</p>
-            <a className="mbk__story-link" href="/menu">{tx.menuPrintLink} ›</a>
-          </aside>
-        </div>
+            <div className="mbk">
+              {/* Кнопки категорий — по одной на каждый раздел бумажного меню */}
+              <nav className="mbk__nav" aria-label="Разделы меню">
+                {menu.map((group) => (
+                  <Fragment key={group.id}>
+                    <span className="mbk__nav-label">{group.title}</span>
+                    {group.categories.map((c) => (
+                      <button
+                        key={c.title}
+                        type="button"
+                        className={`mbk__nav-btn nav__shimmer${c.title === cat.title ? ' mbk__nav-btn--active' : ''}`}
+                        style={{ '--i': btnIndex++ }}
+                        onClick={() => setActiveTitle(c.title)}
+                      >
+                        {c.title}
+                      </button>
+                    ))}
+                  </Fragment>
+                ))}
+              </nav>
+
+              {/* Разворот: длинная категория раскладывается на два листа */}
+              <div className={`mbk__spread${split ? '' : ' mbk__spread--single'}`}>
+                {split ? (
+                  <>
+                    <CategoryCard cat={{ ...cat, items: cat.items.slice(0, half), quote: null }} />
+                    <CategoryCard cat={{ ...cat, items: cat.items.slice(half) }} showHead={false} />
+                  </>
+                ) : (
+                  <CategoryCard cat={cat} />
+                )}
+              </div>
+
+              {/* Немного истории про выбранный раздел */}
+              <aside className="mbk__story">
+                <span className="mbk__story-label">{tx.menuStoryLabel}</span>
+                <h3 className="mbk__story-title">{cat.title}</h3>
+                <p className="mbk__story-text">{story}</p>
+                <a className="mbk__story-link" href="/menu">{tx.menuPrintLink} ›</a>
+              </aside>
+            </div>
+          </>
+        )}
       </div>
-
-      {editing && (
-        <Suspense fallback={null}>
-          <BarMenuEditor
-            initial={{ menu, stories }}
-            onClose={() => setEditing(false)}
-            onSaved={(saved) => {
-              setMenu(saved.menu);
-              setStories(saved.stories);
-              setEditing(false);
-            }}
-          />
-        </Suspense>
-      )}
     </section>
   );
 }

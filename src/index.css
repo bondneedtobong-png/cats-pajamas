@@ -552,12 +552,18 @@ html { scroll-behavior: smooth; }
   /* Bottom padding clears the fixed .book-controls page-count pill that
      sits on top of every page — no page scrolls (.book__page is
      overflow:hidden), so this has to be reserved up front. */
-  padding: 76px 0 100px;
+  /* Контент прижат к низу (над пагинацией) — так весь блок сидит внизу, а
+     свободное место остаётся сверху (по разметке владельца). Нижний padding =
+     зазор до .book-controls. */
+  padding: 60px 0 104px;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   background: var(--bg);
 }
+/* На невысоких экранах контент не поместился бы прижатым к низу (упёрся бы в
+   верх) — возвращаем центрирование, там места и так впритык. */
+@media (max-height: 920px) { .hero { align-items: center; } }
 .hero__bg {
   position: absolute; inset: 0;
   overflow: hidden;
@@ -699,10 +705,13 @@ html { scroll-behavior: smooth; }
      (.hero__rays top:43%). top (position:relative), а не transform — не конфликтует
      с интро-анимацией heroUp. На коротких экранах уменьшаем ниже, чтобы контент
      не наехал на .book-controls (см. @media max-height). */
-  top: -16px;
+  top: 0;
   animation: heroUp 1.2s 1.5s both;
 }
-@media (max-height: 715px) { .hero__content { top: -24px; } }
+/* Короткие экраны центрируются (см. .hero align-items) — слегка подтягиваем
+   контент вверх, чтобы низ не упёрся в .book-controls. */
+@media (max-height: 800px) { .hero__content { top: -8px; } }
+@media (max-height: 715px) { .hero__content { top: -22px; } }
 .hero__logo {
   display: flex;
   align-items: center;
