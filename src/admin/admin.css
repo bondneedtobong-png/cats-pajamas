@@ -210,6 +210,22 @@
 .adm-act-btn--no   { color: #6b7280; border-color: rgba(107,114,128,0.3); }
 .adm-act-btn--no:hover { background: rgba(107,114,128,0.1); }
 
+/* ─── Роли (Фаза 1): бейдж владельца + кнопки повышения/понижения ─── */
+.adm-badge--owner { color: #D4A843; background: rgba(212,168,67,0.14); border-color: rgba(212,168,67,0.5); }
+.adm-role-btn {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 9px; letter-spacing: 0.5px; font-weight: 600;
+  padding: 5px 10px;
+  border: 1px solid; border-radius: 3px;
+  background: transparent; cursor: pointer; white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.adm-role-btn:disabled { opacity: 0.5; cursor: default; }
+.adm-role-btn--promote { color: #D4A843; border-color: rgba(212,168,67,0.45); }
+.adm-role-btn--promote:hover:not(:disabled) { background: rgba(212,168,67,0.12); }
+.adm-role-btn--demote { color: #6b7280; border-color: rgba(107,114,128,0.4); }
+.adm-role-btn--demote:hover:not(:disabled) { color: #f87171; border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.08); }
+
 /* ─── Deposit price input ─── */
 .adm-price-input {
   width: 100px;

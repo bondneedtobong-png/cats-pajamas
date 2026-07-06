@@ -1194,20 +1194,49 @@ function GuestHistoryModal({ guest, onClose }) {
 }
 
 function TabGuests() {
-  const { toast } = useFeedback();
+  const { toast, confirm } = useFeedback();
   const [guests,     setGuests]     = useState([]);
   const [loaded,     setLoaded]     = useState(false);
   const [search,     setSearch]     = useState('');
   const [sort,       setSort]       = useState('level'); // level | name | date
   const [historyFor, setHistoryFor] = useState(null);
   const [savingId,   setSavingId]   = useState(null);
+  const [roleSavingId, setRoleSavingId] = useState(null);
+  // canManageRoles=true только у супер-админа (владельца из .env) — только он
+  // видит кнопки смены роли. Обычный admin (напр. бармен) роли не трогает.
+  const [canManageRoles, setCanManageRoles] = useState(false);
+  const myId = AuthService.getCurrentUser()?.id;
 
   function load() {
     GuestsService.list()
-      .then(g => { setGuests(g); setLoaded(true); })
+      .then(({ guests, canManageRoles }) => { setGuests(guests); setCanManageRoles(canManageRoles); setLoaded(true); })
       .catch(() => { setGuests([]); setLoaded(true); });
   }
   useEffect(load, []);
+
+  async function handleRoleChange(g, role) {
+    if (role === g.role) return;
+    const grant = role === 'admin';
+    const okc = await confirm({
+      title: grant ? 'Выдать доступ администратора?' : 'Убрать из администраторов?',
+      message: grant
+        ? `«${g.name || 'без имени'}» получит полный доступ к админке: меню, гости и их данные, события, рассылка подписчикам бота.`
+        : `«${g.name || 'без имени'}» станет обычным гостем и потеряет доступ к админке.`,
+      confirmLabel: grant ? 'Выдать доступ' : 'Убрать',
+      danger: !grant,
+    });
+    if (!okc) return;
+    setRoleSavingId(g.id);
+    try {
+      await GuestsService.setRole(g.id, role);
+      toast.success(grant ? 'Доступ администратора выдан' : 'Доступ администратора снят');
+      load();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setRoleSavingId(null);
+    }
+  }
 
   async function handleLevelChange(g, value) {
     const level = value === '' ? null : parseInt(value);
@@ -1270,7 +1299,7 @@ function TabGuests() {
         <div className="adm-table-wrap">
           <table className="adm-table">
             <thead>
-              <tr><th>Гость</th><th>Телефон</th><th>Telegram</th><th>Уровень</th><th>Брони</th><th>Регистрация</th><th>История</th></tr>
+              <tr><th>Гость</th><th>Телефон</th><th>Telegram</th><th>Уровень</th><th>Брони</th><th>Регистрация</th><th>Роль</th><th>История</th></tr>
             </thead>
             <tbody>
               {sorted.map(g => (
@@ -1304,6 +1333,21 @@ function TabGuests() {
                   </td>
                   <td>{g.bookings}</td>
                   <td className="adm-table__time">{fmtRegDate(g.createdAt)}</td>
+                  <td>
+                    {g.isOwner ? (
+                      <span className="adm-badge adm-badge--owner" title="Владелец (задан в .env) — роль здесь не меняется">владелец</span>
+                    ) : g.id === myId ? (
+                      <span className="adm-badge" title="Это вы">вы</span>
+                    ) : canManageRoles ? (
+                      g.role === 'admin' ? (
+                        <button className="adm-role-btn adm-role-btn--demote" disabled={roleSavingId === g.id} onClick={() => handleRoleChange(g, 'guest')}>Убрать из админов</button>
+                      ) : (
+                        <button className="adm-role-btn adm-role-btn--promote" disabled={roleSavingId === g.id} onClick={() => handleRoleChange(g, 'admin')}>Сделать админом</button>
+                      )
+                    ) : (
+                      <span className="adm-badge">{g.role === 'admin' ? 'админ' : 'гость'}</span>
+                    )}
+                  </td>
                   <td>
                     <div className="adm-actions">
                       <button className="adm-act-btn adm-act-btn--move" onClick={() => setHistoryFor(g)} title="История броней">🕐</button>

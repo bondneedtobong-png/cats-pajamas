@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import { CONFIRMED_STATUSES, LEVELS, levelForBookings, levelByNum } from './loyalty.js';
 import { getReservations } from './booking.js';
+import { isTelegramAdmin } from './auth.js';
 
 // Админский справочник гостей: список всех зарегистрированных с уровнем,
 // числом подтверждённых броней, telegram-юзернеймом и датой регистрации.
@@ -18,6 +19,9 @@ function rowToGuest(u, bookings) {
     telegramId: u.telegram_id || null,
     telegramUsername: u.telegram_username || null,
     role: u.role || 'guest',
+    // «Владелец» — telegram_id прописан в .env (TELEGRAM_ADMIN_IDS): супер-админ,
+    // его роль тут не меняется (при входе всё равно вернётся admin из env).
+    isOwner: isTelegramAdmin(u.telegram_id),
     createdAt: u.created_at,
     bookings,
     level: { num: level.num, label: level.label, emoji: level.emoji },
@@ -53,6 +57,25 @@ export async function setGuestLevel(userId, levelNum) {
   if (error) throw new Error(error.message);
   if (!data) throw new Error('Гость не найден');
   return { ok: true };
+}
+
+/**
+ * Смена роли пользователя (Фаза 1 «управление ролями»). Гейт супер-админа
+ * (только владельцы из .env) проверяется в HTTP-слое (api/guests.js). Здесь —
+ * инварианты: роль из белого списка, нельзя менять свою роль и роль владельца.
+ */
+export async function setUserRole(actingUserId, targetUserId, role) {
+  if (!['admin', 'guest'].includes(role)) throw new Error('Недопустимая роль');
+  if (actingUserId === targetUserId) throw new Error('Свою роль здесь менять нельзя');
+  const { data: target } = await supabase.from('users')
+    .select('id, telegram_id').eq('id', targetUserId).maybeSingle();
+  if (!target) throw new Error('Пользователь не найден');
+  if (isTelegramAdmin(target.telegram_id)) throw new Error('Владельца (из .env) здесь понизить нельзя');
+  const { data, error } = await supabase.from('users')
+    .update({ role }).eq('id', targetUserId).select().maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Пользователь не найден');
+  return { ok: true, role };
 }
 
 /** История броней гостя для карточки в админке, свежие сверху. */
