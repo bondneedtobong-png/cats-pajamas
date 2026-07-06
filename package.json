@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/prerender-menu.mjs",
+    "build": "vite build && node scripts/prerender-menu.mjs && node scripts/prerender-home.mjs",
     "preview": "vite preview",
     "start:api": "node server.js",
     "start:bot": "node bot-start.js"
