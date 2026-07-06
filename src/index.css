@@ -683,11 +683,11 @@ html { scroll-behavior: smooth; }
 }
 .hero__edition {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 11px;
-  letter-spacing: 6px;
+  font-size: 15px;
+  letter-spacing: 4px;
   text-transform: uppercase;
   color: var(--gold);
-  margin: 0 0 14px;
+  margin: 0 0 16px;
 }
 
 .hero__content {
@@ -699,20 +699,15 @@ html { scroll-behavior: smooth; }
      (.hero__rays top:43%). top (position:relative), а не transform — не конфликтует
      с интро-анимацией heroUp. На коротких экранах уменьшаем ниже, чтобы контент
      не наехал на .book-controls (см. @media max-height). */
-  top: 50px;
+  top: -16px;
   animation: heroUp 1.2s 1.5s both;
 }
-/* Экраны пониже — меньше сдвиг (иначе низ контента упирается в .book-controls) */
-@media (max-height: 820px) { .hero__content { top: 38px; } }
-@media (max-height: 760px) { .hero__content { top: 24px; } }
-@media (max-height: 710px) {
-  .hero__content { top: 12px; }
-}
+@media (max-height: 715px) { .hero__content { top: -24px; } }
 .hero__logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 22px;
+  margin-bottom: 14px;
   /* Свечение статично: анимация filter: drop-shadow пересчитывала блюр
      каждый кадр — главный GPU-жор hero-страницы. */
   filter: drop-shadow(0 0 16px rgba(212,168,67,.65)) drop-shadow(0 0 50px rgba(212,168,67,.30));
@@ -720,15 +715,15 @@ html { scroll-behavior: smooth; }
 .hero__logo-svg {
   width: auto;
   height: auto;
-  max-width: min(740px, 94vw);
-  max-height: 43vh;
+  max-width: min(780px, 94vw);
+  max-height: 45vh;
   display: block;
 }
 /* На низких экранах ужимаем лого, чтобы контенту хватило места над .book-controls
    (правило ниже базового — иначе перебивалось им из-за порядка каскада) */
-@media (max-height: 820px) { .hero__logo-svg { max-height: 40vh; } }
-@media (max-height: 760px) { .hero__logo-svg { max-height: 38vh; } }
-@media (max-height: 710px) { .hero__logo-svg { max-height: 35vh; } }
+@media (max-height: 850px) { .hero__logo-svg { max-height: 40vh; } }
+@media (max-height: 780px) { .hero__logo-svg { max-height: 36vh; } }
+@media (max-height: 715px) { .hero__logo-svg { max-height: 33vh; } }
 .hero__tagline {
   font-family: 'Baskerville', serif;
   font-size: 26px;
@@ -743,7 +738,7 @@ html { scroll-behavior: smooth; }
   font-size: 11px;
   letter-spacing: 5px;
   color: var(--text-dim);
-  margin: 0 0 34px;
+  margin: 0 0 24px;
   text-transform: uppercase;
 }
 .hero__btn {
@@ -764,7 +759,7 @@ html { scroll-behavior: smooth; }
    in normal flow right after the CTA (see Hero.jsx) so it can never drift
    into other fixed UI regardless of viewport height. */
 .hero__next {
-  margin: 28px auto 0;
+  margin: 18px auto 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2342,7 +2337,7 @@ html { scroll-behavior: smooth; }
   .hero__content { padding: 0 20px; }
   .hero__content { top: 0; } /* мобайл: держим по центру, без десктопного сдвига */
   .hero__logo-svg { max-width: min(420px, 90vw); max-height: 35vh; }
-  .hero__edition { font-size: 10px; letter-spacing: 4px; }
+  .hero__edition { font-size: 14px; letter-spacing: 3px; }
   .hero__tagline { font-size: 20px; }
   .hero__sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 22px; }
   .hero__btn { font-size: 10px; letter-spacing: 2px; padding: 14px 32px; }

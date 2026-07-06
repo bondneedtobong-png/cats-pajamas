@@ -52,7 +52,7 @@ export default function Hero({ tx, onNext, onBooking }) {
 
       <div className="hero__content">
         <p className="hero__edition">{tx.heroEdition}</p>
-        <div style={{ marginBottom: 20 }}><Ornament /></div>
+        <div style={{ marginBottom: 14 }}><Ornament width={150} /></div>
 
         <div className="hero__logo">
           <img
@@ -62,7 +62,7 @@ export default function Hero({ tx, onNext, onBooking }) {
           />
         </div>
 
-        <div style={{ marginBottom: 20 }}><Ornament /></div>
+        <div style={{ marginBottom: 14 }}><Ornament width={150} /></div>
 
         <p className="hero__tagline">{tx.heroTagline}</p>
         <p className="hero__sub">{tx.heroSub}</p>
