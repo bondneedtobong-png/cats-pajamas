@@ -501,46 +501,34 @@ html { scroll-behavior: smooth; }
 
 /* ── Telegram login / profile link ────────────────────── */
 
+/* Кнопка кабинета — заметная вторичная кнопка над фиолетовым CTA: золотой
+   контур + подложка-тинт, крупнее и ярче служебных кнопок (текст «Авторизоваться»
+   / «Мой профиль», иконки убраны по просьбе владельца). Свечение статичное. */
 .nav__tg, .nav__profile {
   display: flex;
   align-items: center;
-  gap: 7px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text-dim);
+  justify-content: center;
+  background: rgba(var(--gold-rgb), .10);
+  border: 1px solid rgba(var(--gold-rgb), .55);
+  border-radius: 10px;
+  color: var(--gold);
   font-family: 'Avenir Next', sans-serif;
-  font-size: 10px;
-  letter-spacing: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  padding: 9px 16px;
+  padding: 13px 16px;
   white-space: nowrap;
-  transition: color .25s, border-color .25s, box-shadow .25s, transform .2s;
+  box-shadow: 0 0 12px 1px rgba(var(--gold-rgb), .14); /* статично, см. коммент у .nav__cta */
+  transition: color .25s, border-color .25s, background-color .25s, box-shadow .25s, transform .2s;
 }
-.nav__tg-icon { width: 14px; height: 14px; flex-shrink: 0; transition: transform .25s; }
-
-.nav__tg { box-shadow: 0 0 8px 1px rgba(var(--gold-rgb), .12); } /* статично, см. коммент у .nav__cta */
-.nav__tg:hover {
-  color: #29b5e8;
-  border-color: #29b5e8;
-  box-shadow: 0 4px 20px rgba(41,181,232,.35), 0 0 0 1px rgba(41,181,232,.2);
+.nav__tg:hover, .nav__profile:hover {
+  background: rgba(var(--gold-rgb), .20);
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 4px 20px rgba(var(--gold-rgb), .30), 0 0 0 1px rgba(var(--gold-rgb), .25);
   transform: translateY(-1px);
-  animation: none;
 }
-.nav__tg:hover .nav__tg-icon { transform: scale(1.15); }
-
-.nav__profile:hover { border-color: var(--gold); color: var(--text); }
-
-
-
-/* Icon-only in the sidebar — it's a fixed 236px column regardless of
-   viewport width, "ВОЙТИ ЧЕРЕЗ TELEGRAM" doesn't fit next to the icon at
-   any screen size. Scoped to .nav__actions only, so the mobile drawer
-   (.nav__mobile-actions, a different container) keeps the full label —
-   it has the width to spare. */
-.nav__actions .nav__tg-label { display: none; }
-.nav__actions .nav__tg,
-.nav__actions .nav__profile { justify-content: center; }
 
 /* ── HERO ──────────────────────────────────────────────── */
 .hero {

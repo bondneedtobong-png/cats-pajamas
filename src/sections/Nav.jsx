@@ -10,10 +10,6 @@ function TelegramNavLink({ loggedIn, onClick, onRequestAuth, tx }) {
   if (loggedIn) {
     return (
       <a href="/profile" className="nav__profile nav__shimmer" onClick={onClick} aria-label={tx.navProfile}>
-        <svg className="nav__tg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <circle cx="12" cy="8" r="3.4" />
-          <path d="M4.5 20c1.4-3.8 4.4-5.8 7.5-5.8s6.1 2 7.5 5.8" strokeLinecap="round" />
-        </svg>
         <span className="nav__tg-label">{tx.navProfile}</span>
       </a>
     );
@@ -25,9 +21,6 @@ function TelegramNavLink({ loggedIn, onClick, onRequestAuth, tx }) {
       onClick={() => { onClick?.(); onRequestAuth(); }}
       aria-label={tx.navLoginTg}
     >
-      <svg className="nav__tg-icon" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l.002.001-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.228c.309-1.239-.473-1.8-1.282-1.434z" />
-      </svg>
       <span className="nav__tg-label">{tx.navLoginTg}</span>
     </button>
   );
