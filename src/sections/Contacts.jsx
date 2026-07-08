@@ -26,6 +26,16 @@ export default function Contacts({ tx }) {
   return (
     <section id="contacts" className="contacts">
       <div className="contacts__inner">
+        {/* Финальный CTA перед контактами — раньше жил отдельной страницей
+            книги (Booking.jsx, теперь неиспользуемый), в макете владельца
+            переехал сюда как вступление к последней главе. Тексты те же
+            (tx.bookingLabel/bookingTitle), новых ключей не потребовалось. */}
+        <div className="contacts__cta">
+          <span className="sec-label">{tx.bookingLabel}</span>
+          <h2 className="contacts__cta-title">{tx.bookingTitle}</h2>
+          <a href="/booking" className="hero__btn">{tx.heroCta}</a>
+        </div>
+
         <div ref={r0} className="reveal mb-10">
           <span className="sec-label">{tx.contactsLabel}</span>
         </div>

@@ -22,6 +22,9 @@ export default function About({ tx }) {
   const r2 = useReveal(200);
   const r3 = useReveal(300);
 
+  const paras = Array.isArray(tx.aboutText) ? tx.aboutText : [tx.aboutText];
+  const [firstLetter, ...restOfFirst] = paras[0] ?? '';
+
   return (
     <section id="about" className="about">
       <div className="about__dots" />
@@ -32,9 +35,15 @@ export default function About({ tx }) {
         <div ref={r1} className="reveal mb-50">
           <Ornament />
         </div>
-        <blockquote ref={r2} className="reveal about__quote">{tx.aboutQuote}</blockquote>
+        <div ref={r2} className="reveal about__quote-wrap">
+          <span className="about__quote-mark" aria-hidden="true">&rdquo;</span>
+          <blockquote className="about__quote">{tx.aboutQuote}</blockquote>
+        </div>
         <div ref={r3} className="reveal about__text">
-          {(Array.isArray(tx.aboutText) ? tx.aboutText : [tx.aboutText]).map((p, i) => (
+          <p className="about__para">
+            <span className="about__dropcap">{firstLetter}</span>{restOfFirst.join('')}
+          </p>
+          {paras.slice(1).map((p, i) => (
             <p key={i} className="about__para">{p}</p>
           ))}
         </div>

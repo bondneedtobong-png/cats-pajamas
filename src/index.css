@@ -59,21 +59,28 @@ html { scroll-behavior: smooth; }
 ::-webkit-scrollbar-thumb { background: rgba(155,93,229,.25); border-radius: 2px; }
 
 /* ── Theme tokens ──────────────────────────────────────── */
+/* Редизайн 2026-07-07 (ветка redesign-scroll-v1): палитра владельца из
+   макета — тёплый тёмный сливовый + золото, без фиолетового. --accent
+   намеренно перепривязан на золото (не искали 18 мест использования по
+   файлу — токен-дисциплина проекта окупается именно тут), кроме явных
+   исключений точечно в CSS (см. .contacts__block-label). */
 [data-theme="A"] {
-  --bg:         #0C0A18;
-  --bg2:        #110E22;
-  --bg3:        #070510;
-  --accent:     #9B5DE5;
-  --accent-rgb: 155, 93, 229;
-  --gold:       #D4A843;
-  --gold-rgb:   212, 168, 67;
-  --text:       #F2EDE4;
-  --text-dim:   rgba(242,237,228,0.5);
-  --text-mid:   rgba(242,237,228,0.72);
-  --border:     rgba(212,168,67,0.15);
-  --accent-dim: rgba(155,93,229,0.1);
-  --glow:       rgba(155,93,229,0.65);
-  --theme-name: "VIOLET NIGHT";
+  --bg:         #1C101A;
+  --bg2:        #250F21;
+  --bg3:        #140B12;
+  --bg-rgb:     28, 16, 26;
+  --accent:     #B08900;
+  --accent-rgb: 176, 137, 0;
+  --gold:       #B08900;
+  --gold-hover: #CBA53A;
+  --gold-rgb:   176, 137, 0;
+  --text:       #C6BFB5;
+  --text-dim:   rgba(198,191,181,0.5);
+  --text-mid:   rgba(198,191,181,0.72);
+  --border:     rgba(176,137,0,0.15);
+  --accent-dim: rgba(176,137,0,0.1);
+  --glow:       rgba(176,137,0,0.65);
+  --theme-name: "AMBER NIGHT";
   --nav-w:      300px; /* reserved sidebar column — shared by .book/.book-controls offsets */
   --nav-gap:    20px;  /* margin around the floating nav panel within that column */
 }
@@ -87,142 +94,12 @@ html { scroll-behavior: smooth; }
   transition: background .5s ease, color .3s ease;
 }
 
-/* ── The Book: page-flip navigation ───────────────────────
-   Every section is a fixed full-screen "page" stacked in the same spot.
-   The active page sits flat; the rest are rotated away edge-on around a
-   vertical hinge (left edge for pages already turned, right edge for pages
-   still ahead) — the classic book/menu page-turn, not a fade or a slide. */
-.book {
-  position: fixed;
-  inset: 0;
-  left: var(--nav-w); /* room for the sidebar; reset to 0 under the burger breakpoint */
-  overflow: hidden;
-  perspective: 2600px;
-  background: var(--bg);
-}
-@media (max-width: 900px) {
-  .book { left: 0; }
-}
-.book__page {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden; /* every page must fit the screen on its own — no scroll */
-  backface-visibility: hidden;
-  /* Clearance so content never renders behind the fixed page-count pill
-     (.book-controls) that sits on top of every page. */
-  padding-bottom: 90px;
-  box-sizing: border-box;
-  transition: transform 1.05s cubic-bezier(.65,0,.35,1), opacity .6s ease;
-  /* No permanent will-change here — with 8 pages always mounted, hinting
-     the browser to keep all 8 as standing GPU compositor layers forever
-     (instead of only the 1-2 actually mid-transition at any moment) was
-     a likely cause of the flicker/stutter reported on both phone and
-     desktop. Transitions still work fine without it; the browser just
-     promotes the layer lazily when a transform/opacity change starts. */
-}
-@media (max-width: 900px) {
-  .book__page {
-    /* Телефонный вьюпорт ~660px и «дышит» (адресная строка появляется и
-       прячется), поэтому десктопное «каждая страница без скролла» здесь
-       невыполнимо: overflow:hidden молча резал контент сверху и снизу
-       (подтверждено вживую). На мобиле страница скроллится внутри себя;
-       перелистывание книги от этого не страдает — transform страницы
-       с внутренним скроллом не конфликтует. */
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain; /* скролл внутри страницы не дёргает pull-to-refresh */
-    /* Просвет под фикс-шапку (top-bar ~56px + чёлка) и под .book-controls +
-       home-индикатор снизу. env() работает только при viewport-fit=cover
-       в meta (index.html). */
-    padding-top: calc(64px + env(safe-area-inset-top, 0px));
-    padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px));
-  }
-}
-.book__page--active {
-  transform: none;
-  opacity: 1;
-  pointer-events: auto;
-  transition: transform 1.05s cubic-bezier(.65,0,.35,1), opacity .8s ease .2s;
-}
-.book__page--before {
-  transform: rotateY(-114deg) translateZ(-60px);
-  transform-origin: left center;
-  opacity: 0;
-  pointer-events: none;
-}
-.book__page--after {
-  transform: rotateY(114deg) translateZ(-60px);
-  transform-origin: right center;
-  opacity: 0;
-  pointer-events: none;
-}
-/* Hero keeps its own looping animations (Ken Burns slideshow, logo glow,
-   the "next" float) running 24/7 even while completely hidden, because
-   every page stays mounted for state. That's constant, invisible GPU work
-   stacking on top of the other 7 pages — pause it whenever hero isn't the
-   one on screen. */
-.book__page:not(.book__page--active) .hero__bg-slide,
-.book__page:not(.book__page--active) .hero__rays,
-.book__page:not(.book__page--active) .hero__next,
-.book__page:not(.book__page--active) .menu-carousel__photo,
-.book__page:not(.book__page--active) .menu-carousel__placeholder-icon {
+/* ── Offscreen animation pause (замена старого .book__page:not(--active)
+   селектора после редизайна 2026-07-07, ветка redesign-scroll-v1 — книги
+   больше нет, см. useOffscreenPause в useReveal.js). */
+.hero.is-offscreen .hero__bg-slide,
+.hero.is-offscreen .hero__rays {
   animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .book__page { transition: opacity .4s ease; }
-  .book__page--before, .book__page--after { transform: none; }
-}
-
-/* ── Book flip controls (prev/next + page count) ──────────── */
-.book-controls {
-  position: fixed;
-  left: 50%; /* re-centered on the content area (right of the sidebar) below */
-  bottom: 22px;
-  transform: translateX(-50%);
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 8px 10px;
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
-  backdrop-filter: blur(5px);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-}
-@media (min-width: 901px) {
-  .book-controls { left: calc(var(--nav-w) / 2 + 50vw); }
-}
-.book-controls__arrow {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  font-size: 18px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color .2s, color .2s, opacity .2s;
-}
-.book-controls__arrow:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
-.book-controls__arrow:disabled { opacity: .25; cursor: default; }
-.book-controls__count {
-  font-family: 'Baskerville', serif;
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-  min-width: 58px;
-  text-align: center;
-}
-@media (max-width: 900px) {
-  /* + safe-area: на iPhone home-индикатор перекрывал пилюлю с 01/08 */
-  .book-controls { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); gap: 12px; }
-  .book-controls__arrow { width: 30px; height: 30px; font-size: 16px; }
 }
 
 /* ── Animations ────────────────────────────────────────── */
@@ -261,37 +138,6 @@ html { scroll-behavior: smooth; }
 }
 .ornament__line { height: 1px; background: currentColor; }
 
-/* ── Page backdrop (photo + violet brand tint) ─────────────
-   One global layer behind nav + book, swapped per active page — not
-   per-section — so it also bleeds through the gap around the floating
-   sidebar instead of being clipped to just the content column.
-   Recommended source images: landscape, ≥1920×1280px (min ~1600px on the
-   short side), JPG ~70-80% quality. object-fit:cover crops to whatever
-   viewport shows up, so keep the subject roughly centered with breathing
-   room on all sides — no important detail near the edges. */
-.page-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-.page-bg__photo {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  opacity: .3;
-}
-.page-bg__tint {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 65% 55% at 50% 42%, var(--bg) 25%, transparent 78%),
-    linear-gradient(160deg, rgba(var(--accent-rgb), .32) 0%, transparent 55%),
-    linear-gradient(0deg, var(--bg) 0%, transparent 16%, transparent 84%, var(--bg) 100%);
-}
-
 /* ── Section label (eyebrow) ───────────────────────────── */
 .sec-label {
   font-family: 'Avenir Next', sans-serif;
@@ -308,75 +154,48 @@ html { scroll-behavior: smooth; }
    around it, and clipped into a ribbon tail at the bottom instead of a
    plain rectangle — per client's sketch: "должна выглядеть как закладка
    в книжке, а не тупо прямоугольное меню". */
+/* Редизайн 2026-07-07 (ветка redesign-scroll-v1): fixed-шапка сверху вместо
+   левого сайдбара — по макету владельца. Почти непрозрачный фон (96%) на
+   всякий случай сохранён из старой книги (лечение ряби при перелистывании),
+   хотя перелистывания больше нет — лёгкий blur всё равно дешевле держать
+   небольшим. */
 .nav {
   position: fixed;
-  top: var(--nav-gap);
-  left: var(--nav-gap);
-  bottom: var(--nav-gap);
-  width: calc(var(--nav-w) - var(--nav-gap) * 2);
+  top: 0; left: 0; right: 0;
+  height: 76px;
   z-index: 50;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-  padding: 26px 20px 58px;
-  /* Nearly opaque (96%) on purpose — backdrop-filter has to re-sample
-     whatever's behind it on every frame the page-flip is transforming,
-     which was very likely contributing to the reported flicker/stutter on
-     both phone and desktop. At 96% solid, a heavy blur adds almost nothing
-     visible, so it's cut way down instead of removed outright. */
-  background: color-mix(in srgb, var(--bg2) 96%, transparent);
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 clamp(20px, 4vw, 40px);
+  background: color-mix(in srgb, var(--bg) 96%, transparent);
   backdrop-filter: blur(4px);
-  box-shadow: 0 30px 70px -20px rgba(0,0,0,.65), 0 10px 26px rgba(0,0,0,.4);
-  /* Fixed-px notch depth (not %) — a percentage clip and a fixed-px bottom
-     padding drift apart at different nav heights, which let the CTA button
-     slide down into the clipped-away tail on tall screens. 36px matches
-     the 58px padding-bottom above with margin to spare. */
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 36px), 50% 100%, 0 calc(100% - 36px));
-  overflow-y: auto;
-}
-/* On very short viewports the nav's own content can outgrow the panel and
-   needs its internal scroll — but the clip-path always cuts the same
-   strip off the bottom of the panel's viewport regardless of scroll
-   position, so anything scrolled to the bottom (like the CTA) would stay
-   stuck behind the clip. Drop the decorative notch there; a working
-   scrollable menu beats a ribbon shape. */
-@media (max-height: 640px) {
-  .nav { clip-path: none; padding-bottom: 22px; }
+  border-bottom: 1px solid var(--border);
 }
 .nav__logo {
   display: flex;
   align-items: center;
   color: inherit;
-  margin-bottom: 14px;
+  flex-shrink: 0;
 }
-/* ── Cat logo (navbar) ─────────────────────────────────── */
-.nav__cat {
+/* ── Wordmark logo (navbar) ────────────────────────────────
+   Натуральные пропорции файла (uploads/logo-wordmark.svg):
+   560.4 × 131.3 (viewBox) → соотношение сторон ≈ 4.27:1.
+   Высота — единственное, что задаём; ширина считается сама
+   (width:auto). Чтобы поменять размер — трогать только height
+   здесь и в мобильном брейкпоинте ниже. */
+.nav__logo-img {
   display: block;
-  color: var(--gold);
-  filter: drop-shadow(0 0 5px rgba(var(--gold-rgb), .35));
-  transition: transform .35s cubic-bezier(.34,1.56,.64,1), color .25s ease;
-}
-.nav__cat-ear {
-  transform-box: fill-box;
-  transform-origin: bottom center;
-  transition: transform .35s cubic-bezier(.34,1.56,.64,1);
-}
-.nav__cat-whiskers { opacity: .75; transition: opacity .25s ease; }
-
-/* Hover: ears perk up, cat tips, whiskers brighten */
-.nav__logo:hover .nav__cat { color: var(--text); transform: translateY(-1px) rotate(-3deg); }
-.nav__logo:hover .nav__cat-ear--l { transform: rotate(-16deg) translateY(-1px); }
-.nav__logo:hover .nav__cat-ear--r { transform: rotate(16deg) translateY(-1px); }
-.nav__logo:hover .nav__cat-whiskers { opacity: 1; }
-@media (prefers-reduced-motion: reduce) {
-  .nav__cat, .nav__cat-ear { transition: none; }
+  height: 50px;
+  width: auto;
 }
 .nav__links {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: stretch;
+  align-items: center;
+  gap: clamp(12px, 1.6vw, 26px);
+  flex: 1;
+  justify-content: center;
 }
 
 /* Shared "shift + shimmer" hover treatment for every clickable nav item —
@@ -407,117 +226,102 @@ html { scroll-behavior: smooth; }
   .nav__shimmer:hover { transform: none; }
 }
 
-/* Each link is its own "photo button" — big, with a placeholder backdrop
-   photo (see pageImages in data.js) dimmed by a left-to-right gradient so
-   the label stays legible. "Кнопки должны быть больше... у каждой кнопки
-   будет фотка на фоне." */
+/* Простые текстовые ссылки по макету (без фото-фона и без active-состояния
+   — владелец не подсвечивает текущий раздел в новой навигации). Hover —
+   общий .nav__shimmer (transform/opacity, геометрию не меняет). */
 .nav__link {
-  --link-img: none;
-  display: flex;
-  align-items: center;
-  border-radius: 10px;
+  display: block;
   font-family: 'Baskerville', serif;
-  font-size: clamp(14px, 1.8vh, 17px);
-  letter-spacing: 1.5px;
+  font-size: 13px;
+  letter-spacing: 1.2px;
   color: var(--text);
   text-transform: uppercase;
-  padding: clamp(12px, 2.4vh, 20px) 16px;
-  background-image:
-    linear-gradient(90deg, rgba(9,7,18,.88) 30%, rgba(9,7,18,.4) 100%),
-    var(--link-img);
-  background-size: cover;
-  background-position: center;
-  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
-}
-.nav__link--active {
-  color: var(--gold);
-  box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb), .5);
+  white-space: nowrap;
+  padding: 6px 2px;
 }
 
 /* Вход в админку — рендерится только админам (Nav.jsx проверяет роль).
-   Служебная ссылка под фото-кнопками секций: компактная, пунктирная золотая
-   рамка отличает её от контента «книги». Hover — общий .nav__shimmer
-   (transform/opacity, геометрию не меняет). */
+   Компактная пунктирная золотая рамка отличает её от обычных ссылок.
+   Hover — общий .nav__shimmer (transform/opacity, геометрию не меняет). */
 .nav__admin {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  flex-shrink: 0;
   border: 1px dashed rgba(var(--gold-rgb), .45);
   border-radius: 8px;
   color: var(--gold);
   font-family: 'Avenir Next', sans-serif;
   font-size: 10px;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  padding: 9px 14px;
+  padding: 8px 12px;
+  white-space: nowrap;
 }
 .nav__admin:hover { border-color: var(--gold); }
 
 .nav__actions {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: stretch;
-  margin-top: auto;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .nav__lang {
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 5px;
   color: var(--text-dim);
   font-family: 'Avenir Next', sans-serif;
-  font-size: 10px;
-  letter-spacing: 2px;
-  padding: 9px 14px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  padding: 9px 10px;
+  white-space: nowrap;
 }
 .nav__lang:hover { border-color: var(--gold); color: var(--text); }
 
-/* CTA — "крупная, чуть светящаяся": biggest, brightest item in the sidebar.
-   Свечение СТАТИЧНОЕ: box-shadow-пульс перерисовывал слой 60 кадров/с и
-   вместе с остальными вечными пульсами держал GPU нагруженным даже в покое
-   (диспетчер задач владельца, 2026-07-04). Не возвращать infinite-анимации
-   на постоянно видимые элементы. */
+/* CTA — самый яркий элемент шапки, золотая заливка/тёмный текст (как все
+   CTA в макете). Свечение СТАТИЧНОЕ: box-shadow-пульс перерисовывал слой
+   60 кадров/с и вместе с остальными вечными пульсами держал GPU нагруженным
+   даже в покое (диспетчер задач владельца, 2026-07-04). Не возвращать
+   infinite-анимации на постоянно видимые элементы. */
 .nav__cta {
-  background: var(--accent);
-  border: none; /* теперь <button> (перелистывает книгу), не <a> */
-  color: #fff;
+  display: inline-block;
+  background: var(--gold);
+  border: none;
+  color: var(--bg);
   font-family: 'Avenir Next', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   text-align: center;
-  border-radius: 10px;
-  padding: clamp(14px, 2.6vh, 22px) 18px;
-  display: block;
-  box-shadow: 0 0 18px 2px rgba(var(--accent-rgb), .30), 0 4px 16px rgba(0,0,0,.3);
+  border-radius: 5px;
+  padding: 11px 16px;
+  white-space: nowrap;
+  box-shadow: 0 0 18px 2px rgba(var(--gold-rgb), .30), 0 4px 16px rgba(0,0,0,.3);
   transition: transform .2s, background .2s;
 }
-.nav__cta:hover { background: color-mix(in srgb, var(--accent) 85%, white); transform: translateY(-2px); }
+.nav__cta:hover { background: var(--gold-hover); transform: translateY(-2px); }
 
 /* ── Telegram login / profile link ────────────────────── */
 
-/* Кнопка кабинета — заметная вторичная кнопка над фиолетовым CTA: золотой
-   контур + подложка-тинт, крупнее и ярче служебных кнопок (текст «Авторизоваться»
-   / «Мой профиль», иконки убраны по просьбе владельца). Свечение статичное. */
+/* Кнопка кабинета — заметная вторичная кнопка рядом с золотым CTA: золотой
+   контур + подложка-тинт (текст «Авторизоваться» / «Мой профиль», иконки
+   убраны по просьбе владельца). Свечение статичное. */
 .nav__tg, .nav__profile {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(var(--gold-rgb), .10);
-  border: 1px solid rgba(var(--gold-rgb), .55);
-  border-radius: 10px;
+  background: rgba(var(--gold-rgb), .08);
+  border: 1px solid rgba(var(--gold-rgb), .5);
+  border-radius: 5px;
   color: var(--gold);
   font-family: 'Avenir Next', sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 1.5px;
+  letter-spacing: .5px;
   text-transform: uppercase;
-  padding: 13px 16px;
+  padding: 9px 13px;
   white-space: nowrap;
   box-shadow: 0 0 12px 1px rgba(var(--gold-rgb), .14); /* статично, см. коммент у .nav__cta */
   transition: color .25s, border-color .25s, background-color .25s, box-shadow .25s, transform .2s;
@@ -533,10 +337,12 @@ html { scroll-behavior: smooth; }
 /* ── HERO ──────────────────────────────────────────────── */
 .hero {
   position: relative;
-  /* height:100% (not 100vh) — .book__page already reserves its own
-     padding-bottom for .book-controls; a viewport-absolute min-height here
-     would ignore that reservation and overflow the page by that amount. */
-  height: 100%;
+  /* Редизайн 2026-07-07: секция больше не внутри .book__page (у него была
+     явная высота), а обычный <section> в потоке документа — по правилу
+     CLAUDE.md используем min-height:100dvh (не height:100vh), чтобы контент
+     не резался на низких/densely-packed вьюпортах. */
+  min-height: 100vh;
+  min-height: 100dvh;
   /* Симметричные отступы + align-items:center — честное центрирование блока
      по вертикали внутри hero (а не «прижать к низу» — с крупным лого и
      контентом свободного места и так мало, flex-end визуально ничего не
@@ -615,44 +421,6 @@ html { scroll-behavior: smooth; }
   .hero__rays { animation: none; }
 }
 
-/* Театральные бархатные шторки по краям. Статичные, без анимаций и blur:
-   складки — repeating-linear-gradient из оттенков --accent (без голого hex),
-   плюс мягкая внутренняя подсветка тенью. */
-.hero__drape {
-  position: absolute;
-  /* bottom:-90px дотягивает шторки до самого низа экрана — .hero короче
-     .book__page на 90px (резерв под .book-controls), а book__page overflow:hidden
-     обрезает ровно по вьюпорту. На мобиле переопределяем на 0 (страница скроллит). */
-  top: 0; bottom: -90px;
-  width: 11%;
-  max-width: 200px;
-  z-index: 3;
-  pointer-events: none;
-}
-.hero__drape--left {
-  left: 0;
-  background:
-    linear-gradient(to right, transparent 78%, rgba(155, 93, 229, 0.18) 100%),
-    repeating-linear-gradient(to right,
-      color-mix(in srgb, var(--accent) 12%, var(--bg)) 0,
-      color-mix(in srgb, var(--accent) 30%, var(--bg)) 12px,
-      color-mix(in srgb, var(--accent) 17%, var(--bg)) 24px,
-      color-mix(in srgb, var(--accent) 34%, var(--bg)) 36px,
-      color-mix(in srgb, var(--accent) 12%, var(--bg)) 48px);
-  box-shadow: inset -2px 0 26px rgba(155, 93, 229, 0.25);
-}
-.hero__drape--right {
-  right: 0;
-  background:
-    linear-gradient(to left, transparent 78%, rgba(155, 93, 229, 0.18) 100%),
-    repeating-linear-gradient(to left,
-      color-mix(in srgb, var(--accent) 12%, var(--bg)) 0,
-      color-mix(in srgb, var(--accent) 30%, var(--bg)) 12px,
-      color-mix(in srgb, var(--accent) 17%, var(--bg)) 24px,
-      color-mix(in srgb, var(--accent) 34%, var(--bg)) 36px,
-      color-mix(in srgb, var(--accent) 12%, var(--bg)) 48px);
-  box-shadow: inset 2px 0 26px rgba(155, 93, 229, 0.25);
-}
 .hero__curtain-wrap {
   position: absolute; inset: 0;
   z-index: 20;
@@ -680,12 +448,91 @@ html { scroll-behavior: smooth; }
   margin: 0 0 16px;
 }
 
-.hero__content {
+/* Оглавление на первом экране (правка владельца 2026-07-08): карточки-
+   переходы на остальные главы книги, боковыми колонками вокруг hero__content.
+   .hero__cols — общая строка (сайд | контент | сайд), .hero__content стал
+   flex:1 вместо центрирования через .hero напрямую. */
+.hero__cols {
   position: relative;
   z-index: 5;
+  width: 100%;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 0 6%;
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 44px);
+}
+.hero__content {
+  flex: 1;
+  min-width: 0;
   text-align: center;
   padding: 0 32px;
   animation: heroUp 1.2s 1.5s both;
+}
+
+/* Боковые карточки — только на широком десктопе (>1200px, как в макете):
+   на обычном ноутбуке колонкам уже тесно рядом с крупным лого. Высота задана
+   явно (100dvh за вычетом отступов сверху/снизу) — без этого flex:1 у карточек
+   нечего было бы делить (родитель .hero__cols сам по высоте авто). Слева 3
+   карточки поровну (мельче), справа 2 поровну (крупнее) — обе колонки одной
+   суммарной высоты. */
+.hero__side {
+  position: relative;
+  display: none;
+  flex: 0 0 220px;
+  height: calc(100dvh - 128px);
+  padding: 96px 0 32px; /* верх — очистить фикс-шапку (76px) + запас */
+  flex-direction: column;
+  gap: 14px;
+}
+.hero__side::before {
+  content: '';
+  position: absolute;
+  top: 96px; bottom: 32px; left: 50%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(var(--gold-rgb),.35) 12%, rgba(var(--gold-rgb),.35) 88%, transparent);
+  transform: translateX(-50%);
+  z-index: 0;
+}
+.hero__card {
+  position: relative;
+  z-index: 1;
+  display: block;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  box-shadow: 0 24px 44px -14px rgba(7,5,16,.7);
+}
+.hero__card-img {
+  position: absolute; inset: -4%;
+  background-size: cover;
+  background-position: center;
+  transition: transform .5s cubic-bezier(.16,1,.3,1);
+}
+.hero__card:hover .hero__card-img { transform: scale(1.08); }
+@media (prefers-reduced-motion: reduce) {
+  .hero__card-img { transition: none; }
+}
+.hero__card-scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(0deg, rgba(var(--bg-rgb),.92) 26%, rgba(var(--bg-rgb),.05) 64%);
+}
+.hero__card-body { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px; }
+.hero__card-rule { display: block; height: 2px; width: 22px; background: var(--gold); margin-bottom: 10px; }
+.hero__card-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hero__card-label {
+  font-family: 'Baskerville', serif;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.hero__card-row svg { color: var(--gold); flex-shrink: 0; }
+
+@media (min-width: 1201px) {
+  .hero__side { display: flex; }
 }
 .hero__logo {
   display: flex;
@@ -701,12 +548,13 @@ html { scroll-behavior: smooth; }
   height: auto;
   /* Лого альбомное (~1.54:1) — обычно упирается в ширину, она и главный рычаг
      «крупнее». Высота-кэп страхует, чтобы на низких экранах лого не съедало
-     место над контентом и .book-controls. */
-  max-width: min(880px, 92vw);
-  /* Кэп высоты = «сколько осталось под лого» после текста hero и нижних контролов:
-     44vh не даёт лого разрастись на высоких экранах, а calc() плавно ужимает его на
-     низких — без ступенчатых @media и без наездов на .book-controls (см. историю
-     этого блока: раньше был набор max-height по брейкпоинтам высоты). */
+     место над контентом и .book-controls. Третий член (100%) — чтобы лого не
+     вылезало за свою колонку .hero__content, когда рядом карточки-оглавление. */
+  max-width: min(880px, 92vw, 100%);
+  /* Кэп высоты = «сколько осталось под лого» после текста hero: 44vh не даёт
+     лого разрастись на высоких экранах, а calc() плавно ужимает его на низких
+     — без ступенчатых @media (см. историю этого блока: раньше был набор
+     max-height по брейкпоинтам высоты). */
   max-height: min(44vh, calc(100vh - 540px));
   display: block;
 }
@@ -729,61 +577,32 @@ html { scroll-behavior: smooth; }
   margin: 0 0 24px;
   text-transform: uppercase;
 }
+/* <a href="/booking"> — обычная ссылка, не встроенная бронь. Сплошная
+   золотая заливка, как у CTA в шапке и в макете (Hero + финальный CTA
+   перед «Как найти» переиспользуют этот класс). */
 .hero__btn {
   display: inline-block;
-  background: transparent; /* теперь <button> (перелистывает книгу), не <a> */
-  border: 1px solid var(--gold);
-  color: var(--gold);
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 11px;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  padding: 18px 52px;
-  transition: background .25s, color .25s;
-}
-.hero__btn:hover { background: var(--gold); color: var(--bg); }
-/* "Open the menu" — replaces the old scroll cue now that the page turns
-   instead of scrolling; nudges the guest toward the flip interaction. Sits
-   in normal flow right after the CTA (see Hero.jsx) so it can never drift
-   into other fixed UI regardless of viewport height. */
-.hero__next {
-  margin: 18px auto 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: transparent;
+  background: var(--gold);
   border: none;
-  color: var(--text-dim);
+  border-radius: 4px;
+  color: var(--bg);
   font-family: 'Avenir Next', sans-serif;
-  font-size: 10px;
-  letter-spacing: 3px;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  animation: heroUp 1s 3.2s both, heroNextFloat 2.2s 4s ease-in-out infinite;
-  transition: color .2s;
+  padding: 17px 40px;
+  transition: background .25s;
 }
-.hero__next:hover { color: var(--gold); }
-@keyframes heroNextFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(6px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero__next { animation: heroUp 1s 3.2s both; }
-}
+.hero__btn:hover { background: var(--gold-hover); }
 
 /* ── ABOUT ─────────────────────────────────────────────── */
-/* Every value below is fluid (vh-based clamp) because the whole page has
-   to fit inside 100vh with zero scroll — see .book__page's overflow:hidden. */
+/* Редизайн 2026-07-08: секция больше не «страница книги» с фиксированной
+   высотой — обычный <section> в потоке скролла, растёт по контенту. */
 .about {
-  padding: clamp(48px, 8vh, 96px) 6% clamp(28px, 5vh, 60px);
+  padding: clamp(70px, 12vh, 130px) 6%;
   position: relative;
-  /* Легенда длиннее экрана и намеренно листается внутри страницы. На десктопе
-     .book__page = overflow:hidden, поэтому скроллим саму .about; на мобиле ниже
-     отдаём скролл книжной странице (без вложенных скроллов). */
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  height: 100%;
-  display: flex;
+  overflow: hidden;
 }
 .about__dots {
   position: absolute; inset: 0;
@@ -792,45 +611,55 @@ html { scroll-behavior: smooth; }
   pointer-events: none;
   opacity: .55;
 }
-/* margin:auto (а не align-items:center на .about) — scroll-safe вертикальное
-   центрирование: длинный контент листается, верх не срезается */
-.about__inner { max-width: 820px; margin: auto; position: relative; z-index: 1; width: 100%; }
-.about__quote {
+.about__inner { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; text-align: center; }
+.about__quote-wrap { position: relative; }
+.about__quote-mark {
+  position: absolute;
+  top: -30px; left: 50%;
+  transform: translateX(-50%);
   font-family: 'Baskerville', serif;
-  font-size: clamp(20px, 3.6vh, 44px);
-  font-style: italic;
-  font-weight: 300;
+  font-size: 130px;
+  color: rgba(var(--gold-rgb), .14);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+.about__quote {
+  position: relative;
+  /* font-family: Jar Binks — задаётся один раз в блоке «Brand typography roles» ниже */
+  font-size: clamp(30px, 4.4vw, 44px);
   color: var(--text);
-  text-align: center;
-  margin: 0 0 clamp(14px, 2.6vh, 38px);
-  line-height: 1.25;
+  margin: 0 0 clamp(24px, 4vh, 44px);
+  line-height: 1.3;
 }
 .about__text {
   font-family: 'Avenir Next', sans-serif;
-  font-size: clamp(15px, 2.15vh, 20px);
-  line-height: 1.62;
+  font-size: 16.5px;
+  line-height: 1.75;
   color: var(--text-mid);
-  text-align: center;
+  text-align: left;
   max-width: 680px;
   margin: 0 auto;
   font-weight: 300;
 }
-.about__para { margin: 0 0 0.95em; }
+.about__para { margin: 0 0 1.1em; }
 .about__para:last-child { margin-bottom: 0; }
-/* Мобайл: скроллит сама .book__page, поэтому .about тянется по контенту без
-   собственного overflow — иначе вложенный скролл и обрезка длинной легенды. */
-@media (max-width: 900px) {
-  .about { height: auto; min-height: 100%; overflow: visible; }
+.about__dropcap {
+  float: left;
+  font-family: 'Baskerville', serif;
+  font-weight: 700;
+  font-size: 60px;
+  line-height: .78;
+  padding: 3px 9px 0 0;
+  color: var(--gold);
 }
+
 
 /* ── MENU ──────────────────────────────────────────────── */
 .menu {
-  padding: clamp(64px, 11vh, 110px) 6% clamp(28px, 5vh, 60px);
+  padding: clamp(70px, 12vh, 130px) 6%;
   position: relative;
   overflow: hidden;
-  height: 100%;
-  display: flex;
-  align-items: center;
 }
 .menu__inner { max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
 .menu__title {
@@ -855,14 +684,12 @@ html { scroll-behavior: smooth; }
 /* ── Бар-меню на странице «Напитки» (.mbk): кнопки категорий слева,
    «разворот» из карточек в центре, история раздела справа (макет владельца,
    2026-07-05). Карточки — те же .bmn-* из barmenu.css; локальные --bmn-*
-   переводят их на токены темы книги. Desktop: страница не скроллится —
-   переполнение уходит во внутренние скроллы колонок. ── */
+   переводят их на токены темы книги. Редизайн 2026-07-08: страница больше не
+   зажата в 100vh — секция растёт по контенту вместе со страницей; только
+   список категорий (их 26) держит свою высоту и скроллится внутри себя,
+   чтобы не растягивать колонку «разворота»/«истории» на пустое место. ── */
 .menu__inner--book {
   max-width: 1460px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 }
 .mbk {
   --bmn-card: var(--bg2);
@@ -870,14 +697,12 @@ html { scroll-behavior: smooth; }
   --bmn-cream: var(--text);
   --bmn-dim: var(--text-dim);
   --bmn-faint: rgba(242, 237, 228, 0.38);
-  flex: 1;
-  min-height: 0;
   display: grid;
   grid-template-columns: 215px minmax(0, 1fr) 240px;
+  align-items: start;
   gap: clamp(12px, 1.6vw, 26px);
   text-align: left;
 }
-.mbk > * { min-height: 0; }
 
 /* Кнопки категорий: сверху вниз, каскадное появление (однократное, только
    transform/opacity), hover — общий .nav__shimmer (сдвиг + перелив) */
@@ -885,6 +710,7 @@ html { scroll-behavior: smooth; }
   display: flex;
   flex-direction: column;
   gap: 5px;
+  max-height: 78vh;
   overflow-y: auto;
   padding: 2px 6px 8px 2px;
   scrollbar-width: thin;
@@ -937,10 +763,6 @@ html { scroll-behavior: smooth; }
   grid-template-columns: 1fr 1fr;
   gap: 14px;
   align-content: start;
-  overflow-y: auto;
-  padding: 2px 6px 8px 2px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(var(--gold-rgb), .25) transparent;
 }
 .mbk__spread--single {
   grid-template-columns: minmax(0, 560px);
@@ -957,6 +779,7 @@ html { scroll-behavior: smooth; }
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 78vh;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(var(--gold-rgb), .25) transparent;
@@ -998,16 +821,20 @@ html { scroll-behavior: smooth; }
 .mbk__story-link:hover { opacity: 1; }
 
 /* Мобильный адаптив: кнопки становятся горизонтальной лентой чипов,
-   листы и история идут стеком; скроллится сама страница (правило ≤900px) */
+   листы и история идут стеком (правило ≤900px) */
 @media (max-width: 900px) {
-  /* На мобиле страница книги скроллится внутри себя — секция обязана расти
-     по контенту, иначе height:100% + overflow:hidden молча режут меню
-     (правило из CLAUDE.md, уже наступали) */
-  .menu { height: auto; min-height: 100%; overflow: visible; }
-  .menu__inner--book { height: auto; }
-  .mbk { display: flex; flex-direction: column; gap: 14px; }
+  /* align-items:stretch сбрасывает align-items:start у десктопной grid-версии
+     (см. базовый .mbk) — без этого дочерние колонки не жмутся по ширине
+     экрана и превращаются в нескролящуюся простыню (см. .mbk__nav ниже). */
+  .mbk { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
   .mbk__nav {
     flex-direction: row;
+    /* min-width:0 обязателен: без него flex-колонка не сжимает строку чипов
+       до ширины экрана — она растёт по контенту (26 категорий) и overflow-x:auto
+       перестаёт работать как скролл, категории после первого экрана становятся
+       недостижимы (реальный баг, не только про 100vh — уже наступали) */
+    min-width: 0;
+    max-height: none;
     overflow-x: auto;
     overflow-y: visible;
     gap: 8px;
@@ -1021,8 +848,8 @@ html { scroll-behavior: smooth; }
     border-radius: 999px;
     border-color: rgba(var(--gold-rgb), .3);
   }
-  .mbk__spread { display: flex; flex-direction: column; overflow: visible; padding: 0; }
-  .mbk__story { overflow: visible; }
+  .mbk__spread { display: flex; flex-direction: column; padding: 0; }
+  .mbk__story { max-height: none; overflow: visible; }
 }
 
 /* ── MENU CAROUSEL (one cocktail in view, arrows + dots) ─── */
@@ -1189,12 +1016,9 @@ html { scroll-behavior: smooth; }
 
 /* ── EVENTS ────────────────────────────────────────────── */
 .events {
-  padding: clamp(64px, 11vh, 110px) 6% clamp(28px, 5vh, 60px);
+  padding: clamp(70px, 12vh, 130px) 6%;
   position: relative;
   overflow: hidden;
-  height: 100%;
-  display: flex;
-  align-items: center;
 }
 .events__dots {
   position: absolute; inset: 0;
@@ -1495,12 +1319,9 @@ html { scroll-behavior: smooth; }
 
 /* ── TEAM ──────────────────────────────────────────────── */
 .team {
-  padding: clamp(32px, 8vh, 90px) 6% clamp(16px, 4vh, 48px);
+  padding: clamp(70px, 12vh, 130px) 6%;
   position: relative;
   overflow: hidden;
-  height: 100%;
-  display: flex;
-  align-items: center;
 }
 .team__inner { max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
 .team__sub {
@@ -1532,29 +1353,25 @@ html { scroll-behavior: smooth; }
 
 /* ── Бармены v2 (.tm2): портрет слева, имя+био+цитата в центре, справа
    кнопки-сотрудники с фото-фоном и анкета (макет владельца, 2026-07-05).
-   Desktop: секция влезает в экран, длинная био скроллится внутри своей
-   колонки. Grid-areas, чтобы на мобиле переставить блоки в нужный порядок. ── */
+   Редизайн 2026-07-08: секция растёт по контенту вместо принудительного
+   вмещения в 100vh — фото-колонка получает высоту сама, по сумме строк
+   head+body (grid делает это естественно). Grid-areas — чтобы на мобиле
+   переставить блоки в нужный порядок. ── */
 .team__inner--profile {
   max-width: 1460px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+  margin: 0 auto;
 }
 .tm2 {
-  flex: 1;
-  min-height: 0;
   margin-top: clamp(10px, 2vh, 24px);
   display: grid;
   grid-template-areas:
     'photo head side'
     'photo body side';
   grid-template-columns: minmax(260px, 400px) minmax(0, 1fr) 250px;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto;
   gap: clamp(14px, 2vw, 30px);
   text-align: left;
 }
-.tm2 > * { min-height: 0; }
 
 .tm2__photo {
   grid-area: photo;
@@ -1596,13 +1413,9 @@ html { scroll-behavior: smooth; }
 
 .tm2__body {
   grid-area: body;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(var(--gold-rgb), .25) transparent;
   display: flex;
   flex-direction: column;
   gap: clamp(12px, 2.4vh, 24px);
-  padding-right: 6px;
 }
 .tm2__bio {
   font-family: 'Avenir Next', sans-serif;
@@ -1637,16 +1450,12 @@ html { scroll-behavior: smooth; }
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 0;
 }
 .tm2__nav {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto;
   padding: 2px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(var(--gold-rgb), .25) transparent;
 }
 .tm2__nav-btn {
   flex-shrink: 0; /* не сжиматься в переполненной колонке (см. .mbk__nav-btn) */
@@ -1723,12 +1532,10 @@ html { scroll-behavior: smooth; }
 
 /* Мобильный порядок: имя → фото → био+цитата → кнопки лентой → анкета */
 @media (max-width: 900px) {
-  .team { height: auto; overflow: visible; } /* страница скроллится — не резать */
-  .team__inner--profile { height: auto; }
   .tm2 { display: flex; flex-direction: column; gap: 16px; }
   .tm2__head { order: 1; text-align: center; }
   .tm2__photo { order: 2; max-height: 46vh; aspect-ratio: 3 / 4; margin: 0 auto; width: min(100%, 340px); }
-  .tm2__body { order: 3; overflow: visible; padding-right: 0; }
+  .tm2__body { order: 3; }
   .tm2__bio { max-width: none; }
   .tm2__side { order: 4; }
   .tm2__nav {
@@ -2008,31 +1815,29 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── CONTACTS ──────────────────────────────────────────── */
-/* Contacts+Footer share one page (see .contacts-page in App.jsx) — unlike
-   every other chapter, Footer has to stay pinned at the bottom instead of
-   being centered too, so the fill/center behavior other sections get from
-   their own height:100% lives one level up on the wrapper instead. */
-.contacts-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 .contacts {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: stretch; /* контент заполняет страницу по высоте, как в «Бармены» */
-  padding: clamp(20px, 4vh, 60px) 5%;
+  /* Нижний паддинг — воздух перед футером (жалоба: соцкнопки были впритык
+     к нижней плашке из-за padding-bottom:0). */
+  padding: clamp(70px, 12vh, 130px) 6% clamp(56px, 9vh, 100px);
   position: relative;
   overflow: hidden;
 }
-/* max-width поднят до ширины «Бармены» (1460), inner — колонка: заголовок сверху,
-   сетка снизу растягивается на всю оставшуюся высоту (см. .contacts__grid). */
 .contacts__inner {
   max-width: 1460px;
   margin: 0 auto;
   position: relative;
   z-index: 1;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+}
+/* Финальный CTA («Займите свой столик») перед «Как найти» — см. Contacts.jsx */
+.contacts__cta { text-align: center; max-width: 900px; margin: 0 auto clamp(70px, 10vh, 110px); }
+.contacts__cta-title {
+  font-family: 'Baskerville', serif;
+  font-size: clamp(30px, 4.4vw, 50px);
+  font-weight: 700;
+  color: var(--text);
+  margin: 14px 0 clamp(20px, 3vh, 34px);
+  line-height: 1;
 }
 /* Эйбрроу «ГЛАВА VI...» крупнее только на этой странице (не трогаем общий
    .sec-label — он тюнингован под остальные главы книги). */
@@ -2045,19 +1850,14 @@ html { scroll-behavior: smooth; }
   margin: 0 0 clamp(18px, 3vh, 44px);
   color: var(--text);
   line-height: 1;
-  flex-shrink: 0;
 }
-/* Сетка тянется на всю высоту секции; обе колонки (инфо и карта) заполняют её */
 .contacts__grid {
-  flex: 1;
-  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  grid-template-rows: minmax(0, 1fr);
   gap: clamp(28px, 4vw, 72px);
-  align-items: stretch;
+  align-items: start;
 }
-.contacts__info { display: flex; flex-direction: column; justify-content: center; gap: clamp(24px, 4vh, 56px); }
+.contacts__info { display: flex; flex-direction: column; gap: clamp(20px, 3vh, 40px); }
 .contacts__block-label {
   font-family: 'Avenir Next', sans-serif;
   font-size: 13px;
@@ -2157,8 +1957,7 @@ html { scroll-behavior: smooth; }
   animation: none;
 }
 .contacts__map {
-  height: 100%;
-  min-height: clamp(280px, 40vh, 560px); /* карта крупная и заполняет колонку по высоте */
+  min-height: clamp(280px, 40vh, 560px); /* карта крупная, видна без скролла */
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 14px; /* как рамка портрета в «Бармены» */
@@ -2212,14 +2011,10 @@ html { scroll-behavior: smooth; }
   transition: color .2s;
 }
 .footer__link:hover { color: var(--gold); }
-.footer__brand { display: flex; align-items: center; gap: 13px; opacity: .6; }
-.footer__glass-icon { width: auto; height: 28px; object-fit: contain; flex-shrink: 0; }
-.footer__brand-text {
-  font-family: 'Baskerville', serif;
-  font-size: 15px;
-  letter-spacing: 3px;
-  color: var(--text);
-}
+.footer__brand { display: flex; align-items: center; opacity: .7; }
+/* Натуральные пропорции — как у .nav__logo-img (560.4 × 131.3, ≈4.27:1),
+   тот же файл uploads/logo-wordmark.svg. Ширина считается сама. */
+.footer__wordmark { display: block; height: 22px; width: auto; }
 .footer__copy {
   font-family: 'Avenir Next', sans-serif;
   font-size: 13px;
@@ -2240,26 +2035,19 @@ html { scroll-behavior: smooth; }
 /* ── MOBILE ≤ 680px ─────────────────────────────────────── */
 @media (max-width: 900px) {
 
-  /* Nav — collapse the floating ribbon back into a slim top bar + burger */
+  /* Десктопная шапка уже top-bar — на мобиле просто ниже и с safe-area,
+     плюс прячем полную навигацию в пользу бургера. */
   .nav {
-    top: 0; left: 0; right: 0; bottom: auto;
-    width: auto;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+    height: auto;
     padding: 14px 5%;
     /* Шапка сама закрывает зону чёлки своим фоном — контент под неё
-       не подлезает (см. padding-top у .book__page). */
+       не подлезает (см. scroll-margin-top у секций). */
     padding-top: calc(14px + env(safe-area-inset-top, 0px));
-    border-bottom: 1px solid var(--border);
-    box-shadow: none;
-    clip-path: none;
   }
-  .nav__logo { margin-bottom: 0; }
   .nav__links,
   .nav__actions,
   .nav__admin { display: none; } /* на мобиле админ-ссылка живёт в бургер-меню */
-  .nav__cat { width: 32px; height: 32px; }
+  .nav__logo-img { height: 34px; }
 
   .nav__burger {
     display: flex;
@@ -2348,6 +2136,7 @@ html { scroll-behavior: smooth; }
 
   /* Hero */
   .hero { padding: 68px 0 80px; }
+  .hero__cols { padding: 0; } /* .hero__side скрыт — своя горизонтальная отбивка не нужна */
   .hero__content { padding: 0 20px; }
   .hero__logo-svg { max-width: min(480px, 92vw); max-height: 34vh; }
   .hero__edition { font-size: 14px; letter-spacing: 3px; }
@@ -2400,15 +2189,9 @@ html { scroll-behavior: smooth; }
   .team-carousel__arrow--side { width: 36px; height: 36px; font-size: 18px; }
   .team-modal  { padding: 32px 24px; }
 
-  /* Contacts — single column, so info+map stack instead of sitting
-     side by side; сбрасываем десктопное «заполнение по высоте» (иначе
-     единственная строка-1fr растянула бы инфо и оставила пустоту). */
-  .contacts { align-items: flex-start; }
-  .contacts__inner { display: block; }
+  /* Contacts — single column, so info+map stack instead of sitting side by side */
   .contacts__grid {
-    flex: none;
     grid-template-columns: 1fr;
-    grid-template-rows: none;
     gap: clamp(8px, 2vh, 28px);
     align-items: start;
   }
@@ -2422,61 +2205,6 @@ html { scroll-behavior: smooth; }
   .footer__inner { flex-direction: column; align-items: center; text-align: center; gap: 8px; }
   .footer__links { gap: 18px; }
   .footer__link, .footer__copy { font-size: 11px; }
-  .footer__brand-text { font-size: 13px; }
-}
-
-/* Short-viewport-height safety net for the Team card — catches both a
-   short-and-wide desktop window and a landscape phone (where the
-   max-width:900px block above doesn't apply). The bigger avatar/quote
-   already floor out gracefully via clamp(), but the fixed gaps around
-   them still need trimming here to keep the whole page inside 100vh
-   with zero scroll. Placed after the width block so it wins the cascade
-   for the couple of properties (.team__sub) both touch. */
-@media (max-height: 1000px) {
-  .team { padding-top: 16px; padding-bottom: 10px; }
-  .team .mb-10 { margin-bottom: 6px; }
-  .team__title { margin-bottom: 6px; }
-  .team-carousel__avatar { margin-bottom: 4px; }
-  .team__name, .team__role { margin-bottom: 4px; }
-  .team__spec { margin-bottom: 4px; }
-  .team__divider { margin-bottom: 4px; }
-  .team-carousel__dots { margin-top: 4px; }
-  .team__join { margin-top: 4px; padding-top: 4px; }
-  .team__join-text { margin-bottom: 4px; }
-  .team__sub { margin-bottom: 10px; }
-}
-/* Extreme case — landscape phone (e.g. 844×390). The avatar's 1.5-2x
-   growth target has to give way here: at this aspect ratio there simply
-   isn't room for a 150px circle plus name/role/quote/CTA without
-   scrolling, and "never scrolls" is the harder rule. Still bigger than
-   the pre-redesign 96px baseline. */
-@media (max-height: 460px) {
-  .team { padding-top: 8px; padding-bottom: 4px; }
-  .team__sub { display: none; }
-  .team__title { margin-bottom: 4px; font-size: 30px; }
-  .team-carousel__avatar { width: 88px; height: 88px; margin-bottom: 4px; }
-  .team__role, .team__divider { margin-bottom: 2px; }
-  .team__quote { font-size: 17px; }
-  .team-carousel__dots { margin-top: 2px; }
-  .team__join { margin-top: 2px; padding-top: 2px; }
-  .team__join-btn { padding: 7px 20px; }
-}
-
-/* About — the bigger body-text (+15-20% per the redesign brief) wraps to
-   more lines on narrow screens, so short viewports need the same kind of
-   margin trim as the Team card above to stay inside 100vh. */
-@media (max-height: 1000px) {
-  .about { padding-top: 40px; padding-bottom: 24px; }
-  .about .mb-18 { margin-bottom: 10px; }
-  .about .mb-50 { margin-bottom: 22px; }
-  .about__quote { margin-bottom: 12px; }
-}
-@media (max-height: 460px) {
-  .about { padding-top: 12px; padding-bottom: 8px; }
-  .about .mb-18 { margin-bottom: 4px; }
-  .about .mb-50 { margin-bottom: 8px; }
-  .about__quote { font-size: 15px; margin-bottom: 6px; }
-  .about__text { font-size: 11px; line-height: 1.4; }
 }
 
 /* ── Brand typography roles (по гайду The Cat's Pajamas Club) ───────────── */
@@ -2533,8 +2261,12 @@ html { scroll-behavior: smooth; }
   transition: border-color .2s, color .2s, background .2s;
 }
 .cookie-banner__decline:hover { border-color: rgba(242,237,228,0.4); color: #F2EDE4; }
-.cookie-banner__accept { background: #8a4fd4; border-color: #8a4fd4; color: #fff; }
-.cookie-banner__accept:hover { background: #7c3aed; }
+/* Золото, не фиолет: баннер общий для ВСЕХ страниц (в т.ч. /booking, /admin,
+   которые остаются Violet Night) — золото уже используется тут же в
+   .cookie-banner__link и одинаково уместно на обеих палитрах, фиолет из
+   Violet Night на новой золотой главной смотрелся бы чужеродно. */
+.cookie-banner__accept { background: #D4A843; border-color: #D4A843; color: #0C0A18; }
+.cookie-banner__accept:hover { background: #E0B85C; }
 @media (max-width: 600px) {
   .cookie-banner { flex-direction: column; text-align: center; padding: 16px; }
 }

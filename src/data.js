@@ -34,8 +34,12 @@ export const translations = {
     // и мастерством, а не количеством. Концепция: гость рассказывает о своём
     // вкусе — бармен уже знает, что делать. «Пижама Кота» — русское написание,
     // по нему бар ищут в поиске (SEO). Секция листается (см. .about в index.css).
+    // Первый абзац переписан 2026-07-08 по правке владельца: без слова
+    // «камерный», подача «недавно открылись, но уже узнаваемы» вместо
+    // «мы тут давно». Дата открытия и фраза «стиль важнее здравого смысла» —
+    // прямая формулировка владельца.
     aboutText: [
-      'The Cat\'s Pajamas Club, для своих просто «Пижама Кота», — камерный авторский коктейль-бар в центре Самары, на улице Куйбышева. Гости не раз называли его лучшим баром города, и мы стараемся держать эту планку каждый вечер. Внутри — атмосфера нью-йоркского бара 80-х: тёмное дерево, латунь и бархат, приглушённый свет, живой джаз и панорамное окно с видом на вечерний город.',
+      'Всё началось 20 июля 2025 года, когда команда бартендеров решила, что они могут создать нечто дерзкое — бар, непохожий на привычные самарские заведения. Так и появился Cat\'s Pajamas — место, где стиль важнее здравого смысла. Для своих — просто «Пижама Кота»: коктейль-бар в центре города, на улице Куйбышева. Меньше чем за год гости не раз называли его лучшим баром города, а у стойки уже собрались свои постоянные лица. Внутри — атмосфера нью-йоркского бара 80-х: тёмное дерево, латунь и бархат, приглушённый свет, живой джаз и панорамное окно с видом на вечерний город.',
       'Название говорит само за себя: мы сознательно отказались от снобизма и лишнего пафоса. Каждый коктейль здесь мы собираем как маленький спектакль — со своим характером, неожиданным поворотом и вкусом, который хочется вспоминать. И чтобы получить свой, не нужно разбираться в барной карте: просто расскажите, что вам по душе, — а бармен уже знает, что делать.',
       'Бармен у нас — главный герой вечера. Он расспросит о ваших привычках и настроении и соберёт напиток лично под вас, иногда с личным, только вашим названием. Гости называют это то волшебством, то искусством, а мы просто точно попадаем во вкус. Мы гордимся не длиной карты, а мастерством за стойкой — каждый рецепт рождается здесь, у гостя на глазах.',
       'Отдельная гордость — авторские настойки: их неспешно настаивают прямо за стойкой, и каждого гостя мы встречаем угощением из этой коллекции. За качеством следим всерьёз: крепкий алкоголь уровня лучших мировых баров и продуманная винная карта — от редких находок до достойных отечественных вин. А безалкогольные коктейли собираем так же тщательно, как остальные, — чтобы вечер удался и у тех, кто сегодня за рулём.',
@@ -43,7 +47,7 @@ export const translations = {
       'Это место для тех, кто ценит вкус и чувствует разницу между хорошим и посредственным, — для неспешного вечера с любимым человеком или близкими по духу. Сюда приходят не торопясь: медленно потягивать бокал, говорить обо всём на свете и уходить лишь тогда, когда по-настоящему насытишься — и напитками, и самим вечером. Загляните — и просто расскажите, что вам по вкусу.',
     ],
 
-    menuLabel: 'Глава II · Карта напитков', menuTitle: 'Коктейльная карта',
+    menuLabel: 'Глава III · Карта напитков', menuTitle: 'Коктейльная карта',
     menuClassics: 'Классика', menuSignature: 'Авторский',
     menuCta: 'Забронировать столик',
     menuLoading: 'Загружаем меню…',
@@ -51,14 +55,14 @@ export const translations = {
     menuStoryLabel: 'О разделе',
     menuPrintLink: 'Открыть карту отдельной страницей',
 
-    eventsLabel: 'Глава III · Вечерняя афиша', eventsTitle: 'Джазовая программа',
+    eventsLabel: 'Глава IV · Вечерняя афиша', eventsTitle: 'Джазовая программа',
     eventsLoading: 'Загружаем события…',
     eventsEmpty: 'Ближайших событий пока нет — загляните позже.',
 
     galleryLabel: 'Глава IV · Каждый гость — своя бутылка', galleryTitle: 'Полка воспоминаний',
     galleryIntro: 'Каждый отзыв гостя становится бутылкой на нашей полке. Загляните — вдруг узнаете чей-то вечер.',
 
-    teamLabel: 'Глава V · За барной стойкой', teamTitle: 'Мастера за стойкой',
+    teamLabel: 'Глава II · За барной стойкой', teamTitle: 'Мастера за стойкой',
     teamSub: 'Каждый из наших барменов — это история, прожитая в коктейлях.',
     teamLoading: 'Загружаем команду…',
     teamEmpty: 'Скоро здесь появится команда.',
@@ -118,7 +122,7 @@ export const translations = {
     bkTgFallbackText2: 'Оставьте заявку в Telegram — что-нибудь придумаем 🎷',
     bkTgFallbackBtn: 'Написать в Telegram',
 
-    contactsLabel: 'Глава VI · Как нас найти', contactsTitle: 'Найти бар',
+    contactsLabel: 'Глава V · Как нас найти', contactsTitle: 'Найти бар',
     addressLabel: 'Адрес', address: 'г. Самара, ул. Куйбышева, 98',
     hoursLabel: 'Часы работы',
     daysWeek: 'Пн – Чт, Вс', daysWend: 'Пт – Сб',
@@ -144,7 +148,7 @@ export const translations = {
     // Mirror of the RU legend. Deliberately no opening hours (they live in "Find Us"),
     // no item counts and no cocktail/infusion names — the menu changes constantly.
     aboutText: [
-      'The Cat\'s Pajamas Club — Pizhama Kota to its regulars — is an intimate craft cocktail bar in the heart of Samara, on Kuybysheva Street. Guests have more than once called it the best bar in town, and we work to earn that every night. Inside: the mood of a 1980s New York bar — dark wood, brass and velvet, low light, live jazz and a panoramic window over the evening city.',
+      'It all began on July 20, 2025, when a team of bartenders decided they could create something bold — a bar unlike anything Samara had seen before. That\'s how Cat\'s Pajamas came to be — a place where style matters more than common sense. To regulars, it\'s simply Pizhama Kota: a cocktail bar in the heart of Samara, on Kuybysheva Street. In less than a year, guests have repeatedly called it the best bar in town, and a circle of regulars has already formed at the bar. Inside: the mood of a 1980s New York bar — dark wood, brass and velvet, low light, live jazz and a panoramic window over the evening city.',
       'The name says it all: we deliberately left snobbery and pretense at the door. We build every cocktail like a short play — with its own character, an unexpected turn, and a taste worth remembering. And to get yours, you don\'t need to know the menu: just tell us what you like, and the bartender already knows what to do.',
       'The bartender is the hero of the evening. They\'ll ask about your habits and your mood and mix a drink made just for you, sometimes with a private name that\'s yours alone. Guests call it magic, or art; we simply hit the taste right. We take pride not in the length of the list, but in the craft behind the bar — every recipe is born right here, in front of you.',
       'Our house infusions are a point of pride: steeped slowly right behind the bar, and we welcome every guest with a taste from that collection. We take quality seriously — spirits on a par with the world\'s best bars and a thoughtful wine list, from rare finds to fine local wines. And the alcohol-free cocktails are made with the same care as the rest, so the evening lands even for those who are driving tonight.',
@@ -154,7 +158,7 @@ export const translations = {
 
     // NB: cocktail content itself is RU-only (owner's decision) — these are
     // just the surrounding UI labels for the EN toggle.
-    menuLabel: 'Chapter II · The Drinks List', menuTitle: 'The Cocktail List',
+    menuLabel: 'Chapter III · The Drinks List', menuTitle: 'The Cocktail List',
     menuClassics: 'Classic', menuSignature: 'Signature',
     menuCta: 'Reserve a Table',
     menuLoading: 'Loading the menu…',
@@ -162,14 +166,14 @@ export const translations = {
     menuStoryLabel: 'About this section',
     menuPrintLink: 'Open the menu as a separate page',
 
-    eventsLabel: 'Chapter III · Evening Bill', eventsTitle: 'The Jazz Program',
+    eventsLabel: 'Chapter IV · Evening Bill', eventsTitle: 'The Jazz Program',
     eventsLoading: 'Loading events…',
     eventsEmpty: 'No upcoming events yet — check back soon.',
 
     galleryLabel: 'Chapter IV · Every Guest, Their Own Bottle', galleryTitle: 'Shelf of Memories',
     galleryIntro: 'Every guest review becomes a bottle on our shelf. Take a look — you might recognize someone\'s evening.',
 
-    teamLabel: 'Chapter V · Behind the Bar', teamTitle: 'Masters Behind the Bar',
+    teamLabel: 'Chapter II · Behind the Bar', teamTitle: 'Masters Behind the Bar',
     teamSub: 'Each of our bartenders is a story lived through cocktails.',
     teamLoading: 'Loading the team…',
     teamEmpty: 'The team page is coming soon.',
@@ -229,7 +233,7 @@ export const translations = {
     bkTgFallbackText2: 'Drop us a line on Telegram — we\'ll figure something out 🎷',
     bkTgFallbackBtn: 'Message us on Telegram',
 
-    contactsLabel: 'Chapter VI · Find Us', contactsTitle: 'Find The Bar',
+    contactsLabel: 'Chapter V · Find Us', contactsTitle: 'Find The Bar',
     addressLabel: 'Address', address: 'Samara, Kuybysheva St, 98',
     hoursLabel: 'Hours',
     daysWeek: 'Mon – Thu, Sun', daysWend: 'Fri – Sat',

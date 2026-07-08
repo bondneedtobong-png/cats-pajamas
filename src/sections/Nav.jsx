@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import AuthService from '../auth/AuthService.js';
-import { pageImages } from '../data.js';
 
 // Telegram — единственный способ входа/регистрации на сайте (см. AuthModal).
 // Уже вошедшему гостю показываем ссылку на профиль вместо повторного «войти».
@@ -26,11 +25,12 @@ function TelegramNavLink({ loggedIn, onClick, onRequestAuth, tx }) {
   );
 }
 
-// Page-flip nav — clicking a link no longer scrolls, it turns the book to
-// that page directly (App.jsx owns activePage/onNavigate). Renders as a
-// vertical sidebar on the left from 900px up, and the usual burger + full
-// screen overlay below that.
-export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, onRequestAuth }) {
+// Редизайн 2026-07-07 (ветка redesign-scroll-v1): fixed-шапка сверху вместо
+// левого сайдбара. Ссылки — обычные href="#id" (работают через
+// scroll-behavior:smooth + scroll-margin-top на секциях в index.css), никакой
+// index-навигации через App.jsx больше нет — активного «текущая страница»
+// состояния тоже нет (в макете владельца ссылки не подсвечиваются).
+export default function Nav({ tx, lang, onLangToggle, onRequestAuth }) {
   const [menuOpen, setMenuOpen] = useState(false);
   // Not cached in state — read fresh on every render so it picks up a login
   // that just happened in AuthModal (which re-renders this via App.jsx's
@@ -46,42 +46,21 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
   }, [menuOpen]);
 
   const close = () => setMenuOpen(false);
-  const nav = (id) => (e) => { e.preventDefault(); onNavigate(id); close(); };
-
-  const linkCls = (id) => `nav__link nav__shimmer${activePage === id ? ' nav__link--active' : ''}`;
-  const mobileLinkCls = (id) => `nav__mobile-link nav__shimmer${activePage === id ? ' nav__mobile-link--active' : ''}`;
-  // Small placeholder photo per page — reused from the global backdrop set
-  // until the client sources custom thumbnails per section.
-  const linkStyle = (id) => ({ '--link-img': `url(${pageImages[id]})` });
 
   return (
     <>
       <nav className="nav">
-        <a href="#" className="nav__logo" onClick={nav('hero')} aria-label="The Cat's Pajamas Club">
-          <svg className="nav__cat" viewBox="0 0 64 64" width="38" height="38" fill="none"
-               stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-            {/* ears (animate on hover) */}
-            <path className="nav__cat-ear nav__cat-ear--l" d="M19 21 L15 7 L29 16" />
-            <path className="nav__cat-ear nav__cat-ear--r" d="M45 21 L49 7 L35 16" />
-            {/* head */}
-            <path d="M16 22 Q12 30 12 37 Q12 51 32 53 Q52 51 52 37 Q52 30 48 22" />
-            {/* eyes */}
-            <circle cx="25" cy="34" r="1.7" fill="currentColor" stroke="none" />
-            <circle cx="39" cy="34" r="1.7" fill="currentColor" stroke="none" />
-            {/* nose + mouth */}
-            <path d="M30 40 Q32 42 34 40" />
-            {/* whiskers */}
-            <path className="nav__cat-whiskers" d="M20 37 L8 35 M20 41 L8 43 M44 37 L56 35 M44 41 L56 43" strokeWidth="1.4" />
-          </svg>
+        <a href="#hero" className="nav__logo" aria-label="The Cat's Pajamas Club">
+          <img src="/uploads/logo-wordmark.svg" alt="Пижама Кота" className="nav__logo-img" />
         </a>
 
         <div className="nav__links">
-          <a href="#" style={linkStyle('about')}    className={linkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
-          <a href="#" style={linkStyle('menu')}     className={linkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
-          <a href="#" style={linkStyle('events')}   className={linkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
-          {/* «Полка» скрыта — в разработке (см. PAGES в App.jsx) */}
-          <a href="#" style={linkStyle('team')}     className={linkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
-          <a href="#" style={linkStyle('contacts')} className={linkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
+          <a href="#about"    className="nav__link nav__shimmer">{tx.navAbout}</a>
+          <a href="#team"     className="nav__link nav__shimmer">{tx.navTeam}</a>
+          <a href="#menu"     className="nav__link nav__shimmer">{tx.navMenu}</a>
+          <a href="#events"   className="nav__link nav__shimmer">{tx.navEvents}</a>
+          {/* «Полка» скрыта — в разработке (решение владельца 2026-07-05) */}
+          <a href="#contacts" className="nav__link nav__shimmer">{tx.navContacts}</a>
         </div>
 
         {isAdmin && (
@@ -97,8 +76,7 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
         <div className="nav__actions">
           <TelegramNavLink loggedIn={loggedIn} onRequestAuth={onRequestAuth} tx={tx} />
           <button className="nav__lang nav__shimmer" onClick={onLangToggle}>{tx.langBtn}</button>
-          {/* Бронь живёт на главной (страница книги), не на /booking */}
-          <button type="button" className="nav__cta" onClick={nav('booking')}>{tx.heroCta}</button>
+          <a href="/booking" className="nav__cta">{tx.heroCta}</a>
         </div>
 
         <button
@@ -111,12 +89,12 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
       </nav>
 
       <div className={`nav__mobile${menuOpen ? ' nav__mobile--open' : ''}`}>
-        <a href="#" className={mobileLinkCls('about')}    onClick={nav('about')}>{tx.navAbout}</a>
-        <a href="#" className={mobileLinkCls('menu')}     onClick={nav('menu')}>{tx.navMenu}</a>
-        <a href="#" className={mobileLinkCls('events')}   onClick={nav('events')}>{tx.navEvents}</a>
-        {/* «Полка» скрыта — в разработке (см. PAGES в App.jsx) */}
-        <a href="#" className={mobileLinkCls('team')}     onClick={nav('team')}>{tx.navTeam}</a>
-        <a href="#" className={mobileLinkCls('contacts')} onClick={nav('contacts')}>{tx.navContacts}</a>
+        <a href="#about"    className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navAbout}</a>
+        <a href="#team"     className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navTeam}</a>
+        <a href="#menu"     className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navMenu}</a>
+        <a href="#events"   className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navEvents}</a>
+        {/* «Полка» скрыта — в разработке (решение владельца 2026-07-05) */}
+        <a href="#contacts" className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navContacts}</a>
         {isAdmin && (
           <a href="/admin" className="nav__mobile-link nav__mobile-link--admin nav__shimmer" onClick={close}>
             {tx.navAdmin}
@@ -125,7 +103,7 @@ export default function Nav({ tx, lang, onLangToggle, activePage, onNavigate, on
         <div className="nav__mobile-actions">
           <TelegramNavLink loggedIn={loggedIn} onClick={close} onRequestAuth={onRequestAuth} tx={tx} />
           <button className="nav__lang nav__shimmer" onClick={() => { onLangToggle(); close(); }}>{tx.langBtn}</button>
-          <button type="button" className="nav__cta" onClick={nav('booking')}>{tx.heroCta}</button>
+          <a href="/booking" className="nav__cta" onClick={close}>{tx.heroCta}</a>
         </div>
       </div>
     </>

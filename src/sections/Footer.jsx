@@ -5,8 +5,7 @@ export default function Footer({ tx }) {
     <footer className="footer">
       <div className="footer__inner">
         <div className="footer__brand">
-          <img src="/uploads/logo-icon.svg" className="footer__glass-icon" alt="" />
-          <span className="footer__brand-text">THE CAT'S PAJAMAS CLUB</span>
+          <img src="/uploads/logo-wordmark.svg" className="footer__wordmark" alt="Пижама Кота" />
         </div>
         <div className="footer__links">
           <Link to="/booking-rules" className="footer__link">{tx.footerBookingRules}</Link>
