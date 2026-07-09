@@ -642,6 +642,15 @@
   .bkw__plan { min-height: 0; }
   .bkw__plan-card { display: block; container-type: normal; }
   .bkw__stage-in { width: 100%; height: auto; aspect-ratio: 31300 / 26600; }
+  /* flex:1 (десктопное «раздели место со .bkw__tg-fallback внутри .bkw__side»,
+     задан селектором .bkw__side .bkw__panel — специфичнее, поэтому глушим тем
+     же селектором, а не голым .bkw__panel) здесь ломает форму: страница
+     теперь скроллится, а не .bkw__side — панель всё равно получает урезанную
+     долю высоты и с overflow-y:visible реальный контент формы
+     (имя/телефон/гостей/заметка) вылезает поверх подсказки «большая
+     компания» вместо того, чтобы просто отодвинуть её вниз (баг с реального
+     телефона, 2026-07-09). flex:none — панель растёт по контенту. */
+  .bkw__side .bkw__panel { flex: none; }
   .bkw__panel { overflow-y: visible; }
 }
 
