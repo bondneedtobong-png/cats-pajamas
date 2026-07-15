@@ -1370,11 +1370,18 @@ html { scroll-behavior: smooth; }
 .tm2 {
   margin-top: clamp(10px, 2vh, 24px);
   display: grid;
-  grid-template-areas:
-    'photo head side'
-    'photo body side';
+  /* Раньше head/body были отдельными строками грида (спанились фото/сайдбаром
+     на две строки сразу) — у CSS Grid тогда нет другого выбора, кроме как
+     добивать НЕДОСТАЮЩУЮ для фото/сайдбара высоту в обе auto-строки, и у
+     бармена с короткой био «шапка» (имя/роль/стаж) раздувалась пустым местом
+     снизу, а био визуально съезжала вниз (реальный баг, короткие био —
+     Денис/Александр; пробовал зафиксировать head через max-content — не
+     помогло, браузер всё равно растягивал её под спан). Теперь head+body —
+     один элемент .tm2__content (одна строка грида), а внутри него обычный
+     flex-column: лишняя высota, если она вообще нужна, достаётся снизу под
+     цитатой, а не расталкивает имя/стаж и био. */
+  grid-template-areas: 'photo content side';
   grid-template-columns: minmax(260px, 400px) minmax(0, 1fr) 250px;
-  grid-template-rows: auto auto;
   gap: clamp(14px, 2vw, 30px);
   text-align: left;
 }
@@ -1393,7 +1400,14 @@ html { scroll-behavior: smooth; }
   display: block;
 }
 
-.tm2__head { grid-area: head; }
+.tm2__content {
+  grid-area: content;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 2vw, 30px);
+}
+
 .tm2__name {
   font-family: 'Baskerville', serif;
   font-weight: 700;
@@ -1418,7 +1432,6 @@ html { scroll-behavior: smooth; }
 }
 
 .tm2__body {
-  grid-area: body;
   display: flex;
   flex-direction: column;
   gap: clamp(12px, 2.4vh, 24px);
@@ -1536,14 +1549,15 @@ html { scroll-behavior: smooth; }
   .tm2__join-btn:hover { transform: none; }
 }
 
-/* Мобильный порядок: имя → фото → био+цитата → кнопки лентой → анкета */
+/* Мобильный порядок: фото → имя+био+цитата → кнопки лентой → анкета
+   (head и body теперь один элемент .tm2__content — см. комментарий у .tm2) */
 @media (max-width: 900px) {
   .tm2 { display: flex; flex-direction: column; gap: 16px; }
-  .tm2__head { order: 1; text-align: center; }
-  .tm2__photo { order: 2; max-height: 46vh; aspect-ratio: 3 / 4; margin: 0 auto; width: min(100%, 340px); }
-  .tm2__body { order: 3; }
+  .tm2__photo { order: 1; max-height: 46vh; aspect-ratio: 3 / 4; margin: 0 auto; width: min(100%, 340px); }
+  .tm2__content { order: 2; }
+  .tm2__head { text-align: center; }
   .tm2__bio { max-width: none; }
-  .tm2__side { order: 4; }
+  .tm2__side { order: 3; }
   .tm2__nav {
     flex-direction: row;
     overflow-x: auto;

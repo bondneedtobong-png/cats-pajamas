@@ -72,22 +72,26 @@ export default function Team({ tx }) {
               {current.photoUrl && <img src={current.photoUrl} alt={current.name} loading="lazy" />}
             </div>
 
-            {/* Имя · должность · стаж */}
-            <header className="tm2__head">
-              <h2 className="tm2__name">{current.name}</h2>
-              {current.role && <div className="tm2__role">{current.role}</div>}
-              {current.spec && <div className="tm2__spec">{current.spec}</div>}
-            </header>
+            {/* Имя+стаж и био+цитата — один грид-элемент (.tm2__content), чтобы
+                фото/сайдбар справа не растягивали их порознь (см. .tm2 в CSS) */}
+            <div className="tm2__content">
+              {/* Имя · должность · стаж */}
+              <header className="tm2__head">
+                <h2 className="tm2__name">{current.name}</h2>
+                {current.role && <div className="tm2__role">{current.role}</div>}
+                {current.spec && <div className="tm2__spec">{current.spec}</div>}
+              </header>
 
-            {/* Биография + книжная цитата */}
-            <div className="tm2__body">
-              {current.bio && <p className="tm2__bio">{current.bio}</p>}
-              {quote && (
-                <figure className="tm2__quote">
-                  <blockquote className="tm2__quote-text">«{quote.text}»</blockquote>
-                  {quote.source && <figcaption className="tm2__quote-src">— {quote.source}</figcaption>}
-                </figure>
-              )}
+              {/* Биография + книжная цитата */}
+              <div className="tm2__body">
+                {current.bio && <p className="tm2__bio">{current.bio}</p>}
+                {quote && (
+                  <figure className="tm2__quote">
+                    <blockquote className="tm2__quote-text">«{quote.text}»</blockquote>
+                    {quote.source && <figcaption className="tm2__quote-src">— {quote.source}</figcaption>}
+                  </figure>
+                )}
+              </div>
             </div>
 
             {/* Навигация по сотрудникам + анкета */}
