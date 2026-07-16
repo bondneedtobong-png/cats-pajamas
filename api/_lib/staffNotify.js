@@ -94,3 +94,27 @@ export async function editStaffMessage(messageId, text, { replyMarkup } = {}) {
     console.error('[staffNotify] edit failed:', e.message);
   }
 }
+
+/**
+ * Удаление ранее отправленного стафф-сообщения по message_id. Используется для
+ * уборки сообщений-напоминаний «Заявка ждёт N минут» после того, как заявку
+ * подтвердили/отклонили/она протухла — чтобы в теме «Брони» не оставался шум,
+ * а жила только исходная карточка заявки с итогом. Fire-and-forget: сбой
+ * (сообщение уже удалено, слишком старое >48ч и т.п.) не должен ничего ронять.
+ * Возвращает true при успехе.
+ */
+export async function deleteStaffMessage(messageId) {
+  if (!TOKEN || !STAFF_CHAT_ID || !messageId) return false;
+  try {
+    const resp = await fetch(`https://api.telegram.org/bot${TOKEN}/deleteMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: STAFF_CHAT_ID, message_id: Number(messageId) }),
+    });
+    const data = await resp.json().catch(() => null);
+    return !!data?.ok;
+  } catch (e) {
+    console.error('[staffNotify] delete failed:', e.message);
+    return false;
+  }
+}

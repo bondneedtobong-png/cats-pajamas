@@ -7,7 +7,68 @@ const LOGIN_TOKEN_TTL_MS = 10 * 60 * 1000;
 
 function genOtp() { return String(Math.floor(1000 + Math.random() * 9000)); }
 function genId() { return 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6); }
-function normalizePhone(p) { return (p || '').replace(/\D/g, ''); }
+
+// Единая форма номера — иначе один человек = несколько аккаунтов: гость вводит
+// «8 927…» на сайте (OTP) и делится «+7 927…» в боте, раньше это были разные
+// строки (89277418514 ≠ 79277418514) и разные users. Приводим российские
+// номера к каноничному 7XXXXXXXXXX: ведущая 8 при 11 цифрах → 7; голые 10 цифр
+// (без кода страны) → +7. Иностранные номера (например 1-407… у гостя из США)
+// не трогаем — у них своя длина/код.
+function normalizePhone(p) {
+  let d = (p || '').replace(/\D/g, '');
+  if (d.length === 11 && d[0] === '8') d = '7' + d.slice(1);
+  else if (d.length === 10) d = '7' + d;
+  return d;
+}
+
+// Слияние дублей одного гостя по нормализованному телефону: все аккаунты с тем
+// же номером (кроме keepUserId) вливаются в keepUserId — их брони и связанные
+// записи переезжают, сами строки удаляются. keepUserId должен быть «богаче»
+// (обычно с telegram_id — чтобы ходили ЛС-уведомления по броням). Это лечит и
+// уже возникшие дубли (гость делится номером в боте → его прежний phone-only
+// аккаунт с сайта вливается), и предотвращает новые.
+async function mergeUsersByPhone(keepUserId, normalizedPhone) {
+  if (!keepUserId || !normalizedPhone) return;
+  const { data: dups } = await supabase.from('users')
+    .select('id').eq('phone', normalizedPhone).neq('id', keepUserId);
+  if (!dups?.length) return;
+  for (const dup of dups) {
+    // Брони — критично. FK reservations.guest_id = ON DELETE SET NULL: если
+    // удалить дубль, не перенеся его брони, подтверждённая бронь осиротеет
+    // (guest_id → null: пропадёт из кабинета, у бармена не резолвится гость,
+    // ЛС-уведомления не уходят). supabase-js НЕ бросает на ошибке БД — вернёт
+    // {error} и зарезолвится, поэтому проверяем error ЯВНО и не удаляем аккаунт
+    // при сбое переноса. Плюс финальная страховка ниже: перечитываем, что за
+    // дублем не осталось ни одной брони, — только тогда удаляем.
+    const { error: resvErr } = await supabase.from('reservations')
+      .update({ guest_id: keepUserId }).eq('guest_id', dup.id);
+    if (resvErr) {
+      console.error('[auth] merge: reservations move failed, keep dup', dup.id, resvErr.message);
+      continue;
+    }
+    // Остальные связи best-effort: у phone-only дубля их обычно нет, а unique-
+    // индексы (event_id+guest_id, guest_id+spin_date) при коллизии просто
+    // оставят строку у дубля. reviews не переносим: там нет guest_id, привязка
+    // по telegram_id (остаётся на аккаунте-победителе — у него telegram_id и есть).
+    for (const [table, col] of [
+      ['event_rsvps', 'guest_id'],
+      ['wheel_spins', 'guest_id'],
+      ['loyalty_transactions', 'user_id'],
+      ['loyalty_redemptions', 'user_id'],
+    ]) {
+      await supabase.from(table).update({ [col]: keepUserId }).eq(col, dup.id).catch(() => {});
+    }
+    // Страховка перед необратимым удалением: убеждаемся, что ни одна бронь
+    // больше не ссылается на дубль (перенос выше мог частично не пройти).
+    const { data: left, error: leftErr } = await supabase.from('reservations')
+      .select('id').eq('guest_id', dup.id).limit(1);
+    if (leftErr || left?.length) {
+      console.error('[auth] merge: reservations still on dup, keep it', dup.id);
+      continue;
+    }
+    await supabase.from('users').delete().eq('id', dup.id).catch(() => {});
+  }
+}
 
 export async function requestOtp(phone) {
   const normalized = normalizePhone(phone);
@@ -31,8 +92,18 @@ export async function verifyOtp(phone, code) {
   await supabase.from('otps').delete().eq('phone', normalized);
 
   // Admin — только через Telegram (TELEGRAM_ADMIN_IDS, см. ensureTelegramUser).
-  // Вход по телефону всегда создаёт/находит гостя, даже для этого самого номера.
-  let { data: existing } = await supabase.from('users').select('*').eq('phone', normalized).maybeSingle();
+  // Вход по телефону находит существующего гостя по номеру. Если у гостя уже
+  // есть Telegram-аккаунт с этим номером — входим именно в него (а не плодим
+  // отдельный phone-only дубль): при нескольких совпадениях предпочитаем строку
+  // с telegram_id и вливаем остальные (см. дубли Кристины 2026-07-16).
+  const { data: matches } = await supabase.from('users').select('*').eq('phone', normalized);
+  let existing = null;
+  if (matches?.length) {
+    existing = matches.find(u => u.telegram_id) || matches[0];
+    if (matches.length > 1) {
+      await mergeUsersByPhone(existing.id, normalized).catch((e) => console.error('[auth] merge failed:', e.message));
+    }
+  }
   if (!existing) {
     const row = {
       id: genId(), name: '', phone: normalized, telegram_id: null,
@@ -108,6 +179,11 @@ export async function setUserPhone(userId, phone) {
   const normalized = normalizePhone(phone);
   const { data, error } = await supabase.from('users').update({ phone: normalized }).eq('id', userId).select().single();
   if (error) throw new Error('Не удалось сохранить номер телефона');
+  // Гость поделился номером (бот request_contact) — вливаем в этот аккаунт его
+  // прежние дубли с тем же номером (phone-only с сайта и т.п.), чтобы «один
+  // человек = один аккаунт». Best-effort: сбой слияния не должен ронять сам
+  // вход/сохранение номера.
+  await mergeUsersByPhone(userId, normalized).catch((e) => console.error('[auth] merge failed:', e.message));
   return rowToUser(data);
 }
 

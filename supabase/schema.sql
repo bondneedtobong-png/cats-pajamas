@@ -95,6 +95,10 @@ alter table public.reservations add column if not exists staff_message_id bigint
 -- Счётчик напоминаний персоналу о висящей pending-заявке (15 мин → 45 мин,
 -- дальше не спамим) — состояние поллера в bot-start.js.
 alter table public.reservations add column if not exists staff_reminder_count integer not null default 0;
+-- message_id отправленных напоминаний «Заявка ждёт N минут» — чтобы удалить их
+-- из темы «Брони», когда заявку подтвердили/отклонили/она протухла (иначе шум
+-- копится поверх исходной карточки). См. clearStaffReminders в _lib/booking.js.
+alter table public.reservations add column if not exists staff_reminder_msg_ids jsonb not null default '[]'::jsonb;
 
 -- Walk-in занятость столов: бармен отмечает стол занятым/свободным без брони;
 -- занятость по seated-брони тоже фиксируется здесь строкой source='reservation'

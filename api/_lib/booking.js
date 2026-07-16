@@ -4,7 +4,7 @@ import { BOOKING_RULES } from '../../src/booking/bookingRules.js';
 import {
   timeToMin, minToTime, reservationInstant, barEveningDate,
 } from '../../src/booking/barTime.js';
-import { notifyStaff, notifyStaffPhoto, editStaffMessage } from './staffNotify.js';
+import { notifyStaff, notifyStaffPhoto, editStaffMessage, deleteStaffMessage } from './staffNotify.js';
 import { notifyGuestTg } from './telegramNotify.js';
 import { renderPlanPng } from './planImage.js';
 
@@ -79,7 +79,27 @@ function rowToRes(r) {
     attendancePromptSentAt: r.attendance_prompt_sent_at || null,
     staffMessageId: r.staff_message_id || null,
     staffReminderCount: r.staff_reminder_count || 0,
+    staffReminderMsgIds: Array.isArray(r.staff_reminder_msg_ids) ? r.staff_reminder_msg_ids : [],
   };
+}
+
+// Уборка сообщений-напоминаний «Заявка ждёт N минут» после того, как заявка
+// ушла из pending (подтверждена/отклонена/протухла): в теме «Брони» остаётся
+// только исходная карточка заявки с итогом, без накопившегося шума.
+// ВАЖНО про гонку с поллером: id перечитываем из БД прямо здесь, а не берём из
+// снапшота вызывающего — поллер (remindStalePendingBookings, отдельный процесс)
+// мог дописать новое напоминание между чтением у вызывающего и этим моментом;
+// свежее чтение гарантирует, что удалим и его. Принимает id (строку) или объект
+// с .id. Best-effort: сбой удаления (сообщение старше 48ч и т.п.) не важен.
+async function clearStaffReminders(idOrRow) {
+  const id = typeof idOrRow === 'string' ? idOrRow : idOrRow?.id;
+  if (!id) return;
+  const { data } = await supabase.from('reservations')
+    .select('staff_reminder_msg_ids').eq('id', id).maybeSingle();
+  const ids = Array.isArray(data?.staff_reminder_msg_ids) ? data.staff_reminder_msg_ids : [];
+  if (ids.length) await Promise.all(ids.map(mid => deleteStaffMessage(mid).catch(() => {})));
+  await supabase.from('reservations')
+    .update({ staff_reminder_msg_ids: [] }).eq('id', id).catch(() => {});
 }
 
 // ─── table config (jsonb blob in app_config) ─────────────────────────────────
@@ -277,6 +297,7 @@ async function expireStalePending(rows) {
   for (const r of stale) {
     r.status = 'cancelled'; r.cancelledAt = cancelledAt; r.cancellationReason = reason;
     editStaffBookingMessage(r, null, '⌛️ Отменена автоматически — не подтверждена вовремя.').catch(() => {});
+    clearStaffReminders(r).catch(() => {}); // убрать «Заявка ждёт N минут»
   }
 }
 
@@ -508,6 +529,7 @@ export async function cancelReservation(id, reason = '', opts = {}) {
   if (opts.editStaffMessage !== false) {
     editStaffBookingMessage(res, null, `🚫 ${reason || 'Отменена'}.`).catch(() => {});
   }
+  clearStaffReminders(res).catch(() => {}); // убрать «Заявка ждёт N минут»
   return res;
 }
 
@@ -516,7 +538,8 @@ export async function cancelReservation(id, reason = '', opts = {}) {
 // вызов получает «уже обработана», а не повторное действие (двойной DM гостю,
 // повторные баллы и т.п.).
 export async function updateReservationStatus(id, newStatus, { fromStatus } = {}) {
-  const { data: existing } = await supabase.from('reservations').select('status, guest_id, table_id').eq('id', id).maybeSingle();
+  const { data: existing } = await supabase.from('reservations')
+    .select('status, guest_id, table_id').eq('id', id).maybeSingle();
   if (!existing) throw new Error('Бронь не найдена');
   // Гость мог отменить бронь, пока у бармена на экране висит старый статус —
   // guard от «Подтвердить»/«Завершить» на брони в финальном статусе.
@@ -534,6 +557,13 @@ export async function updateReservationStatus(id, newStatus, { fromStatus } = {}
   if (fromStatus) q = q.eq('status', fromStatus);
   const { data, error } = await q.select().single();
   if (error) throw new Error(fromStatus ? 'Заявка уже обработана — обновите список' : 'Бронь не найдена');
+
+  // Заявка ушла из pending (подтверждена/отклонена) → убрать накопившиеся
+  // напоминания «Заявка ждёт N минут»; исходная карточка остаётся с итогом.
+  // clearStaffReminders сам перечитает актуальные id из БД (гонка с поллером).
+  if (existing.status === 'pending') {
+    clearStaffReminders(id).catch(() => {});
+  }
 
   // seated → стол занят по факту (строка occupancy); финал → занятость закрыта
   if (newStatus === 'seated') {
@@ -595,12 +625,27 @@ export async function remindStalePendingBookings() {
     if (!header) continue;
     try {
       const table = tables.find(t => t.id === r.tableId);
-      await notifyStaff(header + '\n\n' + staffBookingText(r, table), {
+      // message_id напоминания сохраняем, чтобы удалить его при подтверждении/
+      // отклонении/протухании заявки (clearStaffReminders) — иначе в теме
+      // «Брони» копится шум поверх исходной карточки.
+      const msgId = await notifyStaff(header + '\n\n' + staffBookingText(r, table), {
         threadId: STAFF_BOOKINGS_THREAD(),
         replyMarkup: staffConfirmKeyboard(r.id),
       });
-      await supabase.from('reservations')
-        .update({ staff_reminder_count: r.staffReminderCount + 1 }).eq('id', r.id);
+      const nextIds = msgId
+        ? [...(r.staffReminderMsgIds || []), msgId]
+        : (r.staffReminderMsgIds || []);
+      // Запись id ТОЛЬКО пока заявка всё ещё pending (.eq status): если бармен
+      // подтвердил/отклонил её, пока летело это напоминание, его clearStaffReminders
+      // уже отработал по пустому столбцу — не перезатираем его снапшотом (иначе
+      // напоминание осталось бы висеть навсегда, гонка поллер↔подтверждение).
+      const { data: upd } = await supabase.from('reservations')
+        .update({ staff_reminder_count: r.staffReminderCount + 1, staff_reminder_msg_ids: nextIds })
+        .eq('id', r.id).eq('status', 'pending').select('id');
+      if (!upd?.length && msgId) {
+        // Заявка уже не pending — только что отправленное напоминание убираем сами.
+        await deleteStaffMessage(msgId).catch(() => {});
+      }
     } catch (e) {
       console.error('[remindPending]', r.id, 'failed:', e.message);
     }
