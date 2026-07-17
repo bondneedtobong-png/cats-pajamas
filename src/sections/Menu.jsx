@@ -49,6 +49,7 @@ export default function Menu({ tx }) {
 
   return (
     <section id="menu" className="menu">
+      <div className="brand-bottles" />
       <div className="menu__inner menu__inner--book">
         <div ref={r0} className="reveal" style={{ textAlign: 'center' }}>
           <span className="sec-label">{tx.menuLabel}</span>
@@ -115,7 +116,7 @@ export default function Menu({ tx }) {
                 <span className="mbk__story-label">{tx.menuStoryLabel}</span>
                 <h3 className="mbk__story-title">{cat.title}</h3>
                 <p className="mbk__story-text">{story}</p>
-                <a className="mbk__story-link" href="/menu">{tx.menuPrintLink} ›</a>
+                <a className="mbk__story-link u-underline" href="/menu">{tx.menuPrintLink} ›</a>
               </aside>
             </div>
           </>

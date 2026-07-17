@@ -141,6 +141,21 @@
   color: rgba(242,237,228,0.55);
 }
 .adm-btn--ghost:hover { border-color: rgba(212,168,67,0.55); color: rgba(242,237,228,0.85); }
+
+/* Фото событий в модалке (план v4 §B): сетка миниатюр + загрузка/URL */
+.adm-evphotos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.adm-evphoto { position: relative; width: 84px; height: 63px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(242,237,228,0.14); }
+.adm-evphoto--first { border-color: rgba(212,168,67,0.6); }
+.adm-evphoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.adm-evphoto__badge { position: absolute; top: 0; left: 0; font-size: 9px; letter-spacing: .3px; background: rgba(212,168,67,0.92); color: #1c1017; padding: 1px 5px; border-bottom-right-radius: 5px; }
+.adm-evphoto__acts { position: absolute; bottom: 3px; right: 3px; display: flex; gap: 3px; }
+.adm-evphoto__acts button { width: 20px; height: 20px; border-radius: 4px; border: none; background: rgba(20,12,20,0.72); color: #fff; cursor: pointer; font-size: 11px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.adm-evphoto__acts button:hover { background: rgba(20,12,20,0.95); }
+.adm-evphotos__add { margin-bottom: 6px; }
+.adm-evphotos__add .adm-btn { display: inline-block; cursor: pointer; }
+.adm-evphotos__url { display: flex; gap: 6px; }
+.adm-evphotos__url .adm-form-input { flex: 1; }
+.adm-evphotos__hint { margin: 6px 0 0; font-size: 10px; color: rgba(242,237,228,0.45); line-height: 1.5; }
 .adm-btn--saved {
   background: rgba(34,197,94,0.12);
   border: 1px solid rgba(34,197,94,0.3);

@@ -510,16 +510,29 @@
 .bkw__stage-in {
   position: relative;
   margin: auto;
-  aspect-ratio: 31300 / 26600;
-  width: min(100%, calc(100cqh * 31300 / 26600));
-  border: 1px solid var(--bkw-border);
+  aspect-ratio: 31630 / 26550;
+  width: min(100%, calc(100cqh * 31630 / 26550));
+  border: 1px solid rgba(198, 191, 181, 0.16); /* пастельная обводка рамки-квадрифолия */
   border-radius: 12px;
   background:
-    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--bkw-gold) 4%, transparent), transparent 60%),
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--bkw-gold) 5%, transparent), transparent 60%),
     color-mix(in srgb, var(--bkw-bg2) 55%, transparent);
 }
 .bkw__stage-in .fp-svg { width: 100%; height: 100%; }
-.bkw__glowbar-pos { left: 28.75%; top: 2.26%; width: 47.92%; height: 14.66%; }
+
+/* ── Арт-деко рамка-квадрифолий (DecoCorner в BookingWidget) ── */
+.bkw__frame { position: absolute; inset: 0; pointer-events: none; border-radius: 12px; }
+.bkw__frame-corner { position: absolute; width: 54px; height: 54px; }
+.bkw__frame-corner--tl { top: 0; left: 0; }
+.bkw__frame-corner--tr { top: 0; right: 0; transform: scaleX(-1); }
+.bkw__frame-corner--bl { bottom: 0; left: 0; transform: scaleY(-1); }
+.bkw__frame-corner--br { bottom: 0; right: 0; transform: scale(-1, -1); }
+.bkw__corner-svg { display: block; width: 100%; height: 100%; }
+.bkw__corner-l1 { stroke: rgba(198, 191, 181, 0.48); stroke-width: 1.4; }
+.bkw__corner-l2 { stroke: rgba(198, 191, 181, 0.26); stroke-width: 0.9; }
+.bkw__corner-quat { fill: rgba(198, 191, 181, 0.6); }
+@media (max-width: 600px) { .bkw__frame-corner { width: 40px; height: 40px; } }
+.bkw__glowbar-pos { left: 29.02%; top: 1.88%; width: 47.42%; height: 14.69%; }
 .bkw__loading {
   position: absolute;
   top: 8px;
@@ -539,9 +552,9 @@
   color: var(--bkw-dim);
 }
 .bkw__dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.bkw__dot--vacant   { background: var(--st-vacant, #3ECF8E); }
-.bkw__dot--reserved { background: var(--st-reserved, #D4A843); }
-.bkw__dot--occupied { background: var(--st-occupied, #9B5DE5); }
+.bkw__dot--vacant   { background: var(--st-vacant, #86AF93); }
+.bkw__dot--reserved { background: var(--st-reserved, #B08900); }
+.bkw__dot--occupied { background: var(--st-occupied, #7C6480); }
 
 /* ── Панель стола ── */
 .bkw__panel {
@@ -557,13 +570,16 @@
 }
 .bkw__panel--empty { align-items: center; justify-content: center; text-align: center; }
 .bkw__hint-icon { color: var(--bkw-dim); opacity: 0.6; }
+/* Пустое состояние — фирменный знак-креманка (не серый кружок). Ассет уже
+   в оттенке текста (#C4BAB6), приглушаем прозрачностью. */
+.bkw__hint-sign { width: 38px; height: auto; opacity: 0.5; margin-bottom: 4px; }
 .bkw__hint-text { margin: 0; font-size: 13px; color: var(--bkw-dim); max-width: 220px; line-height: 1.6; }
 .bkw__phone-note { margin: 0; font-size: 11px; color: var(--bkw-dim); line-height: 1.7; }
 .bkw__phone-note a { color: var(--bkw-gold); text-decoration: none; }
 
 .bkw__table-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .bkw__table-title { font-family: 'Baskerville', serif; font-size: 19px; font-weight: 700; color: var(--bkw-text); }
-.bkw__table-meta { font-size: 11px; color: var(--bkw-dim); margin-top: 3px; }
+.bkw__table-meta { font-family: 'Involve', 'Avenir Next', sans-serif; font-style: italic; font-size: 12px; color: var(--bkw-text-mid, var(--bkw-dim)); margin-top: 3px; }
 .bkw__badge {
   font-size: 10px;
   letter-spacing: 1.2px;
@@ -574,9 +590,9 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
-.bkw__badge--vacant   { color: var(--st-vacant, #3ECF8E); border-color: color-mix(in srgb, var(--st-vacant, #3ECF8E) 40%, transparent); }
-.bkw__badge--reserved { color: var(--st-reserved, #D4A843); border-color: color-mix(in srgb, var(--st-reserved, #D4A843) 40%, transparent); }
-.bkw__badge--occupied { color: var(--st-occupied, #9B5DE5); border-color: color-mix(in srgb, var(--st-occupied, #9B5DE5) 40%, transparent); }
+.bkw__badge--vacant   { color: var(--st-vacant, #86AF93); border-color: color-mix(in srgb, var(--st-vacant, #86AF93) 42%, transparent); }
+.bkw__badge--reserved { color: var(--st-reserved, #B08900); border-color: color-mix(in srgb, var(--st-reserved, #B08900) 42%, transparent); }
+.bkw__badge--occupied { color: var(--st-occupied, #7C6480); border-color: color-mix(in srgb, var(--st-occupied, #7C6480) 42%, transparent); }
 .bkw__busy-text { margin: 0; font-size: 13px; line-height: 1.6; color: var(--bkw-dim); }
 
 /* ── Форма заявки ── */
@@ -641,7 +657,7 @@
   /* План width-driven: бокс в потоке, высота из аспекта viewBox. */
   .bkw__plan { min-height: 0; }
   .bkw__plan-card { display: block; container-type: normal; }
-  .bkw__stage-in { width: 100%; height: auto; aspect-ratio: 31300 / 26600; }
+  .bkw__stage-in { width: 100%; height: auto; aspect-ratio: 31630 / 26550; }
   /* flex:1 (десктопное «раздели место со .bkw__tg-fallback внутри .bkw__side»,
      задан селектором .bkw__side .bkw__panel — специфичнее, поэтому глушим тем
      же селектором, а не голым .bkw__panel) здесь ломает форму: страница
@@ -684,38 +700,63 @@
 [data-theme],
 .bk-root,
 .adm-root { /* план живёт и в админке (вкладка СТОЛЫ) — темы там нет */
-  --st-vacant:   #3ECF8E;
-  --st-reserved: var(--gold, #D4A843);
-  --st-occupied: var(--accent, #9B5DE5);
-  --fp-ink:      var(--text, #F2EDE4);
+  /* План v4: спокойные «дорогие» статусы вместо неона. Зелёный — единственный
+     в проекте (задан только здесь); золото = бренд-акцент; занят = приглушённый
+     плюм (не фиолетовый неон). Одни токены для плана, легенды и бейджей. */
+  --st-vacant:   #86AF93;
+  --st-reserved: var(--gold, #B08900);
+  --st-occupied: #7C6480;
+  --fp-ink:      var(--text, #C6BFB5);
 }
 
 /* ВАЖНО: внутри .fp-svg НЕТ ни одной animation/transition — любое изменение
    внутри SVG перерисовывает план на CPU каждый кадр (профилировано: на слабых
    машинах это фризы). Hover мгновенный, пульс стойки — HTML-оверлей .bkw__glowbar. */
-.fp-table { cursor: pointer; opacity: 0.92; }
-.fp-table:hover { opacity: 1; }
-
+.fp-table { cursor: pointer; }
 .fp-t--vacant   { --tbl: var(--st-vacant); }
 .fp-t--reserved { --tbl: var(--st-reserved); }
-.fp-t--occupied { --tbl: var(--st-occupied); }
+.fp-t--occupied { --tbl: var(--st-occupied); opacity: 0.5; } /* занято — приглушено, меньше шума */
 
+/* Столешница + тонкий внутренний ободок («дорогая» глубина) */
 .fp-t-shape {
-  fill: color-mix(in srgb, var(--tbl) 10%, transparent);
+  fill: color-mix(in srgb, var(--tbl) 13%, transparent);
   stroke: var(--tbl);
-  stroke-width: 60;
+  stroke-width: 78;
 }
+.fp-t-rim {
+  fill: none;
+  stroke: color-mix(in srgb, var(--tbl) 52%, transparent);
+  stroke-width: 30;
+}
+/* Мебель: стулья вокруг столов и обивка диванов — тонкий контур, чистый декор */
+.fp-chair {
+  fill: none;
+  stroke: color-mix(in srgb, var(--fp-ink) 24%, transparent);
+  stroke-width: 66;
+  stroke-linejoin: round;
+}
+.fp-seam {
+  stroke: color-mix(in srgb, var(--tbl) 42%, transparent);
+  stroke-width: 30;
+}
+/* Ховер меняет только заливку (мгновенно, без transition — правило .fp-svg) */
+.fp-table:hover .fp-t-shape { fill: color-mix(in srgb, var(--tbl) 22%, transparent); }
+
+/* Выбранный стол — двойное кольцо (наружное тусклое + внутреннее чёткое) */
 .fp-t--sel { opacity: 1; }
 .fp-t--sel .fp-t-shape {
   stroke: var(--fp-ink);
-  fill: color-mix(in srgb, var(--tbl) 22%, transparent);
+  fill: color-mix(in srgb, var(--tbl) 26%, transparent);
 }
+.fp-sel-outer { fill: none; stroke: color-mix(in srgb, var(--fp-ink) 22%, transparent); stroke-width: 30; }
+.fp-sel-inner { fill: none; stroke: color-mix(in srgb, var(--fp-ink) 58%, transparent); stroke-width: 46; }
+
 .fp-t-num {
-  fill: color-mix(in srgb, var(--fp-ink) 40%, transparent);
-  font-family: 'Avenir Next', sans-serif;
+  fill: color-mix(in srgb, var(--fp-ink) 64%, transparent);
+  font-family: 'Baskerville', 'Georgia', serif;
 }
 .fp-t-status {
-  fill: var(--tbl);
+  fill: color-mix(in srgb, var(--tbl) 78%, var(--fp-ink));
   font-family: 'Avenir Next', sans-serif;
   font-weight: 600;
 }
@@ -752,12 +793,11 @@
   font-weight: 600;
 }
 
-/* Статичное кольцо у стола с бронью (без анимации — см. комментарий выше) */
-.fp-ring {
-  fill: none;
-  stroke: var(--tbl);
-  stroke-width: 24;
-  opacity: 0.3;
+/* Подпись входа — проём между окнами нижней стены */
+.fp-entrance {
+  fill: color-mix(in srgb, var(--fp-ink) 32%, transparent);
+  font-family: 'Involve', 'Avenir Next', sans-serif;
+  font-style: italic;
 }
 
 /* Пульс свечения стойки — HTML-оверлей ПОВЕРХ svg (композитная opacity-
@@ -788,8 +828,8 @@
    перебивает fontSize-атрибут). Лёгкий выход текста за узкий диван (~5px
    экрана) — осознанный компромисс в пользу читаемости. */
 @media (max-width: 600px) {
-  .fp-t-status { font-size: 640px; }
-  .fp-t-num { font-size: 520px; }
+  .fp-t-num { font-size: 760px; }
+  .fp-t-status { font-size: 560px; }
   .fp-bar-note { font-size: 560px; }
 }
 

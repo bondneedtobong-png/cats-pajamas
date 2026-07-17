@@ -73,6 +73,33 @@ function WhenPicker({ dates, allDates, date, onDateChange, slots, time, onTimeCh
   );
 }
 
+// Арт-деко рамка-квадрифолий вокруг карточки плана — «главный дорогой акцент»
+// (логобук, приём 2). Двойная L-скоба + узел-квадрифолий в каждом углу,
+// пастельная обводка. Чистый декор (pointer-events: none), без анимаций.
+function DecoCorner() {
+  return (
+    <svg className="bkw__corner-svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <path className="bkw__corner-l1" d="M11 62 L11 11 L62 11" />
+      <path className="bkw__corner-l2" d="M16 62 L16 16 L62 16" />
+      <g className="bkw__corner-quat">
+        <circle cx="13" cy="8.6" r="4.3" /><circle cx="17.4" cy="13" r="4.3" />
+        <circle cx="13" cy="17.4" r="4.3" /><circle cx="8.6" cy="13" r="4.3" />
+        <circle cx="13" cy="13" r="2.6" />
+      </g>
+    </svg>
+  );
+}
+function PlanFrame() {
+  return (
+    <div className="bkw__frame" aria-hidden="true">
+      <span className="bkw__frame-corner bkw__frame-corner--tl"><DecoCorner /></span>
+      <span className="bkw__frame-corner bkw__frame-corner--tr"><DecoCorner /></span>
+      <span className="bkw__frame-corner bkw__frame-corner--bl"><DecoCorner /></span>
+      <span className="bkw__frame-corner bkw__frame-corner--br"><DecoCorner /></span>
+    </div>
+  );
+}
+
 function Legend({ tx }) {
   const items = [
     ['bkw__dot--vacant', tx.bkLegendVacant],
@@ -152,12 +179,7 @@ function Panel({ table, when, date, time, tx, currentUser, onRequestAuth, onSubm
       <div className="bkw__panel">
         {when}
         <div className="bkw__panel-center">
-        <div className="bkw__hint-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="12" cy="12" r="9" />
-            <circle cx="12" cy="12" r="3.4" />
-          </svg>
-        </div>
+        <img className="bkw__hint-sign" src="/uploads/logo-icon.svg" alt="" aria-hidden="true" />
         <p className="bkw__hint-text">{tx.bkPanelHint}</p>
         <p className="bkw__phone-note">
           {tx.bkPanelPhone}<br />
@@ -322,9 +344,10 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
 
   const planTx = {
     statusVacant: tx.bkStatusVacant,
-    statusReservedAt: tx.bkStatusReservedAt,
+    statusReservedAt: tx.bkStatusReservedShort || tx.bkStatusReservedAt, // короткая метка на плане («к 20:00»)
     statusOccupied: tx.bkStatusOccupied,
     barNote: tx.bkBarNote,
+    entrance: tx.bkEntrance,
     zoneMain: (tx.bkZoneMain || '').toUpperCase(),
     zoneWindow: (tx.bkZoneWindow || '').toUpperCase(),
     zoneSofas: (tx.bkZoneSofas || '').toUpperCase(),
@@ -352,6 +375,8 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
               />
               {/* Пульс стойки — HTML-слой (composited), SVG остаётся статичным */}
               <div className="bkw__glowbar bkw__glowbar-pos" aria-hidden="true" />
+              {/* Арт-деко рамка-квадрифолий поверх плана */}
+              <PlanFrame />
             </div>
           </div>
           {loading && <div className="bkw__loading">{tx.bkLoading}</div>}

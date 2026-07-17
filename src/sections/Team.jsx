@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useReveal } from '../useReveal.js';
+import DecoFrame from '../ui/DecoFrame.jsx';
 import TeamService from '../team/TeamService.js';
 import ApplicationsService from '../team/ApplicationsService.js';
 
@@ -87,6 +88,7 @@ export default function Team({ tx }) {
                 {current.bio && <p className="tm2__bio">{current.bio}</p>}
                 {quote && (
                   <figure className="tm2__quote">
+                    <DecoFrame />
                     <blockquote className="tm2__quote-text">«{quote.text}»</blockquote>
                     {quote.source && <figcaption className="tm2__quote-src">— {quote.source}</figcaption>}
                   </figure>

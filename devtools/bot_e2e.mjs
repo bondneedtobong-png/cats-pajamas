@@ -12,12 +12,21 @@ process.env.TELEGRAM_STAFF_IDS = '555';
 process.env.TELEGRAM_STAFF_CHAT_ID = '-100500';
 process.env.TELEGRAM_STAFF_BOOKINGS_THREAD_ID = '7';
 process.env.TELEGRAM_CHANNEL = '@catstest'; // getChatMember в перехвате отвечает member — гейт подписки проходит
+import os from 'node:os';
+import { promises as fsp } from 'node:fs';
+process.env.EVENT_UPLOADS_DIR = os.tmpdir() + '/cpjc_e2e_events'; // фото событий пишем во временную папку
+await fsp.rm(process.env.EVENT_UPLOADS_DIR, { recursive: true, force: true }).catch(() => {});
+// 1×1 PNG — валидный вход для sharp при «скачивании» фото из Telegram в тестах.
+const PNG_1x1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
 // ── Перехват Telegram API ──
 const tgCalls = [];
 let tgMsgId = 1000;
 function tgIntercept(url, opts) {
   const s = String(url);
+  // Скачивание файла (getFile → https://api.telegram.org/file/bot<token>/<path>)
+  // — отдаём валидный 1×1 PNG байтами, чтобы sharp мог его обработать.
+  if (s.includes('/file/bot')) return new Response(PNG_1x1, { status: 200 });
   const method = s.split('/').pop().split('?')[0];
   let body = {};
   if (opts?.body && typeof opts.body === 'string') { try { body = JSON.parse(opts.body); } catch {} }
@@ -35,8 +44,14 @@ function tgIntercept(url, opts) {
   if (method === 'getChatMember') result = { status: 'member', user: { id: 0, is_bot: false, first_name: 'x' } };
   if (method === 'sendMessage') result = { message_id: ++tgMsgId, chat: { id: body.chat_id }, date: 0, text: body.text || '' };
   if (method === 'sendPhoto') result = { message_id: ++tgMsgId, chat: { id: body.chat_id }, date: 0 };
+  if (method === 'getFile') result = { file_id: body.file_id, file_unique_id: 'u', file_path: `photos/f${++tgMsgId}.jpg` };
+  if (method === 'sendMediaGroup') {
+    const media = Array.isArray(body.media) ? body.media : (() => { try { return JSON.parse(body.media || '[]'); } catch { return []; } })();
+    result = media.map(() => ({ message_id: ++tgMsgId, chat: { id: body.chat_id }, date: 0 }));
+  }
   if (method === 'forwardMessage') result = { message_id: ++tgMsgId, chat: { id: body.chat_id }, date: 0 };
   if (method === 'editMessageText') result = { message_id: body.message_id, chat: { id: body.chat_id }, date: 0, text: body.text || '' };
+  if (method === 'editMessageCaption') result = { message_id: body.message_id, chat: { id: body.chat_id }, date: 0 };
   return new Response(JSON.stringify({ ok: true, result }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }
 
@@ -127,6 +142,24 @@ async function privText(text, fromId, { username = 'user' } = {}) {
       message_id: ++tgMsgId, date: Math.floor(Date.now() / 1000), text,
       from: { id: fromId, is_bot: false, first_name: 'Юзер', username },
       chat: { id: fromId, type: 'private' },
+    },
+  });
+}
+// Личное фото-сообщение (шаг ev_photos мастера события). Два «размера» —
+// бот берёт последний (самый большой) и «скачивает» его (перехват → 1×1 PNG).
+async function privPhoto(fromId, { username = 'user' } = {}) {
+  tgCalls.length = 0;
+  const uid = ++tgMsgId;
+  await bot.handleUpdate({
+    update_id: updId++,
+    message: {
+      message_id: uid, date: Math.floor(Date.now() / 1000),
+      from: { id: fromId, is_bot: false, first_name: 'Юзер', username },
+      chat: { id: fromId, type: 'private' },
+      photo: [
+        { file_id: `ph_s_${uid}`, file_unique_id: `us${uid}`, width: 90, height: 60 },
+        { file_id: `ph_b_${uid}`, file_unique_id: `ub${uid}`, width: 1280, height: 800 },
+      ],
     },
   });
 }
@@ -379,9 +412,11 @@ ok('J2 мастер спросил дату', calls('sendMessage').some(c => (c.
 await privText('31.12.2026', 111);
 await privText('20:00', 111);
 await privText('Живой квартет и старые пластинки', 111);
+ok('J3a после описания — шаг фото', calls('sendMessage').some(c => (c.body.text || '').includes('Пришлите фото') && JSON.stringify(c.body.reply_markup || {}).includes('evphotosdone')), JSON.stringify(calls('sendMessage').map(c => c.body.text)));
+await cbPriv('evphotosdone', 111); // «Без фото» → превью (регресс: событие без фото)
 const preview = calls('sendMessage').find(c => (c.body.text || '').includes('Проверьте событие'));
 const previewKb = JSON.stringify(preview?.body.reply_markup || {});
-ok('J3 превью: переключатель рассылки + публикация', !!preview && previewKb.includes('evnotify') && previewKb.includes('evsave'), previewKb);
+ok('J3 превью (без фото): переключатель рассылки + публикация', !!preview && previewKb.includes('evnotify') && previewKb.includes('evsave'), previewKb);
 
 await cbPriv('evnotify', 111);
 ok('J4 переключатель: рассылка выключилась', calls('editMessageText').some(c => JSON.stringify(c.body.reply_markup || {}).includes('НЕТ')));
@@ -471,6 +506,56 @@ await cbPriv('bdtoday', 111);
 ok('K11 тумблер «Сегодня» переключился', (await bk.getBookingDatesConfig()).blockToday === true);
 await cbPriv('bdtoday', 111);
 ok('K12 и обратно', (await bk.getBookingDatesConfig()).blockToday === false);
+
+// ═══ L. Событие С ФОТО (мастер → шаг фото → альбом/одиночное) ═══
+console.log('\n── L. Событие с фото ──');
+const EV_DIR = process.env.EVENT_UPLOADS_DIR;
+const diskPath = (url) => EV_DIR + '/' + String(url).replace('/uploads/events/', '');
+const fileExists = async (p) => { try { await fsp.stat(p); return true; } catch { return false; } };
+
+// L(3 фото → медиагруппа + анонс с кнопкой)
+await cbPriv('ev', 111);
+await cbPriv('evadd', 111);
+await privText('Джем-сейшн с фото', 111);
+await privText('15.11.2026', 111);
+await privText('21:00', 111);
+await privText('Три часа импровизаций', 111);
+await privPhoto(111);
+await privPhoto(111);
+await privPhoto(111);
+ok('L1 счётчик фото растёт (3/10)', calls('sendMessage').some(c => (c.body.text || '').includes('Фото 3/10')), JSON.stringify(calls('sendMessage').map(c => c.body.text)));
+await cbPriv('evphotosundo', 111);
+ok('L2 «Убрать последнее» → 2/10', calls('editMessageText').some(c => (c.body.text || '').includes('Фото 2/10')), JSON.stringify(calls('editMessageText').map(c => c.body.text)));
+await privPhoto(111); // снова 3
+await cbPriv('evphotosdone', 111);
+ok('L3 превью — фото-сообщение с подписью «Проверьте»', calls('sendPhoto').some(c => (c.body.caption || c.body.text || '').includes('Проверьте событие')), JSON.stringify(calls('sendPhoto').map(c => c.body)).slice(0, 300));
+await cbPriv('evsave', 111);
+await new Promise(r => setTimeout(r, 250));
+const evPhoto = db.t('events').find(e => e.title === 'Джем-сейшн с фото');
+ok('L4 событие с 3 фото в БД (image_urls)', !!evPhoto && Array.isArray(evPhoto.image_urls) && evPhoto.image_urls.length === 3 && evPhoto.image_url === evPhoto.image_urls[0], JSON.stringify(evPhoto?.image_urls || null));
+ok('L5 файлы webp сохранены на диске', !!evPhoto && await fileExists(diskPath(evPhoto.image_urls[0])) && await fileExists(diskPath(evPhoto.image_urls[0]).replace('.webp', '.thumb.webp')), diskPath(evPhoto?.image_urls?.[0] || ''));
+ok('L6 в канал ушёл альбом (sendMediaGroup)', calls('sendMediaGroup').some(c => c.body.chat_id === '@catstest'), JSON.stringify(calls('sendMediaGroup').map(c => c.body.chat_id)));
+const announce = calls('sendMessage').find(c => c.body.chat_id === '@catstest' && JSON.stringify(c.body.reply_markup || {}).includes('rsvp:'));
+ok('L7 отдельный анонс с кнопкой «Я приду» (у медиагрупп кнопок нет)', !!announce, JSON.stringify(announce?.body || {}).slice(0, 250));
+ok('L8 рассылка — пересылка анонса подписчикам', calls('forwardMessage').length >= 2 && calls('forwardMessage').every(c => String(c.body.from_chat_id) === '@catstest'), JSON.stringify(calls('forwardMessage').map(c => c.body)));
+
+// L(1 фото → sendPhoto + подпись + кнопка прямо в канале)
+await cbPriv('evadd', 111);
+await privText('Вечер одного фото', 111);
+await privText('16.11.2026', 111);
+await privText('-', 111);
+await privText('-', 111);
+await privPhoto(111);
+await cbPriv('evphotosdone', 111);
+await cbPriv('evnotify', 111); // выключим рассылку — проверяем только канал
+await cbPriv('evsave', 111);
+await new Promise(r => setTimeout(r, 200));
+const ev1 = db.t('events').find(e => e.title === 'Вечер одного фото');
+ok('L9 событие с 1 фото в БД', !!ev1 && ev1.image_urls.length === 1);
+const chPhoto = calls('sendPhoto').find(c => c.body.chat_id === '@catstest');
+ok('L10 в канал — фото с подписью и кнопкой «Я приду»', !!chPhoto && (chPhoto.body.caption || chPhoto.body.text || '').includes('Вечер одного фото') && JSON.stringify(chPhoto.body.reply_markup || {}).includes('rsvp:'), JSON.stringify(chPhoto?.body || {}).slice(0, 250));
+
+await fsp.rm(EV_DIR, { recursive: true, force: true }).catch(() => {}); // уборка временных фото
 
 console.log(fails ? `\n${fails} FAILED` : '\nALL SCENARIOS PASS');
 process.exit(fails ? 1 : 0);

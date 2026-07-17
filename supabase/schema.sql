@@ -199,6 +199,10 @@ alter table public.events add column if not exists awards_points boolean not nul
 -- Та же метка-дедупликатор, что у reservations.attendance_prompt_sent_at —
 -- не даёт поллеру слать список RSVP на подтверждение повторно.
 alter table public.events add column if not exists attendance_prompt_sent_at timestamptz;
+-- Несколько фото на событие (план v4 §B): массив веб-путей /uploads/events/<id>/<n>.webp.
+-- Старое image_url оставлено для обратной совместимости — при записи новых форм
+-- заполняем оба (image_url = image_urls[0]), при чтении склеиваем.
+alter table public.events add column if not exists image_urls jsonb not null default '[]'::jsonb;
 
 create table if not exists public.event_rsvps (
   id           text primary key,        -- 'rsvp_...'

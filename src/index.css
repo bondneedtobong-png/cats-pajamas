@@ -125,6 +125,56 @@ html { scroll-behavior: smooth; }
   transition: opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1);
 }
 .reveal.visible { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) { .reveal { transition: none; } }
+
+/* ── Фирменная графика (план v4 §C.1): паттерн бутылок + рамка-квадрифолий ── */
+/* Фоновый слой из силуэтов бутылок (#371931). На #1C101A контраст мал, поэтому
+   слой подаём на ~0.4 (0.05 из логобука здесь буквально невидим — цель
+   «едва заметно, но есть»). Статика, без анимаций. */
+.brand-bottles {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: url('/uploads/bottle-pattern.svg') repeat;
+  background-size: 240px auto;
+  opacity: 0.4;
+}
+/* Арт-деко рамка-квадрифолий (DecoFrame.jsx). Родитель — position:relative +
+   внутренний отступ под уголки. Пастельная обводка (--text), pointer-events:none. */
+.deco-frame { position: absolute; inset: 0; pointer-events: none; }
+.deco-frame::before { content: ''; position: absolute; inset: 10px; border: 1px solid rgba(198,191,181,.15); border-radius: 8px; }
+.deco-frame__corner { position: absolute; width: 50px; height: 50px; }
+.deco-frame--rays .deco-frame__corner { width: 58px; height: 58px; }
+.deco-frame__corner--tl { top: 0; left: 0; }
+.deco-frame__corner--tr { top: 0; right: 0; transform: scaleX(-1); }
+.deco-frame__corner--bl { bottom: 0; left: 0; transform: scaleY(-1); }
+.deco-frame__corner--br { bottom: 0; right: 0; transform: scale(-1, -1); }
+.deco-corner { display: block; width: 100%; height: 100%; }
+.deco-corner__l1 { stroke: rgba(198,191,181,.48); stroke-width: 1.4; }
+.deco-corner__l2 { stroke: rgba(198,191,181,.26); stroke-width: .9; }
+.deco-corner__rays { stroke: rgba(198,191,181,.42); stroke-width: .9; }
+.deco-corner__quat { fill: rgba(198,191,181,.6); }
+@media (max-width: 600px) { .deco-frame__corner, .deco-frame--rays .deco-frame__corner { width: 40px; height: 40px; } }
+
+/* Знак-креманка как разделитель/акцент (логобук) */
+.brand-sign { display: block; opacity: .5; }
+
+/* ── Единый язык hover'ов (план v4 §C.2): ТОЛЬКО transform/opacity ── */
+/* Ссылка: золотое подчёркивание, растущее transform scaleX (геометрия не меняется).
+   Второй примитив — золотой шиммер CTA — на .hero__btn (см. ниже). */
+.u-underline { position: relative; }
+.u-underline::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 1px;
+  background: var(--gold); transform: scaleX(0); transform-origin: left; transition: transform .28s ease;
+}
+.u-underline:hover::after { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .u-underline::after { transition: none; } }
+
+/* Стаггер детей раскрытой секции (план v4 §C.3): контейнер .reveal, дети .reveal-item с --i */
+.reveal-item {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+}
+.reveal-group.visible > .reveal-item { opacity: 1; transform: translateY(0); transition-delay: calc(var(--i, 0) * 75ms); }
+@media (prefers-reduced-motion: reduce) { .reveal-item { transition: none; } }
 
 /* ── Ornament ──────────────────────────────────────────── */
 .ornament {
@@ -588,6 +638,8 @@ html { scroll-behavior: smooth; }
    перед «Как найти» переиспользуют этот класс). */
 .hero__btn {
   display: inline-block;
+  position: relative; /* под шиммер-проблеск */
+  overflow: hidden;
   background: var(--gold);
   border: none;
   border-radius: 4px;
@@ -601,6 +653,20 @@ html { scroll-behavior: smooth; }
   transition: background .25s;
 }
 .hero__btn:hover { background: var(--gold-hover); }
+/* Золотой шиммер-проблеск на наведении: диагональный блик, ползёт transform:translateX
+   + opacity (НЕ background-position). Однократно на hover — не бесконечно. */
+.hero__btn::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 42%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.4), transparent);
+  transform: translateX(0); opacity: 0; pointer-events: none;
+}
+.hero__btn:hover::after { animation: hero-btn-sweep .7s ease; }
+@keyframes hero-btn-sweep {
+  0% { transform: translateX(0); opacity: 0; }
+  18% { opacity: 1; }
+  100% { transform: translateX(380%); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .hero__btn:hover::after { animation: none; } }
 
 /* ── ABOUT ─────────────────────────────────────────────── */
 /* Редизайн 2026-07-08: секция больше не «страница книги» с фиксированной
@@ -1115,6 +1181,77 @@ html { scroll-behavior: smooth; }
 }
 .events__arrow { flex-shrink: 0; opacity: .5; color: var(--accent); }
 
+/* ── Фото событий: витрина + арт-деко уголки + лайтбокс (план v4 §B) ── */
+.events__item--photo { cursor: pointer; }
+/* Арт-деко уголки на фото-карточке (лёгкая рамка-акцент) */
+.events__corner { position: absolute; width: 22px; height: 22px; z-index: 1; pointer-events: none; }
+.events__corner--tl { top: 12px; left: 12px; border-top: 1px solid rgba(198,191,181,.5); border-left: 1px solid rgba(198,191,181,.5); }
+.events__corner--br { bottom: 12px; right: 12px; border-bottom: 1px solid rgba(198,191,181,.5); border-right: 1px solid rgba(198,191,181,.5); }
+/* Значок «увеличить / N фото» справа */
+.events__count {
+  flex-shrink: 0; z-index: 1;
+  font-family: 'Avenir Next', sans-serif; font-size: 12px; letter-spacing: .5px;
+  color: rgba(242,237,228,.8); white-space: nowrap;
+}
+/* Стрип миниатюр (2+ фото) — в один ряд, при переполнении горизонтальный скролл */
+.events__thumbs {
+  display: flex; gap: 7px; margin-top: 12px;
+  overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px;
+}
+.events__thumb {
+  position: relative; flex: 0 0 auto; width: 62px; aspect-ratio: 4 / 3;
+  border: 1px solid rgba(198,191,181,.28); border-radius: 5px; overflow: hidden;
+  padding: 0; background: none; cursor: pointer;
+}
+.events__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .9; }
+.events__thumb:hover img { opacity: 1; transform: scale(1.06); } /* transform/opacity — без reflow */
+.events__thumb img { transition: transform .25s ease, opacity .25s ease; }
+.events__thumb-more {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(10,8,20,.62); color: var(--text); font-size: 13px; font-weight: 600;
+}
+
+/* Лайтбокс-карусель */
+.evlb {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: rgba(8,5,12,.93);
+  animation: evlb-fade .2s ease;
+}
+.evlb__stage { display: flex; max-width: 92vw; max-height: 86vh; }
+.evlb__img {
+  max-width: 92vw; max-height: 86vh; object-fit: contain; display: block;
+  border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  animation: evlb-pop .24s ease;
+}
+.evlb__close, .evlb__nav {
+  position: absolute; z-index: 2; background: rgba(20,12,20,.55);
+  color: var(--text, #C6BFB5); border: 1px solid rgba(198,191,181,.22);
+  cursor: pointer; font-family: 'Avenir Next', sans-serif; line-height: 1;
+}
+.evlb__close {
+  top: max(14px, env(safe-area-inset-top)); right: 18px;
+  width: 42px; height: 42px; border-radius: 50%; font-size: 18px;
+}
+.evlb__nav {
+  top: 50%; transform: translateY(-50%);
+  width: 48px; height: 64px; border-radius: 8px; font-size: 34px;
+}
+.evlb__nav--prev { left: 14px; }
+.evlb__nav--next { right: 14px; }
+.evlb__close:hover, .evlb__nav:hover { border-color: rgba(198,191,181,.5); color: #fff; }
+.evlb__counter {
+  position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+  font-family: 'Avenir Next', sans-serif; font-size: 13px; letter-spacing: 1px; color: var(--text-dim, rgba(198,191,181,.6));
+}
+@keyframes evlb-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes evlb-pop { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .evlb, .evlb__img { animation: none; }
+  .events__thumb:hover img { transform: none; }
+}
+
 /* ── SHELF OF MEMORIES (полка воспоминаний) ────────────── */
 .shelf {
   position: relative;
@@ -1392,6 +1529,7 @@ html { scroll-behavior: smooth; }
   overflow: hidden;
   background: var(--bg2);
   border: 1px solid var(--border);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .32); /* мягкая статичная глубина (план v4 §C.5) */
 }
 .tm2__photo img {
   width: 100%;
@@ -1444,7 +1582,7 @@ html { scroll-behavior: smooth; }
   margin: 0;
   max-width: 62ch;
 }
-.tm2__quote { margin: 0; }
+.tm2__quote { position: relative; margin: 0; padding: clamp(20px, 3vh, 34px) clamp(26px, 4vw, 48px); }
 /* Jar Binks рукописный и мелким нечитаем — держим крупно (правило ≥28px,
    размер и светлота подняты по прямой просьбе владельца: на тёмном фоне
    тонкий рукописный штрих читается только крупным и светлым) */
@@ -1850,7 +1988,11 @@ html { scroll-behavior: smooth; }
   width: 100%;
 }
 /* Финальный CTA («Займите свой столик») перед «Как найти» — см. Contacts.jsx */
-.contacts__cta { text-align: center; max-width: 900px; margin: 0 auto clamp(70px, 10vh, 110px); }
+.contacts__cta {
+  position: relative; /* под рамку-квадрифолий (DecoFrame rays) */
+  text-align: center; max-width: 820px; margin: 0 auto clamp(70px, 10vh, 110px);
+  padding: clamp(30px, 5vh, 56px) clamp(30px, 6vw, 72px);
+}
 .contacts__cta-title {
   font-family: 'Baskerville', serif;
   font-size: clamp(30px, 4.4vw, 50px);
@@ -2008,11 +2150,19 @@ html { scroll-behavior: smooth; }
 /* ── FOOTER ────────────────────────────────────────────── */
 .footer {
   flex-shrink: 0;
+  position: relative; /* под слой бутылок */
+  overflow: hidden;
   padding: clamp(22px, 3.6vh, 46px) 6%;
   background: var(--bg3);
   border-top: 1px solid var(--border);
 }
+.footer__sign {
+  position: relative; z-index: 1;
+  width: 30px; height: auto;
+  margin: 0 auto clamp(14px, 2.4vh, 24px);
+}
 .footer__inner {
+  position: relative; z-index: 1;
   max-width: 1200px;
   margin: 0 auto;
   display: flex;

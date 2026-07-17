@@ -20,6 +20,7 @@ import { renderPlanPng } from './_lib/planImage.js';
 import { getGuestLevel } from './_lib/loyalty.js';
 import { getGuestContact } from './_lib/guests.js';
 import { getEvents, createEvent } from './_lib/events.js';
+import { saveEventPhoto, deleteEventPhoto, MAX_PHOTOS } from './_lib/eventPhotos.js';
 import { rsvpToEvent } from './_lib/eventRsvps.js';
 import { sendBroadcast, forwardBroadcast } from './_lib/broadcast.js';
 import { supabaseSessionStorage } from './_lib/botSession.js';
@@ -75,6 +76,32 @@ function eventBroadcastText(ev, isReminder) {
   return `${head}\n\n*${escapeMd(ev.title)}*\n📅 ${fmtEventDate(ev.date)}${time}${desc}\n\n🪑 Забронировать стол: ${SITE_URL}`;
 }
 function resetSession(ctx) { ctx.session.step = null; ctx.session.draft = {}; }
+
+// id события генерим заранее (в шаге фото) — тем же форматом, что createEvent,
+// чтобы фото легли в папку /uploads/events/<id>/ ещё до записи события в БД.
+function genEventId() { return 'ev_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
+
+// Скачать файл из Telegram по file_id → Buffer (getFile → ссылка на файл → байты).
+async function downloadTelegramFile(api, fileId) {
+  const file = await api.getFile(fileId);
+  const url = `https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('download failed ' + resp.status);
+  return Buffer.from(await resp.arrayBuffer());
+}
+
+// Шаг «фото» мастера события.
+function eventPhotoStepText(n) {
+  return n === 0
+    ? 'Пришлите фото события — до 10, можно альбомом. Или нажмите «Без фото».'
+    : `Фото ${n}/${MAX_PHOTOS} ✅. Пришлите ещё или нажмите «Готово».`;
+}
+function eventPhotoStepKb(n = 0) {
+  const kb = new InlineKeyboard();
+  if (n > 0) kb.text('✅ Готово', 'evphotosdone').row().text('🗑 Убрать последнее', 'evphotosundo').row();
+  else kb.text('⏭ Без фото', 'evphotosdone').row();
+  return kb.text('‹ Отмена', 'evcancel');
+}
 
 // ─── вход на сайте через бота (deep-link /start login_<token>) ──────────────
 // Возвращает true, если это был шаг логин-флоу (и ответ уже отправлен) —
@@ -737,9 +764,20 @@ export function buildBot() {
     const notifyLine = d.notify
       ? '🔔 Подписчикам придёт пересланный пост из канала.'
       : '🔕 Без рассылки в личку — только сайт и канал.';
-    const text = `Проверьте событие:\n\n*${escapeMd(d.title)}*\n📅 ${fmtEventDate(d.date)}${d.time ? ' в ' + d.time : ''}\n${escapeMd(d.description) || '(без описания)'}\n\n`
+    const nPhotos = d.photos?.length || 0;
+    const photoLine = nPhotos ? `\n🖼 Фото: ${nPhotos}` : '';
+    const text = `Проверьте событие:\n\n*${escapeMd(d.title)}*\n📅 ${fmtEventDate(d.date)}${d.time ? ' в ' + d.time : ''}\n${escapeMd(d.description) || '(без описания)'}${photoLine}\n\n`
       + `После публикации: событие на сайте + пост в канале${CHANNEL ? ' ' + CHANNEL : ''}.\n${notifyLine}`;
     return { text, kb };
+  }
+
+  // Превью показываем фото-сообщением, если есть фото (иначе текстом).
+  function sendEventPreview(ctx, d) {
+    const { text, kb } = eventPreviewContent(d);
+    if (d.photos?.length) {
+      return ctx.replyWithPhoto(d.photos[0].fileId, { caption: text, parse_mode: 'Markdown', reply_markup: kb });
+    }
+    return ctx.reply(text, { reply_markup: kb, parse_mode: 'Markdown' });
   }
 
   bot.callbackQuery('evnotify', async (ctx) => {
@@ -753,7 +791,12 @@ export function buildBot() {
     d.notify = !d.notify;
     await ctx.answerCallbackQuery({ text: d.notify ? 'Рассылка включена' : 'Рассылка выключена' });
     const { text, kb } = eventPreviewContent(d);
-    return ctx.editMessageText(text, { reply_markup: kb, parse_mode: 'Markdown' }).catch(() => {});
+    // Превью-сообщение с фото → редактируем подпись, без фото → текст.
+    const isPhoto = !!ctx.callbackQuery.message?.photo;
+    const edit = isPhoto
+      ? ctx.editMessageCaption({ caption: text, parse_mode: 'Markdown', reply_markup: kb })
+      : ctx.editMessageText(text, { reply_markup: kb, parse_mode: 'Markdown' });
+    return edit.catch(() => {});
   });
 
   bot.callbackQuery('evsave', async (ctx) => {
@@ -765,19 +808,41 @@ export function buildBot() {
       return ctx.editMessageText('Черновик события утерян, начните заново.', { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') });
     }
     try {
-      const ev = await createEvent({ title: d.title, date: d.date, time: d.time, description: d.description });
+      const photos = d.photos || [];
+      const ev = await createEvent({
+        id: d.eventId, title: d.title, date: d.date, time: d.time, description: d.description,
+        imageUrls: photos.map(p => p.url),
+      });
       const notify = !!d.notify;
       resetSession(ctx);
       const report = ['✅ Событие сохранено — уже видно на сайте (страница «Афиша»).'];
 
-      // Пост в канал — с кнопкой «Я приду» (RSVP работает прямо из канала).
-      let channelMsg = null;
+      // Пост в канал: 0 фото → текст, 1 → фото+подпись, 2+ → альбом + отдельный
+      // анонс с кнопкой (у медиагрупп не бывает inline-кнопок). broadcastMsg —
+      // что пересылать подписчикам (для альбома — анонс, его можно переслать).
+      const caption = eventBroadcastText(ev, false);
+      const rsvpKb = () => new InlineKeyboard().text('🙋 Я приду', `rsvp:${ev.id}`);
+      let channelMsg = null;   // основной пост (для отчёта «опубликовано»)
+      let broadcastMsg = null; // сообщение для пересылки в рассылке
       if (CHANNEL) {
-        const rsvpKb = new InlineKeyboard().text('🙋 Я приду', `rsvp:${ev.id}`);
-        channelMsg = await ctx.api.sendMessage(CHANNEL, eventBroadcastText(ev, false), { parse_mode: 'Markdown', reply_markup: rsvpKb })
-          .catch((e) => { console.error('[bot] channel post failed:', e.message); return null; });
+        const onErr = (e) => { console.error('[bot] channel post failed:', e.message); return null; };
+        if (photos.length === 0) {
+          channelMsg = await ctx.api.sendMessage(CHANNEL, caption, { parse_mode: 'Markdown', reply_markup: rsvpKb() }).catch(onErr);
+          broadcastMsg = channelMsg;
+        } else if (photos.length === 1) {
+          channelMsg = await ctx.api.sendPhoto(CHANNEL, photos[0].fileId, { caption, parse_mode: 'Markdown', reply_markup: rsvpKb() }).catch(onErr);
+          broadcastMsg = channelMsg;
+        } else {
+          const media = photos.slice(0, MAX_PHOTOS).map((p, i) => (
+            i === 0 ? { type: 'photo', media: p.fileId, caption, parse_mode: 'Markdown' } : { type: 'photo', media: p.fileId }
+          ));
+          const groupMsgs = await ctx.api.sendMediaGroup(CHANNEL, media).catch(onErr);
+          channelMsg = Array.isArray(groupMsgs) ? groupMsgs[0] : null;
+          // Отдельный анонс с кнопкой RSVP (медиагруппа кнопок не держит).
+          broadcastMsg = await ctx.api.sendMessage(CHANNEL, `🎷 *${escapeMd(ev.title)}* — подробности и «Я приду» 👇`, { parse_mode: 'Markdown', reply_markup: rsvpKb() }).catch(onErr);
+        }
         report.push(channelMsg
-          ? `📢 Пост опубликован в канале ${CHANNEL}.`
+          ? `📢 Пост опубликован в канале ${CHANNEL}${photos.length ? ` (${photos.length} фото)` : ''}.`
           : `⚠️ Пост в канал ${CHANNEL} не ушёл — проверьте, что бот админ канала.`);
       }
 
@@ -785,21 +850,83 @@ export function buildBot() {
       // если поста нет — фолбэк на прямое сообщение с той же кнопкой RSVP.
       if (notify) {
         let stats;
-        if (channelMsg) {
-          stats = await forwardBroadcast(ctx.api, channelMsg.chat.id, channelMsg.message_id);
+        if (broadcastMsg) {
+          stats = await forwardBroadcast(ctx.api, broadcastMsg.chat.id, broadcastMsg.message_id);
         } else {
-          const rsvpKb = new InlineKeyboard().text('🙋 Я приду', `rsvp:${ev.id}`);
-          stats = await sendBroadcast(ctx.api, eventBroadcastText(ev, false), { replyMarkup: rsvpKb });
+          stats = await sendBroadcast(ctx.api, caption, { replyMarkup: rsvpKb() });
         }
         report.push(`📨 Уведомление подписчикам: доставлено ${stats.sent} из ${stats.total}${stats.blocked ? `, бот заблокирован у ${stats.blocked}` : ''}.`);
       }
 
-      return ctx.editMessageText(report.join('\n'), {
-        reply_markup: new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'adminmenu'),
-      });
+      // Превью могло быть фото-сообщением → редактируем подпись, не текст.
+      const doneKb = new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'adminmenu');
+      return editPreviewMessage(ctx, report.join('\n'), doneKb);
     } catch (e) {
-      return ctx.editMessageText(`Не удалось сохранить: ${e.message}`, { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') });
+      return editPreviewMessage(ctx, `Не удалось сохранить: ${e.message}`, new InlineKeyboard().text('‹ Назад', 'ev'));
     }
+  });
+
+  // Редактировать превью-сообщение мастера (текст ИЛИ подпись фото) с фолбэком на reply.
+  function editPreviewMessage(ctx, text, kb) {
+    const isPhoto = !!ctx.callbackQuery?.message?.photo;
+    const p = isPhoto
+      ? ctx.editMessageCaption({ caption: text, reply_markup: kb })
+      : ctx.editMessageText(text, { reply_markup: kb });
+    return p.catch(() => ctx.reply(text, { reply_markup: kb }));
+  }
+
+  // ─── Мастер события: шаг «фото» ───────────────────────────────────────────
+  // Фото приходят отдельными message:photo (в т.ч. альбомом — по одному).
+  // grammY обрабатывает апдейты последовательно, поэтому счётчик/индекс файла
+  // не гоняются. Черновик в persistent-сессии хранит только пути и file_id.
+  bot.on('message:photo', async (ctx) => {
+    if (ctx.session.step !== 'ev_photos') return; // фото вне мастера — игнор
+    if (!isTelegramStaff(ctx.from.id)) return;
+    const d = ctx.session.draft;
+    d.photos = d.photos || [];
+    if (!d.eventId) d.eventId = genEventId();
+    if (d.photos.length >= MAX_PHOTOS) {
+      return ctx.reply(`Уже ${MAX_PHOTOS} фото — это максимум. Нажмите «Готово».`, { reply_markup: eventPhotoStepKb(d.photos.length) });
+    }
+    try {
+      const sizes = ctx.message.photo;            // размеры одного фото
+      const largest = sizes[sizes.length - 1];    // самый большой
+      const buffer = await downloadTelegramFile(ctx.api, largest.file_id);
+      const saved = await saveEventPhoto(d.eventId, buffer);
+      d.photos.push({ url: saved.url, fileId: largest.file_id });
+    } catch (e) {
+      console.error('[bot] event photo save failed:', e.message);
+      return ctx.reply('Не смог скачать/сохранить фото, пришлите ещё раз.', { reply_markup: eventPhotoStepKb(d.photos.length) });
+    }
+    return ctx.reply(eventPhotoStepText(d.photos.length), { reply_markup: eventPhotoStepKb(d.photos.length) });
+  });
+
+  bot.callbackQuery('evphotosdone', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    if (!isTelegramStaff(ctx.from.id)) return;
+    const d = ctx.session.draft;
+    if (!d?.title || !d?.date) {
+      resetSession(ctx);
+      return ctx.editMessageText('Черновик события утерян, начните заново.', { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') }).catch(() => {});
+    }
+    d.notify = true; // по умолчанию рассылку шлём — выключается кнопкой в превью
+    ctx.session.step = null;
+    return sendEventPreview(ctx, d);
+  });
+
+  bot.callbackQuery('evphotosundo', async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery();
+    const d = ctx.session.draft;
+    if (d?.photos?.length) {
+      const removed = d.photos.pop();
+      await deleteEventPhoto(d.eventId, removed.url).catch(() => {});
+      await ctx.answerCallbackQuery({ text: 'Убрал последнее фото' });
+    } else {
+      await ctx.answerCallbackQuery();
+    }
+    const n = d?.photos?.length || 0;
+    return ctx.editMessageText(eventPhotoStepText(n), { reply_markup: eventPhotoStepKb(n) })
+      .catch(() => ctx.reply(eventPhotoStepText(n), { reply_markup: eventPhotoStepKb(n) }));
   });
 
   // ─── админ-панель: произвольная рассылка (просто текст, без события) ───────
@@ -1146,10 +1273,10 @@ export function buildBot() {
 
     if (step === 'ev_desc') {
       ctx.session.draft.description = text === '-' ? '' : text;
-      ctx.session.draft.notify = true; // по умолчанию рассылку шлём — выключается кнопкой в превью
-      ctx.session.step = null;
-      const { text: previewText, kb } = eventPreviewContent(ctx.session.draft);
-      return ctx.reply(previewText, { reply_markup: kb, parse_mode: 'Markdown' });
+      ctx.session.draft.eventId = ctx.session.draft.eventId || genEventId();
+      ctx.session.draft.photos = ctx.session.draft.photos || [];
+      ctx.session.step = 'ev_photos';
+      return ctx.reply(eventPhotoStepText(0), { reply_markup: eventPhotoStepKb(0) });
     }
   });
 

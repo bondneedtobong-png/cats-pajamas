@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthService from '../auth/AuthService.js';
 import BookingService from '../booking/BookingService.js';
@@ -533,27 +533,82 @@ function TabMenu() {
 }
 
 // ─── Tab: СОБЫТИЯ ─────────────────────────────────────────────────
+// id события генерим на клиенте (формат совпадает с сервером) — чтобы фото
+// легли в папку /uploads/events/<id>/ ещё до первого сохранения (createEvent
+// принимает этот id). Для существующего события — его id.
+function genEventId() { return 'ev_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
+const MAX_EVENT_PHOTOS = 10;
+
 function EventModal({ initial, onSave, onClose }) {
   const [title,       setTitle]       = useState(initial?.title || '');
   const [date,        setDate]        = useState(initial?.date || todayIso());
   const [time,        setTime]        = useState(initial?.time || '19:00');
   const [description, setDescription] = useState(initial?.description || '');
-  const [imageUrl,    setImageUrl]    = useState(initial?.imageUrl || '');
+  const [photos,      setPhotos]      = useState(
+    initial?.imageUrls?.length ? initial.imageUrls : (initial?.imageUrl ? [initial.imageUrl] : []),
+  );
+  const [urlDraft,    setUrlDraft]    = useState('');
   const [active,      setActive]      = useState(initial?.active !== false);
   const [err,         setErr]         = useState('');
   const [saving,      setSaving]      = useState(false);
+  const [uploading,   setUploading]   = useState(false);
+  const eventId = useRef(initial?.id || genEventId());
+
+  async function handleFiles(fileList) {
+    setErr('');
+    const files = Array.from(fileList || []);
+    for (const file of files) {
+      if (photos.length >= MAX_EVENT_PHOTOS) { setErr(`Не больше ${MAX_EVENT_PHOTOS} фото`); break; }
+      if (file.size > 10 * 1024 * 1024) { setErr(`${file.name}: больше 10 МБ`); continue; }
+      setUploading(true);
+      try {
+        const base64 = await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => res(fr.result);
+          fr.onerror = rej;
+          fr.readAsDataURL(file);
+        });
+        const { url } = await EventsService.uploadPhoto(eventId.current, base64);
+        setPhotos(prev => [...prev, url]);
+      } catch (ex) {
+        setErr(ex.message);
+      } finally {
+        setUploading(false);
+      }
+    }
+  }
+
+  function addUrl() {
+    const u = urlDraft.trim();
+    if (!u) return;
+    if (photos.length >= MAX_EVENT_PHOTOS) { setErr(`Не больше ${MAX_EVENT_PHOTOS} фото`); return; }
+    setPhotos(prev => [...prev, u]);
+    setUrlDraft('');
+  }
+
+  function removePhoto(url) {
+    setPhotos(prev => prev.filter(p => p !== url));
+    if (url.startsWith('/uploads/events/')) EventsService.deletePhoto(eventId.current, url).catch(() => {});
+  }
+
+  function makeFirst(url) {
+    setPhotos(prev => [url, ...prev.filter(p => p !== url)]);
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setErr('');
     setSaving(true);
     try {
-      await onSave({ title, date, time, description, imageUrl, active });
+      // id передаём для нового события (папка фото уже названа так же).
+      await onSave({ id: eventId.current, title, date, time, description, imageUrls: photos, active });
     } catch (ex) {
       setErr(ex.message);
       setSaving(false);
     }
   }
+
+  const thumb = (u) => (u.endsWith('.webp') ? u.replace(/\.webp$/, '.thumb.webp') : u);
 
   return (
     <div className="adm-modal-overlay" onClick={onClose}>
@@ -581,10 +636,38 @@ function EventModal({ initial, onSave, onClose }) {
             <label className="adm-form-lbl">ОПИСАНИЕ</label>
             <textarea className="adm-form-input adm-form-textarea" rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Ансамбль Дмитрия Дмитриева — джаз прямо на сцене бара" />
           </div>
+
           <div className="adm-form-field">
-            <label className="adm-form-lbl">ССЫЛКА НА ФОТО</label>
-            <input className="adm-form-input" type="text" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://... (станет фоном карточки)" />
+            <label className="adm-form-lbl">ФОТО ({photos.length}/{MAX_EVENT_PHOTOS})</label>
+            {photos.length > 0 && (
+              <div className="adm-evphotos">
+                {photos.map((u, i) => (
+                  <div key={u} className={`adm-evphoto${i === 0 ? ' adm-evphoto--first' : ''}`}>
+                    <img src={thumb(u)} alt="" />
+                    {i === 0 && <span className="adm-evphoto__badge">Обложка</span>}
+                    <div className="adm-evphoto__acts">
+                      {i !== 0 && <button type="button" title="Сделать обложкой" onClick={() => makeFirst(u)}>★</button>}
+                      <button type="button" title="Удалить" onClick={() => removePhoto(u)}>✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="adm-evphotos__add">
+              <label className="adm-btn adm-btn--ghost">
+                {uploading ? 'Загрузка…' : '📷 Загрузить файлом'}
+                <input type="file" accept="image/*" multiple hidden disabled={uploading || photos.length >= MAX_EVENT_PHOTOS}
+                  onChange={e => { handleFiles(e.target.files); e.target.value = ''; }} />
+              </label>
+            </div>
+            <div className="adm-evphotos__url">
+              <input className="adm-form-input" type="text" value={urlDraft} onChange={e => setUrlDraft(e.target.value)}
+                placeholder="…или вставьте ссылку на фото" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }} />
+              <button type="button" className="adm-btn adm-btn--ghost" onClick={addUrl}>Добавить</button>
+            </div>
+            <p className="adm-evphotos__hint">Первое фото — обложка карточки. 2+ фото → витрина с лайтбоксом на сайте.</p>
           </div>
+
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'rgba(242,237,228,0.6)', cursor: 'pointer' }}>
             <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
             Показывать на сайте
@@ -639,7 +722,7 @@ function TabEvents() {
     nextDate.setDate(nextDate.getDate() + 7);
     await EventsService.create({
       title: ev.title, date: nextDate.toISOString().split('T')[0],
-      time: ev.time, description: ev.description, imageUrl: ev.imageUrl, active: true,
+      time: ev.time, description: ev.description, imageUrls: ev.imageUrls || [], active: true,
     });
     setTick(n => n + 1);
   }

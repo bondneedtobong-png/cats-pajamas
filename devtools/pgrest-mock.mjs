@@ -49,6 +49,7 @@ const DEFAULTS = {
   reservations: r => ({ staff_message_id: null, staff_reminder_count: 0, attendance_prompt_sent_at: null, cancelled_at: null, cancellation_reason: null, note: '', guest_phone: '', created_at: now(), updated_at: now(), ...r }),
   table_occupancy: r => ({ source: 'walk_in', reservation_id: null, occupied_since: now(), freed_at: null, ...r }),
   app_config: r => ({ value: {}, updated_at: now(), ...r }),
+  events: r => ({ time: '', description: '', image_url: '', image_urls: [], sort_order: 0, active: true, awards_points: false, attendance_prompt_sent_at: null, created_at: now(), updated_at: now(), ...r }),
 };
 
 export function createDb(seed = {}) {

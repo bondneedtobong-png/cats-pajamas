@@ -6,6 +6,7 @@
 // this process's — see HANDOFF_CATS_PAJAMAS.md "VPS-миграция".
 import 'dotenv/config'; // must run before any api/_lib/*.js reads process.env at import time
 import express from 'express';
+import { EVENT_UPLOADS_DIR } from './api/_lib/eventPhotos.js';
 
 import authHandler          from './api/auth.js';
 import reservationsHandler  from './api/reservations.js';
@@ -20,6 +21,15 @@ import loyaltyHandler       from './api/loyalty.js';
 import guestsHandler        from './api/guests.js';
 
 const app = express();
+
+// Фолбэк-раздача фото событий (план v4 §B). На проде их отдаёт nginx
+// (^~ /uploads/events/ alias на персистентную папку вне релизов); этот роут —
+// для локали и на случай, пока nginx не поправлен. Кэш как у ассетов.
+app.use('/uploads/events', express.static(EVENT_UPLOADS_DIR, { maxAge: '365d', immutable: true, fallthrough: true }));
+
+// Загрузка фото событий шлётся как base64 → поднимаем лимит тела ТОЧЕЧНО для
+// /api/events (обычные роуты остаются на дефолтном ~100 КБ, меньше DoS-поверхность).
+app.use('/api/events', express.json({ limit: '12mb' }));
 app.use(express.json());
 
 const routes = {

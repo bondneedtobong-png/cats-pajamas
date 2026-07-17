@@ -1,4 +1,5 @@
 import { useReveal } from '../useReveal.js';
+import DecoFrame from '../ui/DecoFrame.jsx';
 
 // Виджет 2ГИС для организации «The Cat's Pajamas Club» (карточка владельца,
 // код получен через «Поделиться» → «Виджет для сайта» на 2gis.ru). ВАЖНО:
@@ -31,6 +32,7 @@ export default function Contacts({ tx }) {
             переехал сюда как вступление к последней главе. Тексты те же
             (tx.bookingLabel/bookingTitle), новых ключей не потребовалось. */}
         <div className="contacts__cta">
+          <DecoFrame rays />
           <span className="sec-label">{tx.bookingLabel}</span>
           <h2 className="contacts__cta-title">{tx.bookingTitle}</h2>
           <a href="/booking" className="hero__btn">{tx.heroCta}</a>
@@ -98,7 +100,7 @@ export default function Contacts({ tx }) {
               href="https://2gis.ru/samara/firm/70000001101561088"
               target="_blank"
               rel="noopener noreferrer"
-              className="contacts__map-link"
+              className="contacts__map-link u-underline"
             >
               {tx.mapLabel}
             </a>

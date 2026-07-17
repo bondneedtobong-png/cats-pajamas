@@ -23,6 +23,14 @@ const EventsService = {
   async remove(id) {
     return apiFetch('/api/events', { method: 'POST', body: { action: 'delete', id } });
   },
+  /** Загрузка фото файлом (base64) → { url, thumbUrl }. eventId нужен заранее. */
+  async uploadPhoto(eventId, imageBase64) {
+    return apiFetch('/api/events', { method: 'POST', body: { action: 'upload_photo', eventId, imageBase64 } });
+  },
+  /** Удалить файл фото на сервере (best-effort). */
+  async deletePhoto(eventId, url) {
+    return apiFetch('/api/events', { method: 'POST', body: { action: 'delete_photo', eventId, url } });
+  },
 };
 
 export default EventsService;

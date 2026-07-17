@@ -45,6 +45,13 @@ const db = createDb({
     { id: 'tm_s5', name: 'Дмитрий', role: 'Бармен', spec: 'Авторские рецептуры', bio: 'Экспериментатор бара: пока другие полируют классику, он придумывает то, чего в книгах ещё нет. Настойки, необычные сиропы и сочетания, которые на бумаге выглядят спорно, а в бокале — убедительно. Почти каждый новый пункт в карте авторских — его рук дело.', quote: 'Всё вокруг меняется, это закон жизни.', quote_source: 'Форрест Бондурант, «Самый пьяный округ в мире»', photo_url: '/uploads/team/dmitriy.jpg', sort_order: 4, active: true, created_at: '2026-06-01T12:00:00Z', updated_at: '2026-06-01T12:00:00Z' },
     { id: 'tm_s6', name: 'Егор', role: 'Бармен', spec: 'Джин и виски-коктейли', bio: 'Проводник по крепкой части карты: от можжевелового джина до торфяного виски. Любит рассказывать, чем Айла отличается от Спейсайда, но умеет и просто молча налить правильный дрэм. Если вы «не пьёте виски» — дайте ему один шанс вас переубедить.', quote: '«Белая Молния» входит, как нож, острым концом вперёд.', quote_source: 'Джек Бондурант, «Самый пьяный округ в мире»', photo_url: '/uploads/team/egor.jpg', sort_order: 5, active: true, created_at: '2026-06-01T12:00:00Z', updated_at: '2026-06-01T12:00:00Z' },
   ],
+  // События для витрины «Афиши» (план v4 §B): без фото / 1 фото / много фото.
+  // Стенд-ин фото — статика команды (public/uploads/team) для локального превью.
+  events: [
+    { id: 'ev_demo0', title: 'Вечер винила', event_date: '2026-07-25', time: '20:00', description: 'Слушаем редкие пластинки джаза 50-х под бокал вермута.', image_url: '', image_urls: [] },
+    { id: 'ev_demo1', title: 'Живой квартет Дмитриева', event_date: '2026-07-28', time: '21:00', description: 'Саксофон, контрабас и тёплый ламповый вечер прямо на сцене бара.', image_url: '/uploads/team/denis.jpg', image_urls: ['/uploads/team/denis.jpg'] },
+    { id: 'ev_demo3', title: 'Большой джаз-джем', event_date: '2026-08-02', time: '22:00', description: 'Открытая сцена: приходи со своим инструментом и играй с нашими барменами.', image_url: '/uploads/team/egor.jpg', image_urls: ['/uploads/team/egor.jpg', '/uploads/team/dmitriy.jpg', '/uploads/team/vladislav.jpg', '/uploads/team/aleksey.jpg', '/uploads/team/shamusar.jpg'] },
+  ],
   // Пара коктейлей — чтобы карусель «Напитков» на лендинге была не пустой
   cocktails: [
     { id: 'ck_s1', name: 'Clover Club Special', category: 'signature', ingredients: 'джин, малина, лайм, белок', story: 'Фирменный твист на классику 1900-х.', taste: 'ягодный, шелковистый', price: '750 ₽', image_url: '', sort_order: 0, active: true, created_at: '2026-06-01T12:00:00Z', updated_at: '2026-06-01T12:00:00Z' },
