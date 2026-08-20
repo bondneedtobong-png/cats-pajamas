@@ -61,10 +61,6 @@ export default function Hero({ tx }) {
         <div className="hero__bg-slide hero__bg-slide--2" />
         <div className="hero__bg-slide hero__bg-slide--3" />
       </div>
-      {/* Медленно вращающееся свечение-лучи за логотипом (реф владельца).
-          Только transform: rotate — дёшево; пауза вне hero (.is-offscreen,
-          useOffscreenPause) + reduced-motion в CSS. */}
-      <div className="hero__rays" aria-hidden="true" />
       <div className="hero__vignette" />
       <div className="hero__grad" />
 

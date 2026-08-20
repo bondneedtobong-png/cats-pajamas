@@ -97,8 +97,7 @@ html { scroll-behavior: smooth; }
 /* ── Offscreen animation pause (замена старого .book__page:not(--active)
    селектора после редизайна 2026-07-07, ветка redesign-scroll-v1 — книги
    больше нет, см. useOffscreenPause в useReveal.js). */
-.hero.is-offscreen .hero__bg-slide,
-.hero.is-offscreen .hero__rays {
+.hero.is-offscreen .hero__bg-slide {
   animation-play-state: paused;
 }
 
@@ -387,11 +386,9 @@ html { scroll-behavior: smooth; }
 /* ── HERO ──────────────────────────────────────────────── */
 .hero {
   position: relative;
-  /* overflow:hidden обязателен: .hero__rays — 165vmax (на высоком узком
-     телефоне vmax = высота экрана, круг получается заметно шире экрана и
-     без обрезки создаёт лишнюю горизонтальную прокрутку на всю секцию —
-     реальный баг на телефоне, x-overflow: hidden на body его не спасал
-     (тачскролл на мобильном Chrome его всё равно открывал). */
+  /* overflow:hidden: занавес (.hero__curtain-l/-r) уезжает за границы
+     секции на translateX(±100%) — без обрезки даёт горизонтальную
+     прокрутку на телефоне. */
   overflow: hidden;
   /* Редизайн 2026-07-07: секция больше не внутри .book__page (у него была
      явная высота), а обычный <section> в потоке документа — по правилу
@@ -447,36 +444,6 @@ html { scroll-behavior: smooth; }
   position: absolute; inset: 0;
   background: linear-gradient(to bottom, var(--bg) 0%, transparent 18%, transparent 78%, var(--bg) 100%);
 }
-/* Свечение-лучи за логотипом. Малозаметное и медленное (просьба владельца):
-   низкая непрозрачность + ~150с на оборот. Крутится только transform: rotate —
-   композитор делает это дёшево. На неактивной странице встаёт на паузу (см.
-   селектор .book__page:not(--active) выше), при reduced-motion выключается. */
-.hero__rays {
-  position: absolute;
-  left: 50%; top: 43%;
-  width: 165vmax; height: 165vmax;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  pointer-events: none;
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(212, 168, 67, 0.09) 0deg 1deg,
-    transparent 1deg 5deg
-  );
-  /* лучи гаснут к центру (под логотипом) и к краям — остаётся мягкий ореол */
-  -webkit-mask: radial-gradient(closest-side, transparent 4%, #000 24%, rgba(0,0,0,.35) 42%, transparent 60%);
-          mask: radial-gradient(closest-side, transparent 4%, #000 24%, rgba(0,0,0,.35) 42%, transparent 60%);
-  opacity: .55;
-  animation: heroRays 150s linear infinite;
-}
-@keyframes heroRays {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to   { transform: translate(-50%, -50%) rotate(360deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero__rays { animation: none; }
-}
-
 .hero__curtain-wrap {
   position: absolute; inset: 0;
   z-index: 20;
@@ -2314,7 +2281,6 @@ html { scroll-behavior: smooth; }
   .hero__sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 22px; }
   .hero__btn { font-size: 10px; letter-spacing: 2px; padding: 14px 32px; }
   .hero__drape { width: 7%; bottom: 0; }
-  .hero__rays { top: 40%; }
   .hero__next { margin-top: 18px; font-size: 9px; letter-spacing: 2px; }
 
   /* Section paddings/titles now come entirely from the vh-based clamp()
