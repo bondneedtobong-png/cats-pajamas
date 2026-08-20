@@ -16,7 +16,7 @@ export const pageImages = {
 export const translations = {
   ru: {
     langBtn: 'EN',
-    navAbout: 'Легенда', navMenu: 'Напитки', navEvents: 'Афиша',
+    navAbout: 'Легенда', navMenu: 'Меню', navEvents: 'Афиша',
     navGallery: 'Полка', navTeam: 'Бармены', navContacts: 'Как найти',
     navLoginTg: 'Авторизоваться', navProfile: 'Мой профиль',
     navAdmin: 'Админ-панель',
@@ -47,7 +47,7 @@ export const translations = {
       'Это место для тех, кто ценит вкус и чувствует разницу между хорошим и посредственным, — для неспешного вечера с любимым человеком или близкими по духу. Сюда приходят не торопясь: медленно потягивать бокал, говорить обо всём на свете и уходить лишь тогда, когда по-настоящему насытишься — и напитками, и самим вечером. Загляните — и просто расскажите, что вам по вкусу.',
     ],
 
-    menuLabel: 'Глава III · Карта напитков', menuTitle: 'Коктейльная карта',
+    menuLabel: 'Глава III · Карта бара', menuTitle: 'Меню',
     menuClassics: 'Классика', menuSignature: 'Авторский',
     menuCta: 'Забронировать столик',
     menuLoading: 'Загружаем меню…',
@@ -135,7 +135,7 @@ export const translations = {
   },
   en: {
     langBtn: 'RU',
-    navAbout: 'Legend', navMenu: 'Drinks', navEvents: 'Bill',
+    navAbout: 'Legend', navMenu: 'Menu', navEvents: 'Bill',
     navGallery: 'Shelf', navTeam: 'Bartenders', navContacts: 'Find Us',
     navLoginTg: 'Log in', navProfile: 'My profile',
     navAdmin: 'Admin Panel',
@@ -160,7 +160,7 @@ export const translations = {
 
     // NB: cocktail content itself is RU-only (owner's decision) — these are
     // just the surrounding UI labels for the EN toggle.
-    menuLabel: 'Chapter III · The Drinks List', menuTitle: 'The Cocktail List',
+    menuLabel: 'Chapter III · The Bar List', menuTitle: 'Menu',
     menuClassics: 'Classic', menuSignature: 'Signature',
     menuCta: 'Reserve a Table',
     menuLoading: 'Loading the menu…',

@@ -1,11 +1,11 @@
-import { useState, Fragment } from 'react';
+import { useState, useRef, Fragment } from 'react';
 import BarMenuService from './BarMenuService.js';
 import { useFeedback } from '../ui/FeedbackProvider.jsx';
 import EditableText from './EditableText.jsx';
 import { Fan, CornerFan } from './MenuCard.jsx';
 
 // Инлайн-редактор барной карты для админов. НЕ модалка и НЕ отдельная страница:
-// рендерит ту же раскладку «Напитки» (.mbk — кнопки слева, карточка в центре,
+// рендерит ту же раскладку секции «Меню» (.mbk — кнопки слева, карточка в центре,
 // история справа), но её тексты/цены/объёмы правятся прямо на месте (см.
 // EditableText — шрифты остаются «как на сайте»). Слева можно добавлять и удалять
 // группы/категории, в карточке — позиции. Правим единым листом (в один столбец
@@ -71,7 +71,10 @@ export default function MenuInlineEditor({ initial, onCancel, onSaved }) {
   const [draft, setDraft] = useState(() => toDraft(initial));
   const [sel, setSel] = useState({ g: 0, c: 0 });
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [warns, setWarns] = useState([]);
   const [err, setErr] = useState('');
+  const fileRef = useRef(null);
   const { toast, confirm } = useFeedback();
 
   const mutate = (fn) => setDraft((prev) => { const next = clone(prev); fn(next); return next; });
@@ -151,6 +154,40 @@ export default function MenuInlineEditor({ initial, onCancel, onSaved }) {
 
   const h = { patchCat, patchQuote, addItem, patchItem, moveItem, delItem };
 
+  // Импорт из Excel-книги владельца. Парсер грузим динамически — обычному
+  // редактированию он не нужен, в чанк редактора не тащим. Файл ложится в
+  // черновик: пока не нажали «Сохранить карту», «Отмена» вернёт всё назад.
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // чтобы повторный выбор того же файла тоже сработал
+    if (!file) return;
+    setErr(''); setWarns([]); setImporting(true);
+    try {
+      if (typeof DecompressionStream === 'undefined') {
+        throw new Error('Браузер слишком старый для чтения .xlsx — откройте админку в свежем Chrome/Safari.');
+      }
+      const { importMenuFromExcel } = await import('./excelImport.js');
+      const { menu, stories, report } = await importMenuFromExcel(file, fromDraft(draft).stories);
+      const okc = await confirm({
+        title: 'Заменить карту данными из файла?',
+        message: `«${file.name}»: групп ${report.groups}, разделов ${report.categories}, `
+          + `позиций ${report.items}, описаний «О разделе» ${report.stories}. `
+          + 'Текущая карта в редакторе будет заменена целиком. На сайте ничего не изменится, '
+          + 'пока не нажмёте «Сохранить карту», — «Отмена» вернёт как было.',
+        confirmLabel: 'Заменить',
+      });
+      if (!okc) return;
+      setDraft(toDraft({ menu, stories }));
+      setSel({ g: 0, c: 0 });
+      setWarns(report.warnings);
+      toast.success(`Загружено ${report.items} позиций в ${report.categories} разделах`);
+    } catch (ex) {
+      setErr(ex.message || 'Не удалось прочитать файл');
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function handleSave() {
     setErr(''); setSaving(true);
     try {
@@ -170,11 +207,28 @@ export default function MenuInlineEditor({ initial, onCancel, onSaved }) {
         <button type="button" className="mbk-edit-save" onClick={handleSave} disabled={saving}>
           {saving ? 'Сохраняем…' : '✓ Сохранить карту'}
         </button>
+        <button
+          type="button" className="mbk-edit-import"
+          onClick={() => fileRef.current?.click()} disabled={saving || importing}
+          title="Прочитать барную карту из файла Excel (.xlsx)"
+        >
+          {importing ? 'Читаем файл…' : '⭱ Загрузить из Excel'}
+        </button>
+        <input
+          ref={fileRef} type="file" accept=".xlsx" hidden
+          onChange={handleFile}
+        />
         <span className="mbk-edit-bar__note">
           Изменения появятся на сайте сразу. В поиске (карта&nbsp;/menu) — после следующего деплоя.
         </span>
         {err && <span className="mbk-edit-bar__err">{err}</span>}
       </div>
+
+      {warns.length > 0 && (
+        <ul className="mbk-edit-warns">
+          {warns.map((w) => <li key={w}>{w}</li>)}
+        </ul>
+      )}
 
       <div className="mbk mbk--edit">
         {/* Слева: группы и категории с добавлением/удалением/переносом */}

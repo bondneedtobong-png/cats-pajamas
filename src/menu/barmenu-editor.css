@@ -1,11 +1,11 @@
-/* Инлайн-редактор барной карты (админ). НЕ модалка: правит секцию «Напитки»
+/* Инлайн-редактор барной карты (админ). НЕ модалка: правит секцию «Меню»
    прямо на месте. Тексты редактируются поверх реальных элементов карточки
    (.bme-editable), поэтому шрифты/кегль/цвет остаются «как на сайте». Работает
    внутри книги ([data-theme]) — только токены темы, без голого hex (кроме
    унаследованных из старого редактора акцентов: danger #f87171, чернила кнопки
    на золоте #0C0A18). */
 
-/* Кнопка «Редактировать карту» в секции «Напитки» (видна только админам) */
+/* Кнопка «Редактировать карту» в секции «Меню» (видна только админам) */
 .mbk-edit-btn {
   display: inline-flex;
   align-items: center;
@@ -63,6 +63,35 @@
 .mbk-edit-save:hover { filter: brightness(1.06); }
 .mbk-edit-save:disabled,
 .mbk-edit-cancel:disabled { opacity: 0.5; cursor: default; }
+
+/* Кнопка импорта карты из Excel и список предупреждений разбора */
+.mbk-edit-import {
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--gold);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+.mbk-edit-import:hover { border-color: var(--gold); border-style: solid; }
+.mbk-edit-import:disabled { opacity: 0.5; cursor: default; }
+
+.mbk-edit-warns {
+  max-width: 780px;
+  margin: 0 auto 10px;
+  padding: 10px 16px 10px 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  list-style: disc;
+  color: var(--text-mid);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.mbk-edit-warns li + li { margin-top: 6px; }
 
 /* ─── Редактируемый текст поверх реального элемента ────────────────────────── */
 .bme-editable {
