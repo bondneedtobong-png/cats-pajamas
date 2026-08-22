@@ -19,14 +19,19 @@ export default async function handler(req, res) {
   try {
     const user = await getUser(req);
 
-    // ─── GET: events list (public = upcoming only; admin = everything) ────
+    // ─── GET: список событий ──────────────────────────────────────────────
+    // admin=1        — всё, включая скрытые (гейт admin);
+    // scope=public   — всё активное (сайт делит на «Грядущие/Прошедшие» сам);
+    // scope=past     — только прошедшие;
+    // без параметров — как раньше, ближайшие (на этом сидят бот и старые вызовы).
     if (req.method === 'GET') {
-      const { admin } = req.query;
+      const { admin, scope } = req.query;
       if (admin) {
         if (!user || user.role !== 'admin') return forbidden(res);
-        return ok(res, { events: await getEvents({ upcomingOnly: false }) });
+        return ok(res, { events: await getEvents({ scope: 'admin' }) });
       }
-      return ok(res, { events: await getEvents({ upcomingOnly: true }) });
+      const publicScope = scope === 'public' || scope === 'past' ? scope : 'upcoming';
+      return ok(res, { events: await getEvents({ scope: publicScope }) });
     }
 
     // ─── POST: admin CRUD + фото ───────────────────────────────────────────

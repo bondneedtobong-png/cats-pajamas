@@ -12,6 +12,21 @@ process.env.TELEGRAM_STAFF_IDS = '555';
 process.env.TELEGRAM_STAFF_CHAT_ID = '-100500';
 process.env.TELEGRAM_STAFF_BOOKINGS_THREAD_ID = '7';
 process.env.TELEGRAM_CHANNEL = '@catstest'; // getChatMember в перехвате отвечает member — гейт подписки проходит
+// Часы прогона фиксируем на 19:00 по Самаре (15:00 UTC) текущего дня.
+// Сценарии завязаны на «сегодняшний вечер»: они бронируют будущие слоты и
+// проверяют, что walk-in блокирует бронь именно на сегодня. Если запустить
+// набор глубокой ночью, после закрытия бара свободных слотов на сегодня уже
+// нет — и падало всё подряд (ловили 2026-08-23 в 03:40). Таймеры не трогаем:
+// setTimeout живёт по реальным часам, подменяем только показания Date.
+const REAL_NOW = new Date();
+const FIXED_NOW = Date.UTC(REAL_NOW.getUTCFullYear(), REAL_NOW.getUTCMonth(), REAL_NOW.getUTCDate(), 15, 0, 0);
+const RealDate = Date;
+class FixedDate extends RealDate {
+  constructor(...args) { if (args.length === 0) super(FIXED_NOW); else super(...args); }
+  static now() { return FIXED_NOW; }
+}
+globalThis.Date = FixedDate;
+
 import os from 'node:os';
 import { promises as fsp } from 'node:fs';
 process.env.EVENT_UPLOADS_DIR = os.tmpdir() + '/cpjc_e2e_events'; // фото событий пишем во временную папку
@@ -412,22 +427,34 @@ ok('J2 мастер спросил дату', calls('sendMessage').some(c => (c.
 await privText('31.12.2026', 111);
 await privText('20:00', 111);
 await privText('Живой квартет и старые пластинки', 111);
-ok('J3a после описания — шаг фото', calls('sendMessage').some(c => (c.body.text || '').includes('Пришлите фото') && JSON.stringify(c.body.reply_markup || {}).includes('evphotosdone')), JSON.stringify(calls('sendMessage').map(c => c.body.text)));
-await cbPriv('evphotosdone', 111); // «Без фото» → превью (регресс: событие без фото)
-const preview = calls('sendMessage').find(c => (c.body.text || '').includes('Проверьте событие'));
+ok('J3a после описания — шаг фото', calls('sendMessage').some(c => (c.body.text || '').includes('Пришлите фото') && (c.body.text || '').includes('Без фото событие опубликовать нельзя')), JSON.stringify(calls('sendMessage').map(c => c.body.text)));
+ok('J3b на шаге без фото кнопки «Готово» нет', !calls('sendMessage').some(c => JSON.stringify(c.body.reply_markup || {}).includes('evphotosdone')), JSON.stringify(calls('sendMessage').map(c => c.body.reply_markup)));
+
+// Фото обязательно (решение владельца 2026-08-23): «Готово» со старого
+// сообщения не должно проносить событие мимо шага фото.
+await cbPriv('evphotosdone', 111);
+ok('J3c «Готово» без фото → алерт, превью не показано',
+  calls('answerCallbackQuery').some(c => (c.body.text || '').includes('хотя бы одно фото') && c.body.show_alert)
+  && !calls('sendMessage').some(c => (c.body.text || '').includes('Проверьте событие')),
+  JSON.stringify(calls('answerCallbackQuery').map(c => c.body)));
+
+await privPhoto(111);
+await cbPriv('evphotosdone', 111);
+const preview = calls('sendPhoto').find(c => (c.body.caption || c.body.text || '').includes('Проверьте событие'));
 const previewKb = JSON.stringify(preview?.body.reply_markup || {});
-ok('J3 превью (без фото): переключатель рассылки + публикация', !!preview && previewKb.includes('evnotify') && previewKb.includes('evsave'), previewKb);
+ok('J3 превью после фото: переключатель рассылки + публикация', !!preview && previewKb.includes('evnotify') && previewKb.includes('evsave'), previewKb);
 
 await cbPriv('evnotify', 111);
-ok('J4 переключатель: рассылка выключилась', calls('editMessageText').some(c => JSON.stringify(c.body.reply_markup || {}).includes('НЕТ')));
+ok('J4 переключатель: рассылка выключилась', [...calls('editMessageText'), ...calls('editMessageCaption')].some(c => JSON.stringify(c.body.reply_markup || {}).includes('НЕТ')));
 await cbPriv('evnotify', 111); // включить обратно
 
 await cbPriv('evsave', 111);
 await new Promise(r => setTimeout(r, 250));
 const evRow = db.t('events').find(e => e.title === 'Вечер джаза');
 ok('J5 событие в БД → видно на сайте', !!evRow && evRow.event_date === '2026-12-31' && evRow.active === true, JSON.stringify(evRow || {}));
-const chPost = calls('sendMessage').find(c => c.body.chat_id === '@catstest');
+const chPost = calls('sendPhoto').find(c => c.body.chat_id === '@catstest');
 ok('J6 пост в канале с кнопкой «Я приду»', !!chPost && JSON.stringify(chPost.body.reply_markup || {}).includes('rsvp:'), JSON.stringify(chPost?.body || {}).slice(0, 300));
+ok('J6a ссылка на пост сохранена в событии (channel_post_url)', !!evRow?.channel_post_url && /^https:\/\/t\.me\/catstest\/\d+$/.test(evRow.channel_post_url), String(evRow?.channel_post_url));
 const fwds = calls('forwardMessage');
 ok('J7 пост переслан подписчикам из канала', fwds.length >= 2 && fwds.every(c => String(c.body.from_chat_id) === '@catstest'), JSON.stringify(fwds));
 ok('J8 отчёт админу: сайт+канал+рассылка', calls('editMessageText').some(c => (c.body.text || '').includes('сайте') && (c.body.text || '').includes('канале') && (c.body.text || '').includes('доставлено')), JSON.stringify(calls('editMessageText').map(c => c.body.text)));

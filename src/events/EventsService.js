@@ -3,6 +3,11 @@ import { apiFetch } from '../api.js';
 /** Client-side events API wrapper — same channel-agnostic pattern as CocktailsService. */
 const EventsService = {
   /** Public — upcoming (today+) active events, ordered by date. */
+  /** Публично всё активное — сайт сам делит на «Грядущие»/«Прошедшие». */
+  async getPublicAll() {
+    const d = await apiFetch('/api/events?scope=public', { auth: false });
+    return d.events;
+  },
   async getPublic() {
     const d = await apiFetch('/api/events', { auth: false });
     return d.events;

@@ -549,6 +549,7 @@ function EventModal({ initial, onSave, onClose }) {
     initial?.imageUrls?.length ? initial.imageUrls : (initial?.imageUrl ? [initial.imageUrl] : []),
   );
   const [urlDraft,    setUrlDraft]    = useState('');
+  const [postUrl,     setPostUrl]     = useState(initial?.channelPostUrl || '');
   const [active,      setActive]      = useState(initial?.active !== false);
   const [err,         setErr]         = useState('');
   const [saving,      setSaving]      = useState(false);
@@ -602,7 +603,7 @@ function EventModal({ initial, onSave, onClose }) {
     setSaving(true);
     try {
       // id передаём для нового события (папка фото уже названа так же).
-      await onSave({ id: eventId.current, title, date, time, description, imageUrls: photos, active });
+      await onSave({ id: eventId.current, title, date, time, description, imageUrls: photos, channelPostUrl: postUrl, active });
     } catch (ex) {
       setErr(ex.message);
       setSaving(false);
@@ -667,6 +668,15 @@ function EventModal({ initial, onSave, onClose }) {
               <button type="button" className="adm-btn adm-btn--ghost" onClick={addUrl}>Добавить</button>
             </div>
             <p className="adm-evphotos__hint">Первое фото — обложка карточки. 2+ фото → витрина с лайтбоксом на сайте.</p>
+          </div>
+
+          <div className="adm-form-field">
+            <label className="adm-form-lbl">ССЫЛКА НА ПОСТ В КАНАЛЕ</label>
+            <input className="adm-form-input" type="url" value={postUrl} onChange={e => setPostUrl(e.target.value)}
+                   placeholder="https://t.me/catspajajam/123" />
+            <p className="adm-evphotos__hint">
+              Кнопка «Открыть пост в канале» в витрине на сайте. У событий, опубликованных через бота, заполняется сама — здесь нужна только для заведённых руками.
+            </p>
           </div>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'rgba(242,237,228,0.6)', cursor: 'pointer' }}>

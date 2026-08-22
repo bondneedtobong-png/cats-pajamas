@@ -19,7 +19,7 @@ import { editStaffMessage, notifyStaff } from './_lib/staffNotify.js';
 import { renderPlanPng } from './_lib/planImage.js';
 import { getGuestLevel } from './_lib/loyalty.js';
 import { getGuestContact } from './_lib/guests.js';
-import { getEvents, createEvent } from './_lib/events.js';
+import { getEvents, createEvent, updateEvent } from './_lib/events.js';
 import { saveEventPhoto, deleteEventPhoto, MAX_PHOTOS } from './_lib/eventPhotos.js';
 import { rsvpToEvent } from './_lib/eventRsvps.js';
 import { sendBroadcast, forwardBroadcast } from './_lib/broadcast.js';
@@ -30,6 +30,16 @@ const TOKEN   = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
 const CHANNEL = process.env.TELEGRAM_CHANNEL;           // @catspajajam
 const SECRET  = process.env.TELEGRAM_WEBHOOK_SECRET;
 const CHANNEL_URL = CHANNEL ? `https://t.me/${CHANNEL.replace(/^@/, '')}` : '';
+
+// Ссылка на конкретный пост канала: t.me/<канал>/<message_id>. Работает только
+// для публичного канала-юзернейма (@catspajajam); если в env лежит числовой id
+// приватного канала — публичной ссылки не существует, возвращаем ''.
+function channelPostUrl(messageId) {
+  if (!CHANNEL || !messageId) return '';
+  const name = String(CHANNEL).replace(/^@/, '');
+  if (!/^[A-Za-z][\w]{3,}$/.test(name)) return '';
+  return `https://t.me/${name}/${messageId}`;
+}
 const SITE_URL = process.env.PUBLIC_SITE_URL || 'https://cats-pajamas.ru';
 const BAR_PHONE = '+7 (908) 418-00-09';
 
@@ -90,16 +100,18 @@ async function downloadTelegramFile(api, fileId) {
   return Buffer.from(await resp.arrayBuffer());
 }
 
-// Шаг «фото» мастера события.
+// Шаг «фото» мастера события. Фото ОБЯЗАТЕЛЬНО (решение владельца 2026-08-23):
+// без картинки событие плохо выглядит и в канале, и в витрине на сайте,
+// поэтому кнопки «Без фото» больше нет и «Готово» появляется только после
+// первого загруженного фото.
 function eventPhotoStepText(n) {
   return n === 0
-    ? 'Пришлите фото события — до 10, можно альбомом. Или нажмите «Без фото».'
+    ? 'Пришлите фото события — до 10, можно альбомом.\n\n📷 Без фото событие опубликовать нельзя: оно идёт и в канал, и в витрину на сайте.'
     : `Фото ${n}/${MAX_PHOTOS} ✅. Пришлите ещё или нажмите «Готово».`;
 }
 function eventPhotoStepKb(n = 0) {
   const kb = new InlineKeyboard();
   if (n > 0) kb.text('✅ Готово', 'evphotosdone').row().text('🗑 Убрать последнее', 'evphotosundo').row();
-  else kb.text('⏭ Без фото', 'evphotosdone').row();
   return kb.text('‹ Отмена', 'evcancel');
 }
 
@@ -807,6 +819,9 @@ export function buildBot() {
       resetSession(ctx);
       return ctx.editMessageText('Черновик события утерян, начните заново.', { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') });
     }
+    if (!d.photos?.length) {
+      return editPreviewMessage(ctx, '📷 Без фото событие опубликовать нельзя — пришлите хотя бы одно.', eventPhotoStepKb(0));
+    }
     try {
       const photos = d.photos || [];
       const ev = await createEvent({
@@ -844,6 +859,14 @@ export function buildBot() {
         report.push(channelMsg
           ? `📢 Пост опубликован в канале ${CHANNEL}${photos.length ? ` (${photos.length} фото)` : ''}.`
           : `⚠️ Пост в канал ${CHANNEL} не ушёл — проверьте, что бот админ канала.`);
+
+        // Ссылку на пост сохраняем сразу — по ней кнопка «Открыть пост в
+        // канале» в витрине на сайте. Владельцу вставлять её руками не нужно.
+        const postUrl = channelPostUrl(channelMsg?.message_id);
+        if (postUrl) {
+          await updateEvent(ev.id, { channelPostUrl: postUrl })
+            .catch((e) => console.error('[bot] channel_post_url save failed:', e.message));
+        }
       }
 
       // Рассылка: пересылаем пост из канала (гость видит «Переслано из…»);
@@ -902,9 +925,14 @@ export function buildBot() {
   });
 
   bot.callbackQuery('evphotosdone', async (ctx) => {
-    await ctx.answerCallbackQuery();
-    if (!isTelegramStaff(ctx.from.id)) return;
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery();
     const d = ctx.session.draft;
+    // Кнопки «Готово» без фото на клавиатуре нет, но колбэк мог прилететь со
+    // старого сообщения — фото обязательно, отвечаем понятным алертом.
+    if (!d?.photos?.length) {
+      return ctx.answerCallbackQuery({ text: 'Сначала пришлите хотя бы одно фото — без него событие не публикуется.', show_alert: true });
+    }
+    await ctx.answerCallbackQuery();
     if (!d?.title || !d?.date) {
       resetSession(ctx);
       return ctx.editMessageText('Черновик события утерян, начните заново.', { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') }).catch(() => {});

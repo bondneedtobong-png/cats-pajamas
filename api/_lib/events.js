@@ -13,6 +13,20 @@ function generateId() { return 'ev_' + Date.now() + '_' + Math.random().toString
 
 function todayIso() { return new Date().toISOString().split('T')[0]; }
 
+// Ссылка на пост в канале уезжает на сайт в href, а вводит её человек (или
+// собирает бот) — пускаем только http/https, как в pressMentions.js. Пустая
+// строка = «ссылки нет», это допустимо.
+function normalizeChannelUrl(raw) {
+  const url = String(raw ?? '').trim();
+  if (!url) return '';
+  let parsed;
+  try { parsed = new URL(url); } catch { throw new Error('Ссылка на пост должна быть полным адресом, например https://t.me/…'); }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Ссылка на пост должна начинаться с http:// или https://');
+  }
+  return parsed.toString();
+}
+
 // Нормализуем фото строки в массив: приоритет у image_urls, фолбэк на image_url.
 function normalizePhotos(r) {
   const arr = Array.isArray(r.image_urls) ? r.image_urls.filter(u => typeof u === 'string' && u) : [];
@@ -30,6 +44,7 @@ function rowToEvent(r) {
     description: r.description || '',
     imageUrl: imageUrls[0] || '', // обратная совместимость: первое фото = обложка
     imageUrls,
+    channelPostUrl: r.channel_post_url || '',
     sortOrder: r.sort_order,
     active: r.active,
     createdAt: r.created_at,
@@ -46,14 +61,30 @@ function photosFromInput(input) {
   return null; // поле не передано — не трогаем
 }
 
-/** Public: upcoming (today or later) + active, ordered by date. Admin: everything, newest first. */
-export async function getEvents({ upcomingOnly = true } = {}) {
+/**
+ * scope:
+ *   'upcoming' — публично, сегодня и позже, ближайшие сверху (дефолт, как было);
+ *   'past'     — публично, вчера и раньше, свежие сверху;
+ *   'public'   — публично всё активное (сайт сам делит на вкладки «Грядущие/
+ *                Прошедшие» — так переключение мгновенное, без второго запроса);
+ *   'admin'    — вообще всё, включая скрытые, свежие сверху.
+ */
+export async function getEvents({ scope = 'upcoming', upcomingOnly } = {}) {
+  // upcomingOnly — прежняя сигнатура (её зовёт бот и старый код), не ломаем.
+  if (upcomingOnly === false) scope = 'admin';
+  const today = todayIso();
   let q = supabase.from('events').select('*');
-  if (upcomingOnly) {
-    q = q.eq('active', true).gte('event_date', todayIso())
-      .order('event_date', { ascending: true }).order('sort_order', { ascending: true });
-  } else {
+  if (scope === 'admin') {
     q = q.order('event_date', { ascending: false }).order('sort_order', { ascending: true });
+  } else if (scope === 'past') {
+    q = q.eq('active', true).lt('event_date', today)
+      .order('event_date', { ascending: false }).order('sort_order', { ascending: true });
+  } else if (scope === 'public') {
+    q = q.eq('active', true)
+      .order('event_date', { ascending: false }).order('sort_order', { ascending: true });
+  } else {
+    q = q.eq('active', true).gte('event_date', today)
+      .order('event_date', { ascending: true }).order('sort_order', { ascending: true });
   }
   const { data, error } = await q;
   if (error) throw new Error(error.message);
@@ -82,6 +113,7 @@ export async function createEvent(input) {
     sort_order: 0,
     active: input.active !== false,
     awards_points: !!input.awardsPoints,
+    channel_post_url: normalizeChannelUrl(input.channelPostUrl),
   };
   const { data, error } = await supabase.from('events').insert(row).select().single();
   if (error) throw new Error(error.message);
@@ -95,6 +127,7 @@ export async function updateEvent(id, input) {
   if ('time' in input)        patch.time        = input.time?.trim() || '';
   if ('description' in input) patch.description = input.description?.trim() || '';
   if ('active' in input)      patch.active      = !!input.active;
+  if ('channelPostUrl' in input) patch.channel_post_url = normalizeChannelUrl(input.channelPostUrl);
   const photos = photosFromInput(input);
   if (photos) { patch.image_urls = photos; patch.image_url = photos[0] || ''; }
 

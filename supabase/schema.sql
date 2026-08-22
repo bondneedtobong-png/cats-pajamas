@@ -204,6 +204,11 @@ alter table public.events add column if not exists attendance_prompt_sent_at tim
 -- заполняем оба (image_url = image_urls[0]), при чтении склеиваем.
 alter table public.events add column if not exists image_urls jsonb not null default '[]'::jsonb;
 
+-- Ссылка на исходный пост в канале (t.me/<канал>/<message_id>). Для событий из
+-- бота заполняется автоматически при публикации, для заведённых руками в
+-- админке — поле в форме. Нужна кнопке «Открыть пост в канале» на сайте.
+alter table public.events add column if not exists channel_post_url text;
+
 create table if not exists public.event_rsvps (
   id           text primary key,        -- 'rsvp_...'
   event_id     text        not null references public.events (id) on delete cascade,
