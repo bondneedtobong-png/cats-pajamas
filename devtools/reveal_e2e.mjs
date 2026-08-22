@@ -146,6 +146,28 @@ async function scenarioAnchor(browser) {
   await page.close();
 }
 
+// Блок, который монтируется ПОЗЖЕ первой отрисовки (витрина афиши ждёт ответ
+// API). На таком узле прежний useReveal тихо не срабатывал: на момент эффекта
+// ref.current был null, и секция навсегда оставалась прозрачной — поймано
+// 2026-08-23 на живой витрине. Если событий нет, проверять нечего.
+async function scenarioLateMount(browser) {
+  const page = await fresh(browser, DESKTOP);
+  await page.evaluate(() => document.querySelector('#events').scrollIntoView());
+  await page.waitForTimeout(1500);
+  const state = await page.evaluate(() => {
+    const grid = document.querySelector('.evac');
+    if (!grid) return { skipped: true };
+    const wrap = grid.closest('.reveal');
+    return { skipped: false, visible: wrap?.classList.contains('visible'), opacity: wrap && getComputedStyle(wrap).opacity };
+  });
+  if (state.skipped) {
+    console.log('  ..   [desktop] витрина афиши: событий нет — проверка пропущена');
+  } else {
+    check('[desktop] витрина афиши, смонтированная после ответа API, раскрылась', state.visible && state.opacity === '1', `visible=${state.visible} opacity=${state.opacity}`);
+  }
+  await page.close();
+}
+
 async function scenarioResize(browser) {
   const page = await fresh(browser, DESKTOP);
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight * 0.6));
@@ -202,6 +224,7 @@ await scenarioFastWheel(browser, MOBILE, 'mobile 390×844');
 await scenarioScrollbarJumps(browser, DESKTOP, 'desktop 1366×700');
 await scenarioScrollbarJumps(browser, MOBILE, 'mobile 390×844');
 await scenarioAnchor(browser);
+await scenarioLateMount(browser);
 await scenarioResize(browser);
 console.log('\nШапка (рябь при наведении):');
 await scenarioNavPaint(browser);

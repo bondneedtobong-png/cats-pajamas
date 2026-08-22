@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 // ── Reveal-анимации ─────────────────────────────────────────────────────────
 // Один общий IntersectionObserver на все .reveal + страховочный проход по
@@ -135,28 +135,45 @@ function observer() {
   return io;
 }
 
-export function useReveal(delay = 0) {
-  const ref = useRef(null);
+function unregister(el) {
+  const t = timers.get(el);
+  if (t) { clearTimeout(t); timers.delete(el); }
+  pending.delete(el);
+  io?.unobserve(el);
+  if (!pending.size) stopListening();
+}
 
-  useEffect(() => {
-    const el = ref.current;
+/**
+ * Возвращает callback-ref, а не useRef-объект, и это важно: секции рендерят
+ * блоки условно («покажем список, когда приедут данные»), и такой узел
+ * появляется ПОЗЖЕ первого эффекта. Прежняя версия на useRef в этот момент
+ * видела ref.current === null, тихо выходила и больше не срабатывала — блок
+ * навсегда оставался с opacity:0 (поймано на витрине афиши 2026-08-23).
+ * Callback-ref React зовёт ровно тогда, когда узел появился или уехал.
+ */
+export function useReveal(delay = 0) {
+  const state = useRef({ el: null, delay });
+  state.current.delay = delay;
+
+  const setRef = useCallback((el) => {
+    if (state.current.el === el) return;
+    if (state.current.el) unregister(state.current.el);
+    state.current.el = el;
     if (!el || el.classList.contains('visible')) return;
 
-    pending.set(el, delay);
+    pending.set(el, state.current.delay);
     startListening();
     observer().observe(el);
     queueSweep(); // элемент мог смонтироваться уже на экране
+  }, []);
 
-    return () => {
-      const t = timers.get(el);
-      if (t) { clearTimeout(t); timers.delete(el); }
-      pending.delete(el);
-      io?.unobserve(el);
-      if (!pending.size) stopListening();
-    };
-  }, [delay]);
+  // Отписки по useEffect здесь НЕТ намеренно: в React 18 StrictMode (dev)
+  // эффекты прогоняются дважды — cleanup снимал бы регистрацию, а callback-ref
+  // повторно не вызывается (переприкрепление рефов появилось только в React 19),
+  // и reveal умирал молча на всём сайте. Отписка живёт в самом setRef: React
+  // зовёт его с null, когда узел уходит.
 
-  return ref;
+  return setRef;
 }
 
 // Редизайн 2026-07-07: замена старого `.book__page:not(--active) { ... paused }`
