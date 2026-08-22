@@ -8,6 +8,7 @@ import '../booking/booking.css';
 import CocktailsService from '../menu/CocktailsService.js';
 import EventsService from '../events/EventsService.js';
 import ReviewsService from '../reviews/ReviewsService.js';
+import PressService from '../press/PressService.js';
 import TeamService from '../team/TeamService.js';
 import ApplicationsService from '../team/ApplicationsService.js';
 import GuestsService from './GuestsService.js';
@@ -964,6 +965,181 @@ function TabReviews() {
   );
 }
 
+// ─── Tab: СМИ ─────────────────────────────────────────────────────
+// Упоминания в СМИ для блока в «Легенде». Цитаты вносятся ТОЛЬКО дословно из
+// реальных публикаций со ссылкой на источник — придумывать текст «от лица
+// издания» нельзя. Ссылку проверяет сервер (только http/https), см.
+// api/_lib/pressMentions.js.
+function PressModal({ initial, onSave, onClose }) {
+  const [excerpt,     setExcerpt]     = useState(initial?.excerpt || '');
+  const [sourceName,  setSourceName]  = useState(initial?.sourceName || '');
+  const [sourceUrl,   setSourceUrl]   = useState(initial?.sourceUrl || '');
+  const [publishedAt, setPublishedAt] = useState(initial?.publishedAt || todayIso());
+  const [active,      setActive]      = useState(initial?.active !== false);
+  const [err,         setErr]         = useState('');
+  const [saving,      setSaving]      = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setErr('');
+    setSaving(true);
+    try {
+      await onSave({ excerpt, sourceName, sourceUrl, publishedAt, active });
+    } catch (ex) {
+      setErr(ex.message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="adm-modal-overlay" onClick={onClose}>
+      <div className="adm-modal" onClick={e => e.stopPropagation()}>
+        <div className="adm-modal__head">
+          <span className="adm-modal__title">{initial ? 'Редактировать упоминание' : 'Новое упоминание'}</span>
+          <button className="adm-modal__close" onClick={onClose}>✕</button>
+        </div>
+        <form className="adm-modal__form" onSubmit={handleSubmit}>
+          <div className="adm-form-field">
+            <label className="adm-form-lbl">ЦИТАТА ИЗ ПУБЛИКАЦИИ *</label>
+            <textarea
+              className="adm-form-input adm-form-textarea"
+              rows={4}
+              required
+              value={excerpt}
+              onChange={e => setExcerpt(e.target.value)}
+              placeholder="Скопируйте выдержку из статьи дословно…"
+            />
+          </div>
+          <div className="adm-form-row">
+            <div className="adm-form-field">
+              <label className="adm-form-lbl">ИЗДАНИЕ *</label>
+              <input className="adm-form-input" type="text" required value={sourceName}
+                     onChange={e => setSourceName(e.target.value)} placeholder="Афиша" />
+            </div>
+            <div className="adm-form-field">
+              <label className="adm-form-lbl">ДАТА ПУБЛИКАЦИИ</label>
+              <input className="adm-form-input" type="date" value={publishedAt}
+                     onChange={e => setPublishedAt(e.target.value)} />
+            </div>
+          </div>
+          <div className="adm-form-field">
+            <label className="adm-form-lbl">ССЫЛКА НА СТАТЬЮ *</label>
+            <input className="adm-form-input" type="url" required value={sourceUrl}
+                   onChange={e => setSourceUrl(e.target.value)} placeholder="https://…" />
+          </div>
+          <div className="adm-error" style={{ background: 'rgba(212,168,67,0.08)', borderColor: 'rgba(212,168,67,0.25)', color: '#D4A843' }}>
+            Только реальные цитаты из вышедших публикаций. Ссылка обязательна — по ней гость проверит источник.
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'rgba(242,237,228,0.6)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
+            Показывать на сайте
+          </label>
+          {err && <div className="adm-error">{err}</div>}
+          <button className="adm-btn adm-btn--primary" type="submit" disabled={saving}>
+            {saving ? 'Сохраняем…' : 'Сохранить'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TabPress() {
+  const [tick,      setTick]      = useState(0);
+  const [mentions,  setMentions]  = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editing,   setEditing]   = useState(null);
+  const [confirm,   setConfirm]   = useState(null);
+
+  useEffect(() => {
+    PressService.getAllAdmin().then(setMentions).catch(() => {});
+  }, [tick]);
+
+  async function handleSave(data) {
+    if (editing) await PressService.update(editing.id, data);
+    else await PressService.create(data);
+    setShowModal(false);
+    setEditing(null);
+    setTick(n => n + 1);
+  }
+
+  function handleDelete(m) {
+    setConfirm({
+      title: 'Удалить упоминание',
+      message: 'Удалить упоминание «' + m.sourceName + '» без возможности восстановления?',
+      confirmLabel: 'Удалить',
+      onConfirm: async () => {
+        await PressService.remove(m.id);
+        setConfirm(null);
+        setTick(n => n + 1);
+      },
+    });
+  }
+
+  return (
+    <div className="adm-tab">
+      <p className="adm-tab__desc">
+        Выдержки из статей о баре — блок «Упоминания в СМИ» в разделе «Легенда» на сайте. Пока записей нет, блок на сайте не показывается.
+      </p>
+      <div className="adm-filters">
+        <div style={{ flex: 1 }} />
+        <button className="adm-btn adm-btn--primary" onClick={() => { setEditing(null); setShowModal(true); }}>
+          + Добавить упоминание
+        </button>
+      </div>
+
+      {mentions.length === 0 ? (
+        <div className="adm-empty">Упоминаний пока нет</div>
+      ) : (
+        <div className="adm-table-wrap">
+          <table className="adm-table">
+            <thead>
+              <tr>
+                <th>Дата</th><th>Издание</th><th>Цитата</th><th>Публично</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {mentions.map(m => (
+                <tr key={m.id} className={!m.active ? 'adm-table__row--muted' : ''}>
+                  <td>{formatDate(m.publishedAt)}</td>
+                  <td className="adm-table__name">
+                    <a href={m.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#D4A843' }}>{m.sourceName}</a>
+                  </td>
+                  <td style={{ maxWidth: 380, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.excerpt}</td>
+                  <td>{m.active ? '✓ На сайте' : '— Скрыт'}</td>
+                  <td>
+                    <div className="adm-actions">
+                      <button className="adm-act-btn adm-act-btn--ok" onClick={() => { setEditing(m); setShowModal(true); }} title="Редактировать">✎</button>
+                      <button className="adm-act-btn adm-act-btn--del" onClick={() => handleDelete(m)} title="Удалить">✕</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showModal && (
+        <PressModal
+          initial={editing}
+          onSave={handleSave}
+          onClose={() => { setShowModal(false); setEditing(null); }}
+        />
+      )}
+      {confirm && (
+        <ConfirmModal
+          title={confirm.title}
+          message={confirm.message}
+          confirmLabel={confirm.confirmLabel}
+          onConfirm={confirm.onConfirm}
+          onClose={() => setConfirm(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Tab: КОМАНДА ─────────────────────────────────────────────────
 function TeamModal({ initial, onSave, onClose }) {
   const [name,        setName]        = useState(initial?.name || '');
@@ -1688,7 +1864,7 @@ export default function AdminPage() {
       </header>
 
       <div className="adm-tabs">
-        {[['reservations','БРОНИ'],['tables','СТОЛЫ'],['menu','МЕНЮ'],['events','СОБЫТИЯ'],['reviews','ОТЗЫВЫ'],['team','КОМАНДА'],['guests','ГОСТИ']].map(([key, label]) => (
+        {[['reservations','БРОНИ'],['tables','СТОЛЫ'],['menu','МЕНЮ'],['events','СОБЫТИЯ'],['reviews','ОТЗЫВЫ'],['press','СМИ'],['team','КОМАНДА'],['guests','ГОСТИ']].map(([key, label]) => (
           <button key={key}
             className={`adm-tab-btn${tab === key ? ' adm-tab-btn--active' : ''}`}
             onClick={() => setTab(key)}>
@@ -1703,6 +1879,7 @@ export default function AdminPage() {
         {tab === 'menu'         && <TabMenu />}
         {tab === 'events'       && <TabEvents />}
         {tab === 'reviews'      && <TabReviews />}
+        {tab === 'press'        && <TabPress />}
         {tab === 'team'         && <TabTeam />}
         {tab === 'guests'       && <TabGuests />}
       </main>

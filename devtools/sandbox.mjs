@@ -1,7 +1,7 @@
 // Песочница: РЕАЛЬНЫЙ Express-API проекта (server.js) поверх мини-PostgREST
 // в памяти. Прод-БД не трогается. Telegram-токены не заданы — пуши тихо
 // скипаются (мягкая деградация). Запуск из корня проекта:
-//   node devtools/sandbox.mjs
+//   node devtools/sandbox.mjs            (порт 3001; PORT=3020 — если занят)
 // Затем фронт: VITE_API_BASE=http://127.0.0.1:3001 в .env.development.local,
 // или curl с напечатанными ниже токенами.
 process.env.SUPABASE_URL = 'http://127.0.0.1:54321';
@@ -13,7 +13,9 @@ process.env.TELEGRAM_STAFF_IDS = '555000111';
 delete process.env.TELEGRAM_BOT_TOKEN;
 delete process.env.BOT_TOKEN;
 delete process.env.TELEGRAM_STAFF_CHAT_ID;
-process.env.PORT = '3001';
+// Порт можно переопределить: PORT=3020 node devtools/sandbox.mjs — на Windows
+// 3001 иногда занят системными исключениями портов (EACCES).
+process.env.PORT = process.env.PORT || '3001';
 
 import { createDb, startPgrestMock } from './pgrest-mock.mjs';
 
@@ -51,6 +53,20 @@ const db = createDb({
     { id: 'ev_demo0', title: 'Вечер винила', event_date: '2026-07-25', time: '20:00', description: 'Слушаем редкие пластинки джаза 50-х под бокал вермута.', image_url: '', image_urls: [] },
     { id: 'ev_demo1', title: 'Живой квартет Дмитриева', event_date: '2026-07-28', time: '21:00', description: 'Саксофон, контрабас и тёплый ламповый вечер прямо на сцене бара.', image_url: '/uploads/team/denis.jpg', image_urls: ['/uploads/team/denis.jpg'] },
     { id: 'ev_demo3', title: 'Большой джаз-джем', event_date: '2026-08-02', time: '22:00', description: 'Открытая сцена: приходи со своим инструментом и играй с нашими барменами.', image_url: '/uploads/team/egor.jpg', image_urls: ['/uploads/team/egor.jpg', '/uploads/team/dmitriy.jpg', '/uploads/team/vladislav.jpg', '/uploads/team/aleksey.jpg', '/uploads/team/shamusar.jpg'] },
+  ],
+  // Отзывы гостей — для правой колонки «Легенды» (виджет «Гости говорят»).
+  reviews: [
+    { id: 'rv_s1', author: 'Мария', rating: 5, text: 'Пришли без брони в среду, посадили за стойку и весь вечер собирали коктейли под наше настроение. Ушли последними.', review_date: '2026-08-14', source: 'telegram_group', active: true },
+    { id: 'rv_s2', author: '@petr_j', rating: 5, text: 'Лучший Негрони в городе, и бармен не поленился объяснить, чем этот вермут отличается от прошлого.', review_date: '2026-08-09', source: 'telegram_group', active: true },
+    { id: 'rv_s3', author: 'Ольга К.', rating: 4, text: 'Живой квартет по пятницам — отдельная причина приходить. Шумновато у сцены, но это как раз то, за чем идёшь.', review_date: '2026-08-02', source: 'telegram_group', active: true },
+    { id: 'rv_s4', author: 'Гость', rating: 3, text: 'Долго ждали столик (в публичный виджет попасть не должен — рейтинг ниже 4).', review_date: '2026-07-30', source: 'manual', active: true },
+  ],
+  // Упоминания в СМИ. ВНИМАНИЕ: это выдуманные заглушки для локального стенда,
+  // названия изданий намеренно несуществующие — настоящие цитаты вносит
+  // владелец через админку (вкладка СМИ), придумывать их нельзя.
+  press_mentions: [
+    { id: 'pm_s1', excerpt: 'Заглушка для локального стенда: здесь будет реальная выдержка из статьи.', source_name: 'Тестовое издание', source_url: 'https://example.com/article-1', published_at: '2026-06-18', active: true },
+    { id: 'pm_s2', excerpt: 'Вторая заглушка — проверяем, как ложится вторая цитата и ссылка под ней.', source_name: 'Стенд-медиа', source_url: 'https://example.com/article-2', published_at: '2026-04-05', active: true },
   ],
   // Пара коктейлей — чтобы карусель «Напитков» на лендинге была не пустой
   cocktails: [

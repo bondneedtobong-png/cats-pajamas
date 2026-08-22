@@ -250,6 +250,24 @@ alter table public.reviews drop constraint if exists reviews_source_check;
 alter table public.reviews add constraint reviews_source_check
   check (source in ('manual','yandex','telegram_group'));
 
+-- ─── Упоминания в СМИ ────────────────────────────────────────────────────────
+-- Дословные выдержки из статей о баре на сторонних площадках (Афиша,
+-- Собака.ру и т.п.) со ссылкой на публикацию. Заполняется ТОЛЬКО вручную
+-- через админку реальными цитатами: выдумывать текст «от лица издания»
+-- нельзя — это подделка упоминания.
+create table if not exists public.press_mentions (
+  id            text primary key,        -- 'pm_...'
+  excerpt       text        not null,     -- цитата из публикации, дословно
+  source_name   text        not null,     -- как называется издание
+  source_url    text        not null,     -- прямая ссылка на статью (http/https)
+  published_at  date        not null,
+  sort_order    integer     not null default 0,
+  active        boolean     not null default true,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists press_mentions_date_idx on public.press_mentions (published_at);
+
 -- ─── Команда ─────────────────────────────────────────────────────────────────
 create table if not exists public.team_members (
   id           text primary key,        -- 'tm_...'
@@ -394,6 +412,7 @@ alter table public.web_login_tokens  enable row level security;
 alter table public.cocktails         enable row level security;
 alter table public.events            enable row level security;
 alter table public.reviews           enable row level security;
+alter table public.press_mentions    enable row level security;
 alter table public.team_members      enable row level security;
 alter table public.team_applications enable row level security;
 alter table public.wheel_spins        enable row level security;
@@ -436,6 +455,11 @@ create trigger events_touch
 drop trigger if exists reviews_touch on public.reviews;
 create trigger reviews_touch
   before update on public.reviews
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists press_mentions_touch on public.press_mentions;
+create trigger press_mentions_touch
+  before update on public.press_mentions
   for each row execute function public.touch_updated_at();
 
 drop trigger if exists team_members_touch on public.team_members;

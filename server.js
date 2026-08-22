@@ -15,6 +15,7 @@ import cocktailsHandler     from './api/cocktails.js';
 import barMenuHandler       from './api/bar-menu.js';
 import eventsHandler        from './api/events.js';
 import reviewsHandler       from './api/reviews.js';
+import pressMentionsHandler from './api/press-mentions.js';
 import teamHandler          from './api/team.js';
 import applicationsHandler  from './api/applications.js';
 import loyaltyHandler       from './api/loyalty.js';
@@ -40,6 +41,7 @@ const routes = {
   '/api/bar-menu': barMenuHandler,
   '/api/events': eventsHandler,
   '/api/reviews': reviewsHandler,
+  '/api/press-mentions': pressMentionsHandler,
   '/api/team': teamHandler,
   '/api/applications': applicationsHandler,
   '/api/loyalty': loyaltyHandler,
