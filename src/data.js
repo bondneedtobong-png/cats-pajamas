@@ -28,6 +28,8 @@ export const translations = {
 
     aboutLabel: 'Глава I · Легенда бара',
     aboutQuote: '«Здесь джаз звучит даже в тишине»',
+    aboutReviewsLabel: 'Гости говорят',
+    aboutPressLabel: 'Упоминания в СМИ',
     // Легенда: тон и факты сведены из статьи в прессе и отзывов гостей.
     // Намеренно БЕЗ часов работы (они в «Как найти»), без числа позиций и без
     // названий коктейлей/настоек — меню постоянно меняется, хвастаемся качеством
@@ -147,6 +149,8 @@ export const translations = {
 
     aboutLabel: 'Chapter I · The Legend',
     aboutQuote: '"Where jazz plays even in the silence"',
+    aboutReviewsLabel: 'Guests Say',
+    aboutPressLabel: 'In the Press',
     // Mirror of the RU legend. Deliberately no opening hours (they live in "Find Us"),
     // no item counts and no cocktail/infusion names — the menu changes constantly.
     aboutText: [
