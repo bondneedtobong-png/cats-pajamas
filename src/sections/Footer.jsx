@@ -10,8 +10,8 @@ export default function Footer({ tx }) {
           <img src="/uploads/logo-wordmark.svg" className="footer__wordmark" alt="Пижама Кота" />
         </div>
         <div className="footer__links">
-          <Link to="/booking-rules" className="footer__link u-underline">{tx.footerBookingRules}</Link>
-          <Link to="/privacy" className="footer__link u-underline">{tx.footerPrivacy}</Link>
+          <Link to="/booking-rules" className="footer__link u-glare">{tx.footerBookingRules}</Link>
+          <Link to="/privacy" className="footer__link u-glare">{tx.footerPrivacy}</Link>
         </div>
         <span className="footer__copy">{tx.footerCopy}</span>
       </div>

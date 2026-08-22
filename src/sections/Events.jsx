@@ -104,7 +104,7 @@ function EventRow({ ev, index, lang, tx, onOpen }) {
 
   return (
     <div
-      className={`reveal-item events__item${hasImg ? ' events__item--photo' : ''}${gallery ? ' events__item--gallery' : ''}`}
+      className={`reveal-item events__item u-glare${hasImg ? ' events__item--photo' : ''}${gallery ? ' events__item--gallery' : ''}`}
       {...cardProps}
     >
       {hasImg && <div className="events__item-overlay" />}

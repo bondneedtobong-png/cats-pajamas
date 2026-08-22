@@ -1,4 +1,6 @@
-// Silk из react-bits (MIT, DavidHDev/react-bits) — текучая ткань/атлас.
+// Фон первого экрана: текучий атлас. Silk из react-bits (MIT,
+// DavidHDev/react-bits) — выбран владельцем 2026-08-22 из трёх кандидатов
+// витрины (Silk / Aurora / Prism).
 // Шейдер скопирован как есть, а вот обвязка переписана: оригинал тянет
 // three + @react-three/fiber (~150 КБ gzip ради одной плоскости), здесь тот же
 // шейдер крутится на ogl (~10 КБ), который уже нужен Aurora и Prism.
@@ -59,7 +61,7 @@ void main() {
 }
 `;
 
-export default function SilkBg({
+export default function SilkBackground({
   color = '#371931',   // логобук стр. 29, «дополнительный»
   speed = 3.2,         // медленнее дефолтных 5 — бар, а не заставка
   scale = 1.1,
@@ -85,5 +87,5 @@ export default function SilkBg({
     });
   }, [color, speed, scale, rotation, noiseIntensity]);
 
-  return <div ref={ref} className="labbg" aria-hidden="true" />;
+  return <div ref={ref} className="silkbg" aria-hidden="true" />;
 }

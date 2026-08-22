@@ -94,13 +94,6 @@ html { scroll-behavior: smooth; }
   transition: background .5s ease, color .3s ease;
 }
 
-/* ── Offscreen animation pause (замена старого .book__page:not(--active)
-   селектора после редизайна 2026-07-07, ветка redesign-scroll-v1 — книги
-   больше нет, см. useOffscreenPause в useReveal.js). */
-.hero.is-offscreen .hero__bg-slide {
-  animation-play-state: paused;
-}
-
 /* ── Animations ────────────────────────────────────────── */
 @keyframes curtainLeft  { from { transform: translateX(0); }    to { transform: translateX(-100%); } }
 @keyframes curtainRight { from { transform: translateX(0); }    to { transform: translateX(100%);  } }
@@ -156,16 +149,9 @@ html { scroll-behavior: smooth; }
 /* Знак-креманка как разделитель/акцент (логобук) */
 .brand-sign { display: block; opacity: .5; }
 
-/* ── Единый язык hover'ов (план v4 §C.2): ТОЛЬКО transform/opacity ── */
-/* Ссылка: золотое подчёркивание, растущее transform scaleX (геометрия не меняется).
-   Второй примитив — золотой шиммер CTA — на .hero__btn (см. ниже). */
-.u-underline { position: relative; }
-.u-underline::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 1px;
-  background: var(--gold); transform: scaleX(0); transform-origin: left; transition: transform .28s ease;
-}
-.u-underline:hover::after { transform: scaleX(1); }
-@media (prefers-reduced-motion: reduce) { .u-underline::after { transition: none; } }
+/* Единый язык hover'ов — примитив .u-glare, живёт ниже рядом с шапкой
+   (index.css §«Единый язык hover'ов»). Прежнее золотое подчёркивание
+   .u-underline удалено: два разных hover'а на сайте — это не язык. */
 
 /* Стаггер детей раскрытой секции (план v4 §C.3): контейнер .reveal, дети .reveal-item с --i */
 .reveal-item {
@@ -208,7 +194,7 @@ html { scroll-behavior: smooth; }
    backdrop-filter убран (2026-08-22, баг «шапка рябит при наведении»): при
    96% непрозрачности блюр не виден глазом, но заставляет браузер пересобирать
    подложку под всей шапкой на КАЖДУЮ перерисовку её содержимого — а hover
-   перерисовывал (см. .nav__shimmer ниже). Результат — мерцание по шапке.
+   перерисовывал (см. .u-glare ниже). Результат — мерцание по шапке.
    Не возвращать: правило CLAUDE.md про backdrop-filter написано ровно об этом. */
 .nav {
   position: fixed;
@@ -248,46 +234,40 @@ html { scroll-behavior: smooth; }
   justify-content: center;
 }
 
-/* Shared "shift + shimmer" hover treatment for every clickable nav item —
-   a light sweep crosses the label and it nudges sideways, per explicit
-   request ("при наводке на любую кнопку она должна смещаться,
-   переливаться"). Reused by .nav__link/.nav__lang/.nav__tg/.nav__profile.
-   Lives on ::after (not the element's own background) so .nav__link can
-   still carry its own photo underneath.
+/* ── Единый язык hover'ов (HANDOFF_RESTYLE §C.2) ─────────────────────────
+   Один эффект на все кликабельные элементы сайта: карточки, кнопки, ссылки
+   навигации, соцсети, футер. Основа — Glare с reactbits.dev, выбран
+   владельцем 2026-08-22 из трёх кандидатов витрины.
 
-   Блик ЕДЕТ transform'ом, а не background-position (2026-08-22): анимация
-   background-position перекрашивала элемент каждый кадр 0.7с, и вместе с
-   backdrop-filter на .nav это давало рябь по всей шапке. transform слой не
-   перерисовывает — его двигает компоузер. Правило CLAUDE.md «никаких
-   transition на background-position» — как раз про этот случай.
-   Полоса шириной 60% элемента: старт — вплотную слева за краем
-   (translateX(-100%) от собственной ширины), финиш — за правым краем. */
-.nav__shimmer {
+   Золотой блик проезжает наискось + элемент чуть приподнимается. Блик едет
+   transform'ом, а не background-position: перекраска каждый кадр — это то,
+   из-за чего рябила шапка (баг 2026-08-22), а язык теперь стоит на десятках
+   элементов сразу. overflow:hidden режет блик по форме элемента; собственную
+   тень элемента он не трогает (box-shadow рисуется снаружи border-box). */
+.u-glare {
   position: relative;
   overflow: hidden;
-  transition: transform .25s cubic-bezier(.34,1.56,.64,1), color .2s, border-color .2s;
+  transition: transform .3s cubic-bezier(.16,1,.3,1), color .2s, border-color .2s, background-color .2s;
 }
-.nav__shimmer::after {
+.u-glare::after {
   content: '';
-  position: absolute;
-  top: 0; bottom: 0; left: 0;
-  width: 60%;
-  pointer-events: none;
-  background-image: linear-gradient(100deg, transparent, rgba(var(--gold-rgb),.4), transparent);
-  transform: translateX(-100%);
-  transition: transform .7s ease;
+  position: absolute; top: -60%; bottom: -60%; left: 0; width: 45%;
+  pointer-events: none; z-index: 3;
+  background: linear-gradient(100deg, transparent, rgba(var(--gold-rgb), .32), transparent);
+  transform: translateX(-160%) rotate(14deg);
+  transition: transform .75s cubic-bezier(.22,.61,.36,1);
 }
-.nav__shimmer:hover { transform: translateX(6px); }
-.nav__shimmer:hover::after { transform: translateX(180%); }
+.u-glare:hover { transform: translateY(-3px); }
+.u-glare:hover::after { transform: translateX(340%) rotate(14deg); }
 @media (prefers-reduced-motion: reduce) {
-  .nav__shimmer { transition: color .2s, border-color .2s; }
-  .nav__shimmer:hover { transform: none; }
-  .nav__shimmer::after { transition: none; }
+  .u-glare, .u-glare::after { transition: color .2s, border-color .2s; }
+  .u-glare:hover { transform: none; }
+  .u-glare:hover::after { transform: translateX(-160%) rotate(14deg); }
 }
 
 /* Простые текстовые ссылки по макету (без фото-фона и без active-состояния
    — владелец не подсвечивает текущий раздел в новой навигации). Hover —
-   общий .nav__shimmer (transform/opacity, геометрию не меняет). */
+   общий .u-glare (transform/opacity, геометрию не меняет). */
 .nav__link {
   display: block;
   font-family: 'Baskerville', serif;
@@ -301,7 +281,7 @@ html { scroll-behavior: smooth; }
 
 /* Вход в админку — рендерится только админам (Nav.jsx проверяет роль).
    Компактная пунктирная золотая рамка отличает её от обычных ссылок.
-   Hover — общий .nav__shimmer (transform/opacity, геометрию не меняет). */
+   Hover — общий .u-glare (transform/opacity, геометрию не меняет). */
 .nav__admin {
   display: flex;
   align-items: center;
@@ -360,7 +340,7 @@ html { scroll-behavior: smooth; }
   box-shadow: 0 0 18px 2px rgba(var(--gold-rgb), .30), 0 4px 16px rgba(0,0,0,.3);
   transition: transform .2s, background .2s;
 }
-.nav__cta:hover { background: var(--gold-hover); transform: translateY(-2px); }
+.nav__cta:hover { background: var(--gold-hover); }
 
 /* ── Telegram login / profile link ────────────────────── */
 
@@ -423,31 +403,9 @@ html { scroll-behavior: smooth; }
   position: absolute; inset: 0;
   overflow: hidden;
 }
-.hero__bg-slide {
-  position: absolute; inset: 0;
-  background-size: cover;
-  background-position: center 30%;
-  opacity: 0;
-  filter: grayscale(.25) contrast(1.1) brightness(.72) sepia(.12);
-  will-change: opacity, transform;
-  animation: heroSlide 24s linear infinite;
-}
-/* Menu-cover stock, not an interior snapshot — product shots of the drinks
-   themselves read closer to "the cover of a drinks list" than a room photo. */
-.hero__bg-slide--1 { background-image: url('/uploads/team/cocktails.jpg');    animation-delay: 0s;   }
-.hero__bg-slide--2 { background-image: url('/uploads/team/clover-club.jpg');  animation-delay: -8s;  }
-.hero__bg-slide--3 { background-image: url('/uploads/team/bar-evening.jpg'); animation-delay: -16s; }
-@keyframes heroSlide {
-  0%   { opacity: 0;   transform: scale(1.00); }
-  5%   { opacity: .26; transform: scale(1.01); }
-  33%  { opacity: .26; transform: scale(1.08); }
-  40%  { opacity: 0;   transform: scale(1.10); }
-  100% { opacity: 0;   transform: scale(1.00); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero__bg-slide { animation: none; opacity: 0; }
-  .hero__bg-slide--1 { opacity: .24; transform: none; }
-}
+.hero__bg canvas { display: block; }
+.silkbg { position: absolute; inset: 0; overflow: hidden; }
+
 .hero__vignette {
   position: absolute; inset: 0;
   background: radial-gradient(ellipse 75% 65% at 50% 40%, transparent 15%, color-mix(in srgb, var(--bg) 73%, transparent) 65%, var(--bg) 100%);
@@ -546,7 +504,6 @@ html { scroll-behavior: smooth; }
   background-position: center;
   transition: transform .5s cubic-bezier(.16,1,.3,1);
 }
-.hero__card:hover .hero__card-img { transform: scale(1.08); }
 @media (prefers-reduced-motion: reduce) {
   .hero__card-img { transition: none; }
 }
@@ -617,8 +574,6 @@ html { scroll-behavior: smooth; }
    перед «Как найти» переиспользуют этот класс). */
 .hero__btn {
   display: inline-block;
-  position: relative; /* под шиммер-проблеск */
-  overflow: hidden;
   background: var(--gold);
   border: none;
   border-radius: 4px;
@@ -632,21 +587,6 @@ html { scroll-behavior: smooth; }
   transition: background .25s;
 }
 .hero__btn:hover { background: var(--gold-hover); }
-/* Золотой шиммер-проблеск на наведении: диагональный блик, ползёт transform:translateX
-   + opacity (НЕ background-position). Однократно на hover — не бесконечно. */
-.hero__btn::after {
-  content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 42%;
-  background: linear-gradient(100deg, transparent, rgba(255,255,255,.4), transparent);
-  transform: translateX(0); opacity: 0; pointer-events: none;
-}
-.hero__btn:hover::after { animation: hero-btn-sweep .7s ease; }
-@keyframes hero-btn-sweep {
-  0% { transform: translateX(0); opacity: 0; }
-  18% { opacity: 1; }
-  100% { transform: translateX(380%); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) { .hero__btn:hover::after { animation: none; } }
-
 /* ── ABOUT ─────────────────────────────────────────────── */
 /* Редизайн 2026-07-08: секция больше не «страница книги» с фиксированной
    высотой — обычный <section> в потоке скролла, растёт по контенту. */
@@ -756,7 +696,7 @@ html { scroll-behavior: smooth; }
 }
 
 /* Кнопки категорий: сверху вниз, каскадное появление (однократное, только
-   transform/opacity), hover — общий .nav__shimmer (сдвиг + перелив) */
+   transform/opacity), hover — общий .u-glare (подъём + перелив) */
 .mbk__nav {
   display: flex;
   flex-direction: column;
@@ -1183,7 +1123,7 @@ html { scroll-behavior: smooth; }
   padding: 0; background: none; cursor: pointer;
 }
 .events__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .9; }
-.events__thumb:hover img { opacity: 1; transform: scale(1.06); } /* transform/opacity — без reflow */
+.events__thumb:hover img { opacity: 1; } /* подъём и блик даёт .u-glare на карточке */
 .events__thumb img { transition: transform .25s ease, opacity .25s ease; }
 .events__thumb-more {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -1618,7 +1558,7 @@ html { scroll-behavior: smooth; }
   animation: mbkBtnIn 0.45s ease backwards;
   animation-delay: calc(var(--i) * 60ms);
 }
-.tm2__nav-btn:hover { transform: translateX(5px); opacity: 1; border-color: rgba(var(--gold-rgb), .45); }
+.tm2__nav-btn:hover { opacity: 1; border-color: rgba(var(--gold-rgb), .45); }
 .tm2__nav-btn--active {
   opacity: 1;
   border-color: rgba(var(--gold-rgb), .7);
@@ -1662,7 +1602,6 @@ html { scroll-behavior: smooth; }
 
 @media (prefers-reduced-motion: reduce) {
   .tm2__nav-btn { animation: none; transition: border-color .2s, opacity .2s; }
-  .tm2__nav-btn:hover { transform: none; }
   .tm2__join-btn:hover { transform: none; }
 }
 
@@ -1744,7 +1683,7 @@ html { scroll-behavior: smooth; }
   transition: border-color .2s, color .2s, transform .2s;
   flex-shrink: 0;
 }
-.team-carousel__arrow--side:hover { border-color: var(--gold); color: var(--gold); transform: scale(1.08); }
+.team-carousel__arrow--side:hover { border-color: var(--gold); color: var(--gold); }
 .team-carousel__dots {
   display: flex;
   justify-content: center;
@@ -2080,7 +2019,6 @@ html { scroll-behavior: smooth; }
   flex-shrink: 0;
   transition: transform .3s;
 }
-.contacts__social:hover .contacts__social-icon { transform: scale(1.2); }
 
 /* Instagram — розово-оранжевый */
 .contacts__social--ig:hover {

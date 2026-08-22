@@ -8,7 +8,7 @@ import AuthService from '../auth/AuthService.js';
 function TelegramNavLink({ loggedIn, onClick, onRequestAuth, tx }) {
   if (loggedIn) {
     return (
-      <a href="/profile" className="nav__profile nav__shimmer" onClick={onClick} aria-label={tx.navProfile}>
+      <a href="/profile" className="nav__profile u-glare" onClick={onClick} aria-label={tx.navProfile}>
         <span className="nav__tg-label">{tx.navProfile}</span>
       </a>
     );
@@ -16,7 +16,7 @@ function TelegramNavLink({ loggedIn, onClick, onRequestAuth, tx }) {
   return (
     <button
       type="button"
-      className="nav__tg nav__shimmer"
+      className="nav__tg u-glare"
       onClick={() => { onClick?.(); onRequestAuth(); }}
       aria-label={tx.navLoginTg}
     >
@@ -25,6 +25,9 @@ function TelegramNavLink({ loggedIn, onClick, onRequestAuth, tx }) {
   );
 }
 
+// Hover всех кликабельных элементов шапки — общий .u-glare (единый язык
+// сайта, см. index.css §«Единый язык hover'ов»), отдельного nav__shimmer
+// больше нет.
 // Редизайн 2026-07-07 (ветка redesign-scroll-v1): fixed-шапка сверху вместо
 // левого сайдбара. Ссылки — обычные href="#id" (работают через
 // scroll-behavior:smooth + scroll-margin-top на секциях в index.css), никакой
@@ -55,16 +58,16 @@ export default function Nav({ tx, lang, onLangToggle, onRequestAuth }) {
         </a>
 
         <div className="nav__links">
-          <a href="#about"    className="nav__link nav__shimmer">{tx.navAbout}</a>
-          <a href="#team"     className="nav__link nav__shimmer">{tx.navTeam}</a>
-          <a href="#menu"     className="nav__link nav__shimmer">{tx.navMenu}</a>
-          <a href="#events"   className="nav__link nav__shimmer">{tx.navEvents}</a>
+          <a href="#about"    className="nav__link u-glare">{tx.navAbout}</a>
+          <a href="#team"     className="nav__link u-glare">{tx.navTeam}</a>
+          <a href="#menu"     className="nav__link u-glare">{tx.navMenu}</a>
+          <a href="#events"   className="nav__link u-glare">{tx.navEvents}</a>
           {/* «Полка» скрыта — в разработке (решение владельца 2026-07-05) */}
-          <a href="#contacts" className="nav__link nav__shimmer">{tx.navContacts}</a>
+          <a href="#contacts" className="nav__link u-glare">{tx.navContacts}</a>
         </div>
 
         {isAdmin && (
-          <a href="/admin" className="nav__admin nav__shimmer" aria-label={tx.navAdmin}>
+          <a href="/admin" className="nav__admin u-glare" aria-label={tx.navAdmin}>
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" />
               <path d="M2 14h4M10 8h4M18 16h4" />
@@ -75,8 +78,8 @@ export default function Nav({ tx, lang, onLangToggle, onRequestAuth }) {
 
         <div className="nav__actions">
           <TelegramNavLink loggedIn={loggedIn} onRequestAuth={onRequestAuth} tx={tx} />
-          <button className="nav__lang nav__shimmer" onClick={onLangToggle}>{tx.langBtn}</button>
-          <a href="/booking" className="nav__cta">{tx.heroCta}</a>
+          <button className="nav__lang u-glare" onClick={onLangToggle}>{tx.langBtn}</button>
+          <a href="/booking" className="nav__cta u-glare">{tx.heroCta}</a>
         </div>
 
         <button
@@ -89,21 +92,21 @@ export default function Nav({ tx, lang, onLangToggle, onRequestAuth }) {
       </nav>
 
       <div className={`nav__mobile${menuOpen ? ' nav__mobile--open' : ''}`}>
-        <a href="#about"    className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navAbout}</a>
-        <a href="#team"     className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navTeam}</a>
-        <a href="#menu"     className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navMenu}</a>
-        <a href="#events"   className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navEvents}</a>
+        <a href="#about"    className="nav__mobile-link u-glare" onClick={close}>{tx.navAbout}</a>
+        <a href="#team"     className="nav__mobile-link u-glare" onClick={close}>{tx.navTeam}</a>
+        <a href="#menu"     className="nav__mobile-link u-glare" onClick={close}>{tx.navMenu}</a>
+        <a href="#events"   className="nav__mobile-link u-glare" onClick={close}>{tx.navEvents}</a>
         {/* «Полка» скрыта — в разработке (решение владельца 2026-07-05) */}
-        <a href="#contacts" className="nav__mobile-link nav__shimmer" onClick={close}>{tx.navContacts}</a>
+        <a href="#contacts" className="nav__mobile-link u-glare" onClick={close}>{tx.navContacts}</a>
         {isAdmin && (
-          <a href="/admin" className="nav__mobile-link nav__mobile-link--admin nav__shimmer" onClick={close}>
+          <a href="/admin" className="nav__mobile-link nav__mobile-link--admin u-glare" onClick={close}>
             {tx.navAdmin}
           </a>
         )}
         <div className="nav__mobile-actions">
           <TelegramNavLink loggedIn={loggedIn} onClick={close} onRequestAuth={onRequestAuth} tx={tx} />
-          <button className="nav__lang nav__shimmer" onClick={() => { onLangToggle(); close(); }}>{tx.langBtn}</button>
-          <a href="/booking" className="nav__cta" onClick={close}>{tx.heroCta}</a>
+          <button className="nav__lang u-glare" onClick={() => { onLangToggle(); close(); }}>{tx.langBtn}</button>
+          <a href="/booking" className="nav__cta u-glare" onClick={close}>{tx.heroCta}</a>
         </div>
       </div>
     </>

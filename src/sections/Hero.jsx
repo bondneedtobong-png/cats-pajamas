@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useOffscreenPause } from '../useReveal.js';
 import { pageImages } from '../data.js';
+import SilkBackground from '../ui/SilkBackground.jsx';
 
 const Ornament = ({ width = 72 }) => (
   <div className="ornament" style={{ marginBottom: 0 }}>
@@ -26,7 +26,7 @@ const Ornament = ({ width = 72 }) => (
 // высоты. Видны только на широком десктопе (>1200px) — см. .hero__side.
 function SideCard({ id, image, label }) {
   return (
-    <a href={`#${id}`} className="hero__card" aria-label={label}>
+    <a href={`#${id}`} className="hero__card u-glare" aria-label={label}>
       <div className="hero__card-img" style={{ backgroundImage: `url(${image})` }} />
       <div className="hero__card-scrim" />
       <div className="hero__card-body">
@@ -44,7 +44,6 @@ function SideCard({ id, image, label }) {
 
 export default function Hero({ tx }) {
   const [curtainDone, setCurtainDone] = useState(false);
-  const offscreenRef = useOffscreenPause();
 
   useEffect(() => {
     const t = setTimeout(() => setCurtainDone(true), 2100);
@@ -52,14 +51,13 @@ export default function Hero({ tx }) {
   }, []);
 
   return (
-    <section id="hero" className="hero" ref={offscreenRef}>
-      {/* Background — bar photography treated as cover stock, not a photo
-          hero: heavier vignette/desaturation so it reads as texture behind
-          printed type rather than a snapshot. */}
+    <section id="hero" className="hero">
+      {/* Фон — текучий сливовый атлас (WebGL, см. ui/SilkBackground.jsx).
+          Пришёл на смену слайд-шоу из фотографий бара: выбор владельца
+          2026-08-22 по витрине вариантов. Сам себя ставит на паузу, когда
+          Hero уходит с экрана, и рисует один кадр при reduced-motion. */}
       <div className="hero__bg">
-        <div className="hero__bg-slide hero__bg-slide--1" />
-        <div className="hero__bg-slide hero__bg-slide--2" />
-        <div className="hero__bg-slide hero__bg-slide--3" />
+        <SilkBackground />
       </div>
       <div className="hero__vignette" />
       <div className="hero__grad" />
@@ -96,7 +94,7 @@ export default function Hero({ tx }) {
           <p className="hero__sub">{tx.heroSub}</p>
           {/* Редизайн: бронь больше не встроена в лендинг — обычная ссылка на
               рабочий отдельный маршрут /booking (см. HANDOFF-историю). */}
-          <a href="/booking" className="hero__btn">{tx.heroCta}</a>
+          <a href="/booking" className="hero__btn u-glare">{tx.heroCta}</a>
         </div>
 
         <div className="hero__side hero__side--right">

@@ -88,7 +88,7 @@ export default function Menu({ tx }) {
                       <button
                         key={c.title}
                         type="button"
-                        className={`mbk__nav-btn nav__shimmer${c.title === cat.title ? ' mbk__nav-btn--active' : ''}`}
+                        className={`mbk__nav-btn u-glare${c.title === cat.title ? ' mbk__nav-btn--active' : ''}`}
                         style={{ '--i': btnIndex++ }}
                         onClick={() => setActiveTitle(c.title)}
                       >
@@ -116,7 +116,7 @@ export default function Menu({ tx }) {
                 <span className="mbk__story-label">{tx.menuStoryLabel}</span>
                 <h3 className="mbk__story-title">{cat.title}</h3>
                 <p className="mbk__story-text">{story}</p>
-                <a className="mbk__story-link u-underline" href="/menu">{tx.menuPrintLink} ›</a>
+                <a className="mbk__story-link u-glare" href="/menu">{tx.menuPrintLink} ›</a>
               </aside>
             </div>
           </>

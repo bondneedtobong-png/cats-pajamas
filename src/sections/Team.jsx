@@ -105,7 +105,7 @@ export default function Team({ tx }) {
                     <button
                       key={m.id}
                       type="button"
-                      className={`tm2__nav-btn${i === idx ? ' tm2__nav-btn--active' : ''}`}
+                      className={`tm2__nav-btn u-glare${i === idx ? ' tm2__nav-btn--active' : ''}`}
                       style={{
                         '--i': i,
                         backgroundImage: m.photoUrl
@@ -124,7 +124,7 @@ export default function Team({ tx }) {
 
               <div className="tm2__join">
                 <p className="tm2__join-text">{tx.teamJoinAsk}</p>
-                <button className="tm2__join-btn" onClick={() => setShowForm(true)}>{tx.teamJoinShare}</button>
+                <button className="tm2__join-btn u-glare" onClick={() => setShowForm(true)}>{tx.teamJoinShare}</button>
               </div>
             </aside>
           </div>
