@@ -1,7 +1,7 @@
 // E2E-проверки лендинга в настоящем Chromium (Playwright, headless).
-// Написано под баг прода 2026-08-22 «reveal зависает на opacity:0 при быстрой
-// прокрутке»: сценарий сначала был воспроизведён в живом Chrome владельца,
-// здесь он закреплён тестом.
+// Написано под баг прода 2026-08-22: «reveal зависает на opacity:0 при быстрой
+// прокрутке» + «шапка рябит при наведении». Оба сценария сначала были
+// воспроизведены в живом Chrome владельца, здесь они закреплены тестом.
 //
 // Запуск (dev-сервер должен работать): node devtools/reveal_e2e.mjs
 // Другой адрес:                        node devtools/reveal_e2e.mjs http://localhost:4173
@@ -157,6 +157,41 @@ async function scenarioResize(browser) {
   await page.close();
 }
 
+// Шапка: правила визуала CLAUDE.md, проверяемые машиной. Рябь при наведении
+// давал не сам эффект, а СПОСОБ: перекраска (background-position, box-shadow)
+// внутри fixed-шапки с backdrop-filter — каждый кадр пересобиралась подложка
+// под всей шапкой.
+async function scenarioNavPaint(browser) {
+  const page = await fresh(browser, DESKTOP);
+  const nav = await page.evaluate(() => {
+    const el = document.querySelector('.nav');
+    const link = document.querySelector('.nav__link');
+    const tg = document.querySelector('.nav__tg, .nav__profile');
+    const cs = getComputedStyle(el);
+    return {
+      backdrop: cs.backdropFilter || cs.webkitBackdropFilter || 'none',
+      afterTransition: getComputedStyle(link, '::after').transitionProperty,
+      linkTransition: getComputedStyle(link).transitionProperty,
+      tgTransition: tg ? getComputedStyle(tg).transitionProperty : '',
+    };
+  });
+  check('[desktop] .nav без backdrop-filter', nav.backdrop === 'none', `backdrop-filter: ${nav.backdrop}`);
+  check('[desktop] блик .nav__link::after едет transform, а не background-position', nav.afterTransition === 'transform', `transition-property: ${nav.afterTransition}`);
+  check(
+    '[desktop] в переходах шапки нет перекрашиваемых свойств',
+    ![nav.linkTransition, nav.tgTransition].some((t) => /background-position|box-shadow|filter/.test(t)),
+    `link: ${nav.linkTransition} | tg: ${nav.tgTransition}`,
+  );
+
+  // Блик должен реально проезжать по кнопке на hover — эффект владельца сохранён.
+  const before = await page.evaluate(() => getComputedStyle(document.querySelector('.nav__link'), '::after').transform);
+  await page.hover('.nav__link');
+  await page.waitForTimeout(400);
+  const during = await page.evaluate(() => getComputedStyle(document.querySelector('.nav__link'), '::after').transform);
+  check('[desktop] блик при наведении едет (эффект на месте)', before !== during, `${before} → ${during}`);
+  await page.close();
+}
+
 const browser = await chromium.launch();
 console.log(`\nЛендинг: ${URL}\n`);
 console.log('Reveal при быстрой прокрутке:');
@@ -168,6 +203,8 @@ await scenarioScrollbarJumps(browser, DESKTOP, 'desktop 1366×700');
 await scenarioScrollbarJumps(browser, MOBILE, 'mobile 390×844');
 await scenarioAnchor(browser);
 await scenarioResize(browser);
+console.log('\nШапка (рябь при наведении):');
+await scenarioNavPaint(browser);
 await browser.close();
 
 console.log(failed ? `\n${failed} FAILED\n` : '\nALL SCENARIOS PASS\n');

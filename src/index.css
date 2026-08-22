@@ -204,10 +204,12 @@ html { scroll-behavior: smooth; }
    plain rectangle — per client's sketch: "должна выглядеть как закладка
    в книжке, а не тупо прямоугольное меню". */
 /* Редизайн 2026-07-07 (ветка redesign-scroll-v1): fixed-шапка сверху вместо
-   левого сайдбара — по макету владельца. Почти непрозрачный фон (96%) на
-   всякий случай сохранён из старой книги (лечение ряби при перелистывании),
-   хотя перелистывания больше нет — лёгкий blur всё равно дешевле держать
-   небольшим. */
+   левого сайдбара — по макету владельца. Фон почти непрозрачный (96%).
+   backdrop-filter убран (2026-08-22, баг «шапка рябит при наведении»): при
+   96% непрозрачности блюр не виден глазом, но заставляет браузер пересобирать
+   подложку под всей шапкой на КАЖДУЮ перерисовку её содержимого — а hover
+   перерисовывал (см. .nav__shimmer ниже). Результат — мерцание по шапке.
+   Не возвращать: правило CLAUDE.md про backdrop-filter написано ровно об этом. */
 .nav {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -219,7 +221,6 @@ html { scroll-behavior: smooth; }
   gap: 16px;
   padding: 0 clamp(20px, 4vw, 40px);
   background: color-mix(in srgb, var(--bg) 96%, transparent);
-  backdrop-filter: blur(4px);
   border-bottom: 1px solid var(--border);
 }
 .nav__logo {
@@ -252,27 +253,36 @@ html { scroll-behavior: smooth; }
    request ("при наводке на любую кнопку она должна смещаться,
    переливаться"). Reused by .nav__link/.nav__lang/.nav__tg/.nav__profile.
    Lives on ::after (not the element's own background) so .nav__link can
-   still carry its own photo underneath. */
+   still carry its own photo underneath.
+
+   Блик ЕДЕТ transform'ом, а не background-position (2026-08-22): анимация
+   background-position перекрашивала элемент каждый кадр 0.7с, и вместе с
+   backdrop-filter на .nav это давало рябь по всей шапке. transform слой не
+   перерисовывает — его двигает компоузер. Правило CLAUDE.md «никаких
+   transition на background-position» — как раз про этот случай.
+   Полоса шириной 60% элемента: старт — вплотную слева за краем
+   (translateX(-100%) от собственной ширины), финиш — за правым краем. */
 .nav__shimmer {
   position: relative;
   overflow: hidden;
-  transition: transform .25s cubic-bezier(.34,1.56,.64,1), color .2s, border-color .2s, box-shadow .25s;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1), color .2s, border-color .2s;
 }
 .nav__shimmer::after {
   content: '';
   position: absolute;
-  inset: 0;
+  top: 0; bottom: 0; left: 0;
+  width: 60%;
   pointer-events: none;
-  background-image: linear-gradient(100deg, transparent 30%, rgba(var(--gold-rgb),.4) 48%, transparent 66%);
-  background-size: 260% 100%;
-  background-position: 150% 0;
-  transition: background-position .7s ease;
+  background-image: linear-gradient(100deg, transparent, rgba(var(--gold-rgb),.4), transparent);
+  transform: translateX(-100%);
+  transition: transform .7s ease;
 }
 .nav__shimmer:hover { transform: translateX(6px); }
-.nav__shimmer:hover::after { background-position: -60% 0; }
+.nav__shimmer:hover::after { transform: translateX(180%); }
 @media (prefers-reduced-motion: reduce) {
   .nav__shimmer { transition: color .2s, border-color .2s; }
   .nav__shimmer:hover { transform: none; }
+  .nav__shimmer::after { transition: none; }
 }
 
 /* Простые текстовые ссылки по макету (без фото-фона и без active-состояния
@@ -373,13 +383,15 @@ html { scroll-behavior: smooth; }
   padding: 9px 13px;
   white-space: nowrap;
   box-shadow: 0 0 12px 1px rgba(var(--gold-rgb), .14); /* статично, см. коммент у .nav__cta */
-  transition: color .25s, border-color .25s, background-color .25s, box-shadow .25s, transform .2s;
+  /* box-shadow из transition убран (2026-08-22): тень перерисовывается
+     программно каждый кадр, а элемент живёт в шапке — это была вторая
+     половина ряби. Свечение теперь одинаковое в покое и на hover. */
+  transition: color .25s, border-color .25s, background-color .25s, transform .2s;
 }
 .nav__tg:hover, .nav__profile:hover {
   background: rgba(var(--gold-rgb), .20);
   border-color: var(--gold);
   color: var(--gold);
-  box-shadow: 0 4px 20px rgba(var(--gold-rgb), .30), 0 0 0 1px rgba(var(--gold-rgb), .25);
   transform: translateY(-1px);
 }
 
