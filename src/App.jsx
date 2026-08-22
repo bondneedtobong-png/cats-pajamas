@@ -26,6 +26,10 @@ const AdminPage        = lazy(() => import('./admin/AdminPage.jsx'));
 const BookingRulesPage = lazy(() => import('./pages/BookingRulesPage.jsx'));
 const PrivacyPage      = lazy(() => import('./pages/PrivacyPage.jsx'));
 const NotFoundPage     = lazy(() => import('./pages/NotFoundPage.jsx'));
+// Витрина кандидатов для выбора владельцем (WebGL-фон Hero, язык hover'ов).
+// Ленивый чанк, на лендинг не влияет и ниоткуда не залинкован; после выбора
+// вариант переезжает в секции, а src/lab удаляется.
+const LabPage          = lazy(() => import('./lab/LabPage.jsx'));
 
 // Редизайн 2026-07-07 (ветка redesign-scroll-v1): лендинг — обычная
 // непрерывно скроллящаяся страница с fixed-меню сверху (см. Nav.jsx), по
@@ -91,6 +95,8 @@ export default function App() {
           <Route path="/admin"         element={<AdminPage />} />
           <Route path="/booking-rules" element={<BookingRulesPage />} />
           <Route path="/privacy"       element={<PrivacyPage />} />
+          <Route path="/lab"                  element={<LabPage />} />
+          <Route path="/lab/:kind/:variant"   element={<LabPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
