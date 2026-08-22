@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useReveal } from '../useReveal.js';
 import EventsService from '../events/EventsService.js';
 
@@ -33,45 +33,91 @@ function photosOf(ev) {
   return ev.imageUrl ? [ev.imageUrl] : [];
 }
 
+function todayIso() { return new Date().toISOString().split('T')[0]; }
+
 export default function Events({ tx, lang }) {
-  const [events,  setEvents]  = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [events,   setEvents]   = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [tab,      setTab]      = useState('upcoming');
+  const [openEv,   setOpenEv]   = useState(null); // раскрытое событие (модалка)
   const [lightbox, setLightbox] = useState(null); // { images, index }
   const r0 = useReveal(0);
   const r1 = useReveal(100);
-  const rList = useReveal(0); // контейнер-группа для стаггера карточек (§C.3)
+  const rList = useReveal(0);
 
   useEffect(() => {
     let alive = true;
-    EventsService.getPublic()
+    // Один запрос на всё активное: переключение вкладок мгновенное, без
+    // повторного похода в сеть (событий у бара десятки, не тысячи).
+    EventsService.getPublicAll()
       .then(list => { if (alive) setEvents(list); })
       .catch(() => { if (alive) setEvents([]); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, []);
 
+  const { upcoming, past } = useMemo(() => {
+    const today = todayIso();
+    const up = events.filter(e => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+    const pa = events.filter(e => e.date < today).sort((a, b) => b.date.localeCompare(a.date));
+    return { upcoming: up, past: pa };
+  }, [events]);
+
+  // Первым экраном не показываем пустоту, если в соседней вкладке есть что
+  // показать: программа у бара сезонная, между сериями концертов «Грядущих»
+  // может не быть неделями.
+  useEffect(() => {
+    if (!loading && upcoming.length === 0 && past.length > 0) setTab('past');
+  }, [loading, upcoming.length, past.length]);
+
+  const list = tab === 'past' ? past : upcoming;
   const openLightbox = useCallback((images, index) => setLightbox({ images, index }), []);
 
   return (
     <section id="events" className="events">
       <div className="events__dots" />
       <div className="events__inner">
+        <div className="events__tabs" role="tablist" aria-label={tx.eventsTitle}>
+          {[['upcoming', tx.eventsTabUpcoming], ['past', tx.eventsTabPast]].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              className={`events__tab u-glare${tab === key ? ' events__tab--active' : ''}`}
+              onClick={() => setTab(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div ref={r0} className="reveal mb-10">
           <span className="sec-label">{tx.eventsLabel}</span>
         </div>
         <h2 ref={r1} className="reveal events__title">{tx.eventsTitle}</h2>
 
         {loading && <p className="events__note">{tx.eventsLoading}</p>}
-        {!loading && events.length === 0 && <p className="events__note">{tx.eventsEmpty}</p>}
+        {!loading && list.length === 0 && (
+          <p className="events__note">{tab === 'past' ? tx.eventsEmptyPast : tx.eventsEmpty}</p>
+        )}
 
-        {!loading && events.length > 0 && (
-          <div ref={rList} className="reveal-group events__list">
-            {events.map((ev, i) => (
-              <EventRow key={ev.id} ev={ev} index={i} lang={lang} tx={tx} onOpen={openLightbox} />
-            ))}
+        {!loading && list.length > 0 && (
+          <div ref={rList} className="reveal">
+            <EventsAccordion key={tab} events={list} lang={lang} tx={tx} onOpen={setOpenEv} />
           </div>
         )}
       </div>
+
+      {openEv && (
+        <EventDetails
+          ev={openEv}
+          lang={lang}
+          tx={tx}
+          onLightbox={openLightbox}
+          onClose={() => setOpenEv(null)}
+        />
+      )}
 
       {lightbox && (
         <EventLightbox
@@ -86,62 +132,124 @@ export default function Events({ tx, lang }) {
   );
 }
 
-function EventRow({ ev, index, lang, tx, onOpen }) {
-  const photos = photosOf(ev);
-  const hasImg = photos.length > 0;
-  const gallery = photos.length > 1;
-  const cover = photos[0];
-
-  const cardProps = hasImg
-    ? {
-        style: { backgroundImage: `url(${cover})`, '--i': index },
-        role: 'button',
-        tabIndex: 0,
-        onClick: () => onOpen(photos, 0),
-        onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(photos, 0); } },
-      }
-    : { style: { '--i': index } };
+// ─── Витрина-«гармошка» ──────────────────────────────────────────────────────
+// Идея и раскладка — Accordion Gallery с reactbits.dev, но реализация своя:
+// оригинал тянет gsap (~35 КБ gzip) ради того, что здесь делает одна
+// transition на flex-grow. Ширина панелей — единственное, что анимируется
+// на главном потоке; на телефоне (≤900px) гармошка вообще выключается и
+// превращается в обычный вертикальный список — на тач-экране «раскрытие по
+// наведению» смысла не имеет, а слабому железу не нужны лишние кадры.
+function EventsAccordion({ events, lang, tx, onOpen }) {
+  const [active, setActive] = useState(0);
+  const items = events.slice(0, 6); // больше шести панелей в ряд нечитаемо
+  const grow = Math.max(2.6, items.length * 0.9); // насколько раскрывается активная
 
   return (
-    <div
-      className={`reveal-item events__item u-glare${hasImg ? ' events__item--photo' : ''}${gallery ? ' events__item--gallery' : ''}`}
-      {...cardProps}
-    >
-      {hasImg && <div className="events__item-overlay" />}
-      {hasImg && <div className="events__corner events__corner--tl" aria-hidden="true" />}
-      {hasImg && <div className="events__corner events__corner--br" aria-hidden="true" />}
-      <div className="events__date">
-        <div className="events__day">{formatEventDay(ev.date, lang)}</div>
-        <div className="events__time">{ev.time}</div>
-      </div>
-      <div className="events__vline" />
-      <div className="events__body">
-        <h3 className="events__title-item">{ev.title}</h3>
-        <p className="events__desc">{ev.description}</p>
-        {gallery && (
-          <div className="events__thumbs" onClick={(e) => e.stopPropagation()}>
-            {photos.slice(0, 6).map((src, i) => (
-              <button
-                key={i}
-                type="button"
-                className="events__thumb"
-                onClick={() => onOpen(photos, i)}
-                aria-label={`${tx.eventsPhoto || 'Фото'} ${i + 1}`}
-              >
-                <img src={thumbSrc(src)} alt="" loading="lazy" />
-                {i === 5 && photos.length > 6 && <span className="events__thumb-more">+{photos.length - 6}</span>}
-              </button>
-            ))}
+    <div className="evac">
+      {items.map((ev, i) => {
+        const photos = photosOf(ev);
+        const cover = photos[0];
+        const isActive = i === active;
+        return (
+          <article
+            key={ev.id}
+            className={`evac__panel${isActive ? ' evac__panel--active' : ''}${cover ? '' : ' evac__panel--nophoto'}`}
+            style={{ flexGrow: isActive ? grow : 1 }}
+            onMouseEnter={() => setActive(i)}
+            onFocus={() => setActive(i)}
+          >
+            {cover && (
+              <img className="evac__img" src={cover} alt="" loading="lazy" draggable="false" />
+            )}
+            <span className="evac__scrim" aria-hidden="true" />
+            <span className="evac__date">{formatEventDay(ev.date, lang)}{ev.time ? ` · ${ev.time}` : ''}</span>
+            {photos.length > 1 && <span className="evac__count" aria-hidden="true">🖼 {photos.length}</span>}
+            <span className="evac__label">
+              <span className="evac__bar" aria-hidden="true" />
+              <span className="evac__name">{ev.title}</span>
+            </span>
+            {/* Кликабельна вся панель, а не только раскрытая: на тач-экране
+                наведения нет, и «сначала раскрой, потом жми» там не работает. */}
+            <button
+              type="button"
+              className="evac__hit"
+              onClick={() => onOpen(ev)}
+              onFocus={() => setActive(i)}
+            >
+              <span className="sr-only">{ev.title} — {tx.eventsOpenCard}</span>
+            </button>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Раскрытое событие ───────────────────────────────────────────────────────
+// Формат намеренно другой, чем у сетки снаружи (§B): крупное основное фото +
+// стрип миниатюр, клик по миниатюре — лайтбокс-карусель.
+function EventDetails({ ev, lang, tx, onLightbox, onClose }) {
+  const photos = photosOf(ev);
+  const [main, setMain] = useState(0);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+
+  return (
+    <div className="evdt" role="dialog" aria-modal="true" aria-label={ev.title} onClick={onClose}>
+      <div className="evdt__card" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="evdt__close" onClick={onClose} aria-label={tx.close}>✕</button>
+
+        {photos.length > 0 && (
+          <div className="evdt__gallery">
+            <button
+              type="button"
+              className="evdt__main"
+              onClick={() => onLightbox(photos, main)}
+              aria-label={`${tx.eventsPhoto} ${main + 1}`}
+            >
+              <img src={photos[main]} alt="" loading="lazy" />
+            </button>
+            {photos.length > 1 && (
+              <div className="evdt__strip">
+                {photos.map((src, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`evdt__thumb${i === main ? ' evdt__thumb--active' : ''}`}
+                    onClick={() => { setMain(i); onLightbox(photos, i); }}
+                    onMouseEnter={() => setMain(i)}
+                    aria-label={`${tx.eventsPhoto} ${i + 1}`}
+                  >
+                    <img src={thumbSrc(src)} alt="" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
+
+        <div className="evdt__body">
+          <span className="evdt__date">{formatEventDay(ev.date, lang)}{ev.time ? ` · ${ev.time}` : ''}</span>
+          <h3 className="evdt__title">{ev.title}</h3>
+          {ev.description && <p className="evdt__text">{ev.description}</p>}
+          {ev.channelPostUrl && (
+            <a
+              className="evdt__post u-glare"
+              href={ev.channelPostUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {tx.eventsOpenPost} ↗
+            </a>
+          )}
+        </div>
       </div>
-      {hasImg
-        ? <span className="events__count" aria-hidden="true">{gallery ? `🖼 ${photos.length}` : '🔍'}</span>
-        : (
-          <svg className="events__arrow" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        )}
     </div>
   );
 }

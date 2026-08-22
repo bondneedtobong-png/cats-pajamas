@@ -1155,97 +1155,216 @@ html { scroll-behavior: smooth; }
   font-weight: 300;
   font-style: italic;
 }
-.events__list { border: 1px solid var(--border); display: flex; flex-direction: column; }
-.events__item {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  padding: 34px 48px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  transition: background .25s;
+/* ── Афиша: переключатель «Грядущие / Прошедшие» ────────────────────────── */
+.events__tabs {
+  display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 clamp(14px, 2.4vh, 26px);
 }
-.events__item:last-child { border-bottom: none; }
-.events__item:hover { background: var(--bg2); }
-
-/* Admin-uploaded event photo becomes the card background */
-.events__item--photo { background-size: cover; background-position: center; }
-.events__item--photo:hover { background-color: transparent; }
-.events__item-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(to right, rgba(10,8,20,.90) 30%, rgba(10,8,20,.55));
-  z-index: 0;
-}
-.events__item--photo > *:not(.events__item-overlay) { position: relative; z-index: 1; }
-.events__item--photo .events__desc { color: rgba(242,237,228,.75); }
-.events__item--photo .events__vline { background: rgba(242,237,228,.28); }
-.events__date { flex-shrink: 0; text-align: center; width: 108px; }
-.events__day {
+.events__tab {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 9px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 5px;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 9px 18px;
 }
-.events__time {
-  font-family: 'Baskerville', serif;
-  font-size: 32px;
-  font-weight: 900;
+.events__tab--active { color: var(--bg); background: var(--gold); border-color: var(--gold); }
+
+/* ── Витрина-«гармошка» ─────────────────────────────────────────────────────
+   Раскладка — по мотивам Accordion Gallery с reactbits.dev, но без gsap:
+   единственное, что анимируется, — flex-grow активной панели (плюс opacity
+   подписи). На ≤900px гармошка выключается совсем: на тач-экране нет
+   наведения, а вертикальный список и легче для слабого телефона. */
+.evac {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  height: clamp(300px, 46vh, 440px);
+}
+.evac__panel {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  transition: flex-grow .55s cubic-bezier(.16, 1, .3, 1);
+}
+.evac__img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) brightness(.62);
+  transition: filter .45s ease;
+  user-select: none;
+}
+.evac__panel--active .evac__img { filter: grayscale(0) brightness(.86); }
+.evac__scrim {
+  position: absolute; inset: 0; pointer-events: none;
+  /* Затемнение сверху — под строку даты (на светлом кадре она терялась),
+     снизу — под название события. */
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 62%, transparent) 0%, transparent 22%),
+    linear-gradient(180deg, transparent 42%, color-mix(in srgb, var(--bg) 88%, transparent) 100%);
+}
+.evac__panel--nophoto {
+  background: linear-gradient(160deg, var(--bg2), color-mix(in srgb, var(--bg2) 60%, #371931));
+}
+.evac__date {
+  position: absolute; top: 14px; left: 8px; right: 8px;
+  text-align: center;
+  /* На сжатой панели строка даты и счётчик фото налезали друг на друга —
+     счётчик показываем только на раскрытой, дате оставляем поля. */
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 9.5px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .7);
+  z-index: 2; pointer-events: none;
+}
+.evac__count {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  opacity: 0; transition: opacity .3s ease;
+  font-size: 10px; letter-spacing: 1px;
   color: var(--text);
-  line-height: 1;
+  background: rgba(10, 8, 20, .55);
+  border-radius: 4px; padding: 3px 7px;
+  pointer-events: none;
 }
-.events__vline { width: 1px; height: 52px; background: var(--border); flex-shrink: 0; }
-.events__body { flex: 1; min-width: 0; }
-.events__title-item {
+/* Подпись видна у раскрытой панели: у сжатой для неё просто нет ширины. */
+.evac__label {
+  position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 2;
+  display: flex; align-items: center; gap: 10px;
+  opacity: 0; transform: translateX(-10px);
+  transition: opacity .4s ease, transform .4s cubic-bezier(.16, 1, .3, 1);
+  pointer-events: none;
+}
+.evac__panel--active .evac__label { opacity: 1; transform: translateX(0); }
+.evac__panel--active .evac__count { opacity: 1; }
+.evac__bar { flex: 0 0 auto; width: 3px; height: 24px; border-radius: 3px; background: var(--gold); }
+.evac__name {
   font-family: 'Baskerville', serif;
-  font-size: 27px;
-  font-style: italic;
+  font-size: clamp(15px, 1.5vw, 22px);
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .6);
+}
+/* Кликабельна вся панель — прозрачная кнопка поверх, чтобы клавиатура и
+   скринридер получили нормальную цель, а не div с onClick. */
+.evac__hit {
+  position: absolute; inset: 0; z-index: 3;
+  background: transparent; border: 0; padding: 0;
+  cursor: pointer;
+}
+.evac__hit:focus-visible { outline: 2px solid var(--gold); outline-offset: -4px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+@media (max-width: 900px) {
+  .evac { flex-direction: column; height: auto; }
+  .evac__panel { flex: none; height: 168px; transition: none; }
+  .evac__img { filter: grayscale(0) brightness(.78); }
+  .evac__label { opacity: 1; transform: none; }
+  .evac__count { opacity: 1; transition: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .evac__panel, .evac__img, .evac__label { transition: none; }
+}
+
+/* ── Раскрытое событие (модалка) ────────────────────────────────────────── */
+.evdt {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: rgba(8, 5, 14, .88);
+  animation: evlb-fade .2s ease;
+}
+.evdt__card {
+  position: relative;
+  width: min(880px, 100%);
+  max-height: min(88vh, 900px);
+  overflow: auto;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .6);
+  animation: evlb-pop .22s cubic-bezier(.16, 1, .3, 1);
+}
+.evdt__close {
+  position: absolute; top: 10px; right: 10px; z-index: 4;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(10, 8, 20, .6);
+  border: 1px solid var(--border);
+  color: var(--text); font-size: 15px; line-height: 1;
+  transition: color .2s, border-color .2s;
+}
+.evdt__close:hover { color: var(--gold); border-color: var(--gold); }
+
+.evdt__gallery { padding: 0; }
+.evdt__main {
+  display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in;
+}
+.evdt__main img {
+  display: block; width: 100%;
+  aspect-ratio: 16 / 9; object-fit: cover;
+  border-radius: 10px 10px 0 0;
+}
+/* Стрип миниатюр — один ряд с горизонтальной прокруткой при переполнении
+   (контент-бюджет карточки, §B). aspect-ratio держит высоту до загрузки. */
+.evdt__strip {
+  display: flex; gap: 8px;
+  padding: 8px 10px 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.evdt__thumb {
+  flex: 0 0 auto;
+  width: 96px; aspect-ratio: 4 / 3;
+  padding: 0; border: 1px solid transparent; border-radius: 5px;
+  overflow: hidden; background: var(--bg3); cursor: pointer;
+  opacity: .75;
+  transition: opacity .2s ease, border-color .2s ease, transform .2s ease;
+}
+.evdt__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.evdt__thumb:hover { opacity: 1; transform: translateY(-2px); }
+.evdt__thumb--active { opacity: 1; border-color: var(--gold); }
+
+.evdt__body { padding: 18px clamp(16px, 3vw, 28px) clamp(20px, 3vw, 28px); }
+.evdt__date {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--gold);
+}
+.evdt__title {
+  font-family: 'Baskerville', serif;
+  font-size: clamp(22px, 3vw, 34px);
   font-weight: 400;
   color: var(--text);
-  margin: 0 0 6px;
-  line-height: 1.2;
+  margin: 8px 0 12px;
 }
-.events__desc {
+.evdt__text {
   font-family: 'Avenir Next', sans-serif;
-  font-size: 13px;
-  color: var(--text-dim);
-  margin: 0;
-  line-height: 1.75;
-  font-weight: 300;
+  font-size: 14.5px; line-height: 1.7;
+  color: var(--text-mid);
+  white-space: pre-line; /* текст поста из канала приходит с переносами */
+  margin: 0 0 18px;
 }
-.events__arrow { flex-shrink: 0; opacity: .5; color: var(--accent); }
-
-/* ── Фото событий: витрина + арт-деко уголки + лайтбокс (план v4 §B) ── */
-.events__item--photo { cursor: pointer; }
-/* Арт-деко уголки на фото-карточке (лёгкая рамка-акцент) */
-.events__corner { position: absolute; width: 22px; height: 22px; z-index: 1; pointer-events: none; }
-.events__corner--tl { top: 12px; left: 12px; border-top: 1px solid rgba(198,191,181,.5); border-left: 1px solid rgba(198,191,181,.5); }
-.events__corner--br { bottom: 12px; right: 12px; border-bottom: 1px solid rgba(198,191,181,.5); border-right: 1px solid rgba(198,191,181,.5); }
-/* Значок «увеличить / N фото» справа */
-.events__count {
-  flex-shrink: 0; z-index: 1;
-  font-family: 'Avenir Next', sans-serif; font-size: 12px; letter-spacing: .5px;
-  color: rgba(242,237,228,.8); white-space: nowrap;
+.evdt__post {
+  display: inline-block;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(var(--gold-rgb), .08);
+  border: 1px solid rgba(var(--gold-rgb), .5);
+  border-radius: 5px;
+  padding: 12px 22px;
 }
-/* Стрип миниатюр (2+ фото) — в один ряд, при переполнении горизонтальный скролл */
-.events__thumbs {
-  display: flex; gap: 7px; margin-top: 12px;
-  overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px;
-}
-.events__thumb {
-  position: relative; flex: 0 0 auto; width: 62px; aspect-ratio: 4 / 3;
-  border: 1px solid rgba(198,191,181,.28); border-radius: 5px; overflow: hidden;
-  padding: 0; background: none; cursor: pointer;
-}
-.events__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .9; }
-.events__thumb:hover img { opacity: 1; } /* подъём и блик даёт .u-glare на карточке */
-.events__thumb img { transition: transform .25s ease, opacity .25s ease; }
-.events__thumb-more {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(10,8,20,.62); color: var(--text); font-size: 13px; font-weight: 600;
+@media (max-width: 600px) {
+  .evdt__card { max-height: 92vh; }
+  .evdt__main img { aspect-ratio: 4 / 3; }
+  .evdt__thumb { width: 76px; }
 }
 
 /* Лайтбокс-карусель */
@@ -1286,7 +1405,8 @@ html { scroll-behavior: smooth; }
 @keyframes evlb-pop { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) {
   .evlb, .evlb__img { animation: none; }
-  .events__thumb:hover img { transform: none; }
+  .evdt, .evdt__card { animation: none; }
+  .evdt__thumb:hover { transform: none; }
 }
 
 /* ── SHELF OF MEMORIES (полка воспоминаний) ────────────── */
@@ -2364,17 +2484,9 @@ html { scroll-behavior: smooth; }
   .menu-carousel__name { font-size: 34px; }
   .menu-carousel__story { max-width: none; }
 
-  /* Events */
-  .events__item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 22px 20px;
-  }
-  .events__date  { display: flex; flex-direction: row; gap: 14px; align-items: baseline; width: auto; text-align: left; }
-  .events__vline { display: none; }
-  .events__arrow { display: none; }
-  .events__time  { font-size: 24px; }
+  /* Events: гармошка на узком экране разложена в вертикальный список
+     (см. .evac в блоке афиши), здесь остаются только подписи. */
+  .events__tab { font-size: 10px; padding: 8px 14px; }
 
   /* Atmosphere + Reviews */
   .atmosphere { min-height: 0; padding: 64px 5% 56px; }

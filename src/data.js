@@ -61,6 +61,10 @@ export const translations = {
     eventsLoading: 'Загружаем события…',
     eventsEmpty: 'Ближайших событий пока нет — загляните позже.',
     eventsPhoto: 'Фото', close: 'Закрыть',
+    eventsTabUpcoming: 'Грядущие события', eventsTabPast: 'Прошедшие события',
+    eventsEmptyPast: 'Прошедших событий пока нет.',
+    eventsOpenPost: 'Открыть пост в канале',
+    eventsOpenCard: 'Подробнее о событии',
 
     galleryLabel: 'Глава IV · Каждый гость — своя бутылка', galleryTitle: 'Полка воспоминаний',
     galleryIntro: 'Каждый отзыв гостя становится бутылкой на нашей полке. Загляните — вдруг узнаете чей-то вечер.',
@@ -176,6 +180,10 @@ export const translations = {
     eventsLoading: 'Loading events…',
     eventsEmpty: 'No upcoming events yet — check back soon.',
     eventsPhoto: 'Photo', close: 'Close',
+    eventsTabUpcoming: 'Upcoming', eventsTabPast: 'Past events',
+    eventsEmptyPast: 'No past events yet.',
+    eventsOpenPost: 'Open the channel post',
+    eventsOpenCard: 'Event details',
 
     galleryLabel: 'Chapter IV · Every Guest, Their Own Bottle', galleryTitle: 'Shelf of Memories',
     galleryIntro: 'Every guest review becomes a bottle on our shelf. Take a look — you might recognize someone\'s evening.',

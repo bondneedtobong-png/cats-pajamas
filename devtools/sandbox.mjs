@@ -52,7 +52,11 @@ const db = createDb({
   events: [
     { id: 'ev_demo0', title: 'Вечер винила', event_date: '2026-07-25', time: '20:00', description: 'Слушаем редкие пластинки джаза 50-х под бокал вермута.', image_url: '', image_urls: [] },
     { id: 'ev_demo1', title: 'Живой квартет Дмитриева', event_date: '2026-07-28', time: '21:00', description: 'Саксофон, контрабас и тёплый ламповый вечер прямо на сцене бара.', image_url: '/uploads/team/denis.jpg', image_urls: ['/uploads/team/denis.jpg'] },
-    { id: 'ev_demo3', title: 'Большой джаз-джем', event_date: '2026-08-02', time: '22:00', description: 'Открытая сцена: приходи со своим инструментом и играй с нашими барменами.', image_url: '/uploads/team/egor.jpg', image_urls: ['/uploads/team/egor.jpg', '/uploads/team/dmitriy.jpg', '/uploads/team/vladislav.jpg', '/uploads/team/aleksey.jpg', '/uploads/team/shamusar.jpg'] },
+    { id: 'ev_demo3', title: 'Большой джаз-джем', event_date: '2026-08-02', time: '22:00', description: 'Открытая сцена: приходи со своим инструментом и играй с нашими барменами.', image_url: '/uploads/team/egor.jpg', image_urls: ['/uploads/team/egor.jpg', '/uploads/team/dmitriy.jpg', '/uploads/team/vladislav.jpg', '/uploads/team/aleksey.jpg', '/uploads/team/shamusar.jpg'], channel_post_url: 'https://t.me/catspajajam/101' },
+    // Грядущие — чтобы на стенде работали обе вкладки переключателя.
+    { id: 'ev_next1', title: 'Квартет Дмитриева', event_date: '2026-09-05', time: '21:00', description: 'Саксофон, контрабас, рояль и барабаны.\n\nВход свободный, столики бронируются заранее.', image_url: '/uploads/team/aleksey.jpg', image_urls: ['/uploads/team/aleksey.jpg', '/uploads/team/vladislav.jpg'], channel_post_url: 'https://t.me/catspajajam/120' },
+    { id: 'ev_next2', title: 'Вечер винила', event_date: '2026-09-12', time: '20:00', description: 'Слушаем редкие пластинки джаза 50-х под бокал вермута.', image_url: '/uploads/team/shamusar.jpg', image_urls: ['/uploads/team/shamusar.jpg'] },
+    { id: 'ev_next3', title: 'Джем открытой сцены', event_date: '2026-09-19', time: '22:00', description: 'Приходи со своим инструментом.', image_url: '/uploads/team/denis.jpg', image_urls: ['/uploads/team/denis.jpg', '/uploads/team/egor.jpg', '/uploads/team/dmitriy.jpg'] },
   ],
   // Отзывы гостей — для правой колонки «Легенды» (виджет «Гости говорят»).
   reviews: [
