@@ -4,9 +4,13 @@ import MenuShowcase from './MenuShowcase.jsx';
 import './menubook.css';
 
 // Секция «Меню» как настоящая книга бара: закрытая обложка (тёмно-фиолетовый
-// бумвинил + слепое тиснение знаком), по клику — переворот обложки и книга
-// уезжает к центру, дальше ОДНА непрерывная книга по всей карте: развороты
-// идут подряд, категория при длинном списке занимает несколько разворотов.
+// бумвинил с зерном + слепое тиснение логотипом), по клику — переворот обложки
+// и книга уезжает к центру, дальше ОДНА непрерывная книга по всей карте:
+// развороты идут подряд, категория при длинном списке занимает несколько
+// разворотов. Книга закрывается с ОБОИХ концов: долистал до конца — щёлкнул по
+// правому листу, книга захлопнулась задней обложкой; ещё клик — открылась с
+// конца. То же в начале: клик по левому листу на первом развороте закрывает
+// книгу передней обложкой. Стрелок нет, листаем кликом по листу.
 // Референс — логобук, стр. 43–44 («Меню основное»): кремовая льняная бумага,
 // ЧЁРНЫЙ текст (осознанное исключение из тёмной темы сайта ради читаемости),
 // золотисто-серые арт-деко рамки с веерами, заголовок раздела капителью
@@ -21,12 +25,6 @@ import './menubook.css';
 //
 // Движение: только transform/opacity; всё бесконечное здесь запрещено
 // (правило проекта), анимации разовые и выключаются при prefers-reduced-motion.
-
-/* ── Знак «Пижама кота» для тиснения на обложке ──────────────────────────────
-   Форма — из бренд-файла «Логотип без текста/svg/Пижама кота_знак_темный на
-   прозрачном фоне.svg» (единственный path). Красим почти в цвет обложки: на
-   фото логобука тиснение видно только на свету, а не как яркий логотип. */
-const MARK_PATH = 'M560.4,234.13c-0.04-1.23-0.18-2.31-1.08-3.23c-0.19-0.19-0.41-0.35-0.62-0.52c-3.91-3.21-8.7-5.31-13.35-7.19c-10.86-4.38-22.44-6.97-33.95-8.94c-21.18-3.62-42.71-5.04-64.17-5.5c-26.81-0.58-53.76,0.1-80.46,2.71c-16.25,1.59-32.56,3.85-48.37,8.02c-7.64,2.02-15.37,4.46-22.38,8.18c-1.29,0.68-2.55,1.42-3.72,2.28c-0.42,0.31-0.89,0.6-1.25,0.98c-1.15,1.19-1.08,2.75-1.07,4.29c0.02,3.39,0.33,6.77,0.8,10.13c3.77,26.5,21.09,48.42,42.61,63.31c10.56,7.31,22.05,12.98,33.57,18.59c9.98,4.86,20.16,9.88,28.88,16.83c9.11,7.26,16.2,16.47,19.7,27.67c4.33,13.89,4.38,28.95,5,43.37c1.34,31.27,1.27,62.59,0.98,93.88c-0.14,15.01,0.42,30.31-1.57,45.23c-1.59,11.89-5.5,23.26-12.08,33.31c-11.56,17.68-29.98,29.57-49.09,37.76c-9.22,3.95-18.81,7.05-28.5,9.66c-1.82,0.49-2.94,2.49-2.44,4.3c0.55,2.01,2.43,2.72,4.3,2.44c0.47-0.07,0.94-0.13,1.4-0.2c0.5-0.07,1.01-0.14,1.51-0.21c0.11-0.01,0.24-0.03,0.42-0.06c0.43-0.06,0.85-0.11,1.27-0.17c4.77-0.62,9.56-1.19,14.34-1.72c15.07-1.67,30.19-2.95,45.34-3.7c32.98-1.63,65.97,0.33,98.8,3.55c7.78,0.76,15.56,1.58,23.32,2.56c0.21,0.04,0.41,0.07,0.61,0.07c0,0,0,0,0.01,0c1.88,0.24,3.5-1.78,3.5-3.5c0-0.6-0.14-1.11-0.38-1.56c-0.36-0.82-1.06-1.51-2.19-1.82c-20.2-5.46-40.2-13.18-57.04-25.84c-8.26-6.21-15.63-13.81-21.17-22.55c-6.42-10.14-10.16-21.58-11.59-33.47c-1.83-15.13-1.31-30.59-1.45-45.8c-0.14-15.58-0.22-31.17-0.09-46.75c0.13-15.72,0.47-31.43,1.17-47.13c0.64-14.24,0.75-29.09,5.27-42.75c7.49-22.64,28.94-34.06,49.05-43.82c23.55-11.44,46.84-24.52,61.75-46.83c7.27-10.87,12.18-23.31,13.84-36.3C560.22,240.54,560.49,237.32,560.4,234.13z M335.03,641.29C334.79,641.32,334.82,641.32,335.03,641.29L335.03,641.29z';
 
 // Позиций на страницу — по РЕАЛЬНОЙ высоте листа (та же формула, что в CSS:
 // --mbook-page-h = clamp(420px, 78vh, 780px)). Считаем здесь то же число, что
@@ -156,7 +154,9 @@ export default function MenuBook({ menu, stories, printLink }) {
   const [size, setSize] = useState(() => (typeof window === 'undefined'
     ? { w: 1440, h: 900 }
     : { w: window.innerWidth, h: window.innerHeight }));
-  const [closed, setClosed] = useState(true);
+  // front — книга закрыта передней обложкой, back — задней (долистали до
+  // конца и захлопнули), open — читаем разворот.
+  const [mode, setMode] = useState('front');
   const [spread, setSpread] = useState(0);
   const [flip, setFlip] = useState(null); // { dir, id, front, back, frozen }
   const busy = useRef(false);
@@ -252,17 +252,30 @@ export default function MenuBook({ menu, stories, printLink }) {
     busy.current = false;
   }, [last, turn]);
 
-  const open = () => {
-    setClosed(false);
-    at.current = 0;
-    setSpread(0);
-  };
+  const closed = mode !== 'open';
 
-  // Стрелки клавиатуры листают книгу, когда фокус внутри неё.
+  /** Открыть книгу на развороте (0 — с начала, last — с конца). */
+  const openAt = (i) => {
+    const to = Math.max(0, Math.min(last, i));
+    at.current = to;
+    setSpread(to);
+    setMode('open');
+  };
+  /** Захлопнуть: 'front' — на первом развороте, 'back' — на последнем. */
+  const close = (side) => { setFlip(null); setMode(side); };
+
+  // Клик по листу: листаем, а на краях книги — закрываем её с этой стороны.
+  const turnLeft = () => (spread === 0 ? close('front') : goTo(spread - 1));
+  const turnRight = () => (spread === last ? close('back') : goTo(spread + 1));
+
+  // Стрелки клавиатуры: то же самое, включая закрытие и открытие с краёв.
   const onKeyDown = (e) => {
-    if (closed) return;
-    if (e.key === 'ArrowRight') { e.preventDefault(); goTo(spread + 1); }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(spread - 1); }
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const fwd = e.key === 'ArrowRight';
+    if (mode === 'front') { if (fwd) openAt(0); return; }
+    if (mode === 'back') { if (!fwd) openAt(last); return; }
+    (fwd ? turnRight : turnLeft)();
   };
 
   // Пузыри покачиваются бесконечно — вне экрана ставим на паузу, чтобы не
@@ -292,7 +305,7 @@ export default function MenuBook({ menu, stories, printLink }) {
     } else if (nav.scrollHeight > nav.clientHeight + 1) {
       nav.scrollTo({ top: nav.scrollTop + (e.top + e.height / 2) - (n.top + n.height / 2), behavior: smooth });
     }
-  }, [spread, closed]);
+  }, [spread, mode]);
 
   const cur = spreads[spread] || [null, null];
   const leftPage = flip?.frozen.side === 'left' ? flip.frozen.page : cur[0];
@@ -308,8 +321,9 @@ export default function MenuBook({ menu, stories, printLink }) {
   const jumpTo = (key) => {
     const page = jumps.get(key);
     if (page === undefined) return;
-    if (closed) setClosed(false);
-    goTo(spreadOfPage(page));
+    const target = spreadOfPage(page);
+    if (closed) { openAt(target); return; }
+    goTo(target);
   };
 
   // Подсветка активного пузыря: какие разделы лежат на открытом развороте.
@@ -320,7 +334,7 @@ export default function MenuBook({ menu, stories, printLink }) {
   );
 
   return (
-    <div className={`mbook${closed ? ' mbook--closed' : ''}`} ref={rootRef} onKeyDown={onKeyDown}>
+    <div className={`mbook mbook--${mode}${closed ? ' mbook--closed' : ''}`} ref={rootRef} onKeyDown={onKeyDown}>
       {/* Пузыри — самостоятельные плавающие элементы слева, без рамки и подложки */}
       <nav className="mbook__bubbles" ref={navRef} aria-label="Быстрый переход по разделам меню">
         <p className="mbook__bubbles-title">Что вы ищете?</p>
@@ -353,26 +367,22 @@ export default function MenuBook({ menu, stories, printLink }) {
       </nav>
 
       <div className="mbook__stage">
-        <button
-          type="button" className="mbook__arrow mbook__arrow--prev"
-          onClick={() => goTo(spread - 1)} disabled={closed || spread === 0}
-          aria-label="Предыдущий разворот"
-        >‹</button>
-
         <div className="mbook__book">
           <div className="mbook__spread">
+            {/* Листаем кликом по листу; на краях книги тот же клик её
+                захлопывает — слева передней обложкой, справа задней. */}
             <button
               type="button" className="mbook__side mbook__side--left"
-              onClick={() => goTo(spread - 1)} disabled={closed || spread === 0}
-              aria-label="Предыдущий разворот" tabIndex={-1}
+              onClick={turnLeft} disabled={closed}
+              aria-label={spread === 0 ? 'Закрыть меню' : 'Предыдущий разворот'} tabIndex={-1}
             >
               <BookPage page={leftPage} side="left" />
             </button>
             <span className="mbook__spine" aria-hidden="true" />
             <button
               type="button" className="mbook__side mbook__side--right"
-              onClick={() => goTo(spread + 1)} disabled={closed || spread === last}
-              aria-label="Следующий разворот" tabIndex={-1}
+              onClick={turnRight} disabled={closed}
+              aria-label={spread === last ? 'Закрыть меню' : 'Следующий разворот'} tabIndex={-1}
             >
               <BookPage page={rightPage} side="right" />
             </button>
@@ -394,34 +404,36 @@ export default function MenuBook({ menu, stories, printLink }) {
             )}
           </div>
 
-          {/* Обложка: бумвинил + слепое тиснение знаком. Закрыта — вся книга,
-              открыта — уехала налево за корешок. */}
+          {/* Передняя обложка: бумвинил с зерном и слепое тиснение логотипом
+              (маска /uploads/logo-lockup.svg — тот же локап, что на печатной
+              обложке в логобуке). Открыта — легла за левый лист. */}
           <button
-            type="button" className="mbook__cover" onClick={open}
-            tabIndex={closed ? 0 : -1} aria-hidden={!closed}
+            type="button" className="mbook__cover mbook__cover--front"
+            onClick={() => openAt(0)}
+            tabIndex={mode === 'front' ? 0 : -1} aria-hidden={mode !== 'front'}
             aria-label="Открыть меню"
           >
-            <span className="mbook__cover-emboss" aria-hidden="true">
-              <svg viewBox="0 0 850.39 850.39" width="150" height="150">
-                <path d={MARK_PATH} />
-              </svg>
-            </span>
-            <span className="mbook__cover-hint">Меню</span>
+            <span className="mbook__cover-emboss" aria-hidden="true" />
           </button>
-        </div>
 
-        <button
-          type="button" className="mbook__arrow mbook__arrow--next"
-          onClick={() => goTo(spread + 1)} disabled={closed || spread === last}
-          aria-label="Следующий разворот"
-        >›</button>
+          {/* Задняя обложка: книгу можно долистать до конца и захлопнуть, а
+              следующим кликом открыть с конца. */}
+          <button
+            type="button" className="mbook__cover mbook__cover--back"
+            onClick={() => openAt(last)}
+            tabIndex={mode === 'back' ? 0 : -1} aria-hidden={mode !== 'back'}
+            aria-label="Открыть меню с конца"
+          />
+        </div>
       </div>
 
       <MenuShowcase />
 
       <div className="mbook__foot">
         <span className="mbook__pager">
-          {closed ? 'Книга закрыта' : `Разворот ${spread + 1} из ${spreads.length}`}
+          {mode === 'front' && 'Нажмите на обложку'}
+          {mode === 'back' && 'Конец карты — нажмите, чтобы открыть с конца'}
+          {mode === 'open' && `Разворот ${spread + 1} из ${spreads.length}`}
         </span>
         {printLink && <a className="mbook__print u-glare" href="/menu">{printLink} ›</a>}
       </div>

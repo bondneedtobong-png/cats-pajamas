@@ -207,8 +207,9 @@
   transition: transform .9s cubic-bezier(.22, .8, .28, 1);
 }
 /* Закрытая книга смещена от центра сцены — так, чтобы открытый разворот лёг
-   ровно посередине (раскадровка прототипа, кадр 01). */
-.mbook--closed .mbook__book { transform: translateX(9%); }
+   ровно посередине. Закрыта с конца — смещена зеркально. */
+.mbook--front .mbook__book { transform: translateX(9%); }
+.mbook--back .mbook__book { transform: translateX(-5%); } /* не наезжать на пузыри */
 
 .mbook__spread {
   position: absolute;
@@ -448,110 +449,106 @@
 .mbook__leaf-face--back { transform: rotateY(180deg); }
 .mbook__leaf-face .mbook__paper { height: 100%; }
 
-/* ─── Обложка ───────────────────────────────────────────────────────────── */
+/* ─── Обложки: передняя и задняя ────────────────────────────────────────── */
 
 .mbook__cover {
   position: absolute;
-  left: 50%;
   top: 0;
   width: 50%;
   height: 100%;
   padding: 0;
   border: 0;
-  border-radius: 2px 4px 4px 2px;
   transform-origin: left center;
-  transform: rotateY(0deg);
   transition: transform .9s cubic-bezier(.22, .8, .28, 1);
+  /* Бумвинил: тёмно-фиолетовое полотно + мягкий свет сверху-слева. Зерно —
+     отдельным слоем ниже (::after), иначе оно затирается градиентами. */
   background:
-    radial-gradient(120% 90% at 30% 20%, var(--mbook-cover-hi), var(--mbook-cover) 62%),
+    radial-gradient(120% 90% at 30% 18%, var(--mbook-cover-hi), var(--mbook-cover) 62%),
     var(--mbook-cover);
   box-shadow: 0 30px 60px rgba(0, 0, 0, .55), inset 0 0 60px rgba(0, 0, 0, .35);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
   cursor: pointer;
   z-index: 6;
-  /* Изнанка обложки не просвечивает сквозь листы после открытия. */
-  backface-visibility: hidden;
+  backface-visibility: hidden; /* изнанка не просвечивает сквозь листы */
 }
-/* Открытая обложка легла за левый лист. */
-.mbook:not(.mbook--closed) .mbook__cover {
-  transform: rotateY(-178deg);
-  z-index: 0;
+.mbook__cover--front { left: 50%; border-radius: 2px 4px 4px 2px; transform-origin: left center; }
+.mbook__cover--back  { left: 0;   border-radius: 4px 2px 2px 4px; transform-origin: right center; }
+
+/* Зерно кожзама: заранее испечённая монохромная плитка
+   (public/uploads/leather-grain.webp, 200×200, бесшовная). CSS-шум через
+   feTurbulence на тёмном полотне съедался overlay-смешиванием в ноль —
+   картинка даёт предсказуемую фактуру и не считается каждый кадр. */
+.mbook__cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: url('/uploads/leather-grain.webp') repeat;
+  background-size: 140px 140px; /* мельче зерно — ближе к фото логобука */
+  mix-blend-mode: overlay;
+  opacity: .32;
   pointer-events: none;
 }
 /* Корешок: тёмная полоса с золотой ниткой у сгиба. */
 .mbook__cover::before {
   content: '';
   position: absolute;
-  left: 0;
   top: 0;
   bottom: 0;
   width: 10px;
   background: linear-gradient(90deg, rgba(0, 0, 0, .5), rgba(var(--gold-rgb), .25) 60%, rgba(0, 0, 0, .28));
-  border-radius: 2px 0 0 2px;
+  z-index: 1;
 }
-/* Обрез страниц справа — видно, что под обложкой книга. */
-.mbook__cover::after {
-  content: '';
-  position: absolute;
-  right: -6px;
-  top: 8px;
-  bottom: 8px;
-  width: 6px;
-  border-radius: 0 3px 3px 0;
-  background: repeating-linear-gradient(0deg, var(--mbook-page) 0 2px, var(--mbook-page-2) 2px 4px);
-  opacity: .85;
+.mbook__cover--front::before { left: 0; border-radius: 2px 0 0 2px; }
+.mbook__cover--back::before  { right: 0; border-radius: 0 2px 2px 0; transform: scaleX(-1); }
+
+/* Открытые обложки лежат за листами. */
+.mbook__cover--front { transform: rotateY(-178deg); z-index: 0; pointer-events: none; }
+.mbook__cover--back  { transform: rotateY(178deg);  z-index: 0; pointer-events: none; }
+.mbook--front .mbook__cover--front,
+.mbook--back .mbook__cover--back {
+  transform: rotateY(0deg);
+  z-index: 6;
+  pointer-events: auto;
 }
-.mbook--closed .mbook__cover:hover,
-.mbook--closed .mbook__cover:focus-visible {
+.mbook--front .mbook__cover--front:hover,
+.mbook--front .mbook__cover--front:focus-visible,
+.mbook--back .mbook__cover--back:hover,
+.mbook--back .mbook__cover--back:focus-visible {
   transform: translateY(-6px) rotate(-.6deg);
 }
-/* Слепое тиснение: знак почти в цвет обложки, читается только светом —
-   верхняя подсветка + нижняя тень (как оттиск в бумвиниле). */
+
+/* Слепое тиснение логотипом: форма — из бренд-файла «Логотип на латинице»
+   (public/uploads/logo-lockup.svg), красим почти в цвет обложки и добавляем
+   верхнюю подсветку с нижней тенью — оттиск в бумвиниле, а не яркий логотип. */
 .mbook__cover-emboss {
-  line-height: 0;
-  color: #3E2038;
+  position: relative;
+  z-index: 2;
+  width: 82%;
+  aspect-ratio: 1;
+  background: #40213A;
+  -webkit-mask: url('/uploads/logo-lockup.svg') center / contain no-repeat;
+  mask: url('/uploads/logo-lockup.svg') center / contain no-repeat;
   filter:
-    drop-shadow(0 1.5px 0 rgba(203, 165, 58, .38))
+    drop-shadow(0 1.5px 0 rgba(203, 165, 58, .34))
     drop-shadow(0 -1.5px 1px rgba(0, 0, 0, .7));
   transition: filter .35s ease, transform .35s ease;
 }
-.mbook__cover-emboss svg { fill: currentColor; }
-.mbook--closed .mbook__cover:hover .mbook__cover-emboss {
+.mbook--front .mbook__cover--front:hover .mbook__cover-emboss {
   filter:
-    drop-shadow(0 1px 0 rgba(203, 165, 58, .55))
-    drop-shadow(0 -1px 0 rgba(0, 0, 0, .6));
-  transform: scale(1.015);
-}
-.mbook__cover-hint {
-  font-family: 'Baskerville', serif;
-  font-size: 26px;
-  letter-spacing: 6px;
-  text-transform: uppercase;
-  color: rgba(203, 165, 58, .5);
+    drop-shadow(0 1.5px 0 rgba(203, 165, 58, .55))
+    drop-shadow(0 -1.5px 1px rgba(0, 0, 0, .75));
+  transform: scale(1.012);
 }
 
-/* ─── Стрелки и подпись под книгой ──────────────────────────────────────── */
+/* Обрез страниц: видно, что под обложкой книга. */
+.mbook--front .mbook__cover--front,
+.mbook--back .mbook__cover--back { overflow: visible; }
+.mbook__cover--front .mbook__cover-emboss { margin-left: 4px; }
 
-.mbook__arrow {
-  flex-shrink: 0;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1px solid rgba(var(--gold-rgb), .35);
-  background: rgba(var(--bg-rgb), .5);
-  color: var(--gold);
-  font-family: 'Baskerville', serif;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  transition: transform .2s ease, opacity .2s ease, border-color .2s ease;
-}
-.mbook__arrow:hover:not(:disabled) { transform: scale(1.08); border-color: rgba(var(--gold-rgb), .7); }
-.mbook__arrow:disabled { opacity: .25; cursor: default; }
+/* ─── Подпись под книгой ────────────────────────────────────────────────── */
 
 .mbook__foot {
   grid-column: 1 / -1;
@@ -597,32 +594,18 @@
   .mbook__bubble { animation: none; margin-left: 0; }
   /* Книга занимает почти всю ширину — смещать закрытую обложку уже некуда,
      иначе она уезжает за край экрана. */
-  .mbook--closed .mbook__book { transform: translateX(3%); }
+  .mbook--front .mbook__book { transform: translateX(3%); }
+  .mbook--back .mbook__book { transform: translateX(-3%); }
   .mbook__foot { grid-column: 1; }
 }
 
 @media (max-width: 640px) {
   .mbook {
     --mbook-page-h: clamp(300px, 46vh, 380px);
-    --mbook-fit: calc((100vw - 26px) / 2); /* стрелки уходят поверх книги — вся ширина листам */
+    --mbook-fit: calc((100vw - 26px) / 2); /* листание кликом по листу — вся ширина книге */
   }
-  .mbook__stage { position: relative; }
-  .mbook__arrow {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 7;
-    width: 32px;
-    height: 32px;
-    font-size: 18px;
-    background: rgba(var(--bg-rgb), .8);
-  }
-  .mbook--closed .mbook__book { transform: none; }
-  .mbook__arrow--prev { left: 0; }
-  .mbook__arrow--next { right: 0; }
-  .mbook__arrow:hover:not(:disabled) { transform: translateY(-50%) scale(1.08); }
-  .mbook__cover-hint { font-size: 18px; letter-spacing: 4px; }
-  .mbook__cover-emboss svg { width: 92px; height: 92px; }
+  .mbook--front .mbook__book,
+  .mbook--back .mbook__book { transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -635,9 +618,9 @@
   .mbook__cover-emboss,
   .mbook__bubble,
   .mbook__bubble::before,
-  .mbook__arrow { transition: none; }
   .mbook__leaf--fwd, .mbook__leaf--back { animation: none; }
   .mbook__bubble:hover .mbook__bubble-body,
   .mbook__bubble:focus-visible .mbook__bubble-body,
-  .mbook--closed .mbook__cover:hover { transform: none; }
+  .mbook--front .mbook__cover--front:hover,
+  .mbook--back .mbook__cover--back:hover { transform: none; }
 }
