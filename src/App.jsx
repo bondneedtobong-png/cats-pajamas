@@ -4,6 +4,7 @@ import { translations } from './data.js';
 import Nav      from './sections/Nav.jsx';
 import Hero     from './sections/Hero.jsx';
 import About    from './sections/About.jsx';
+import Wall     from './sections/Wall.jsx';
 import Team     from './sections/Team.jsx';
 import Menu     from './sections/Menu.jsx';
 import Events   from './sections/Events.jsx';
@@ -52,6 +53,9 @@ function MainSite() {
       <main>
         <Hero tx={tx} />
         <About tx={tx} />
+        {/* «Дрейфующая стена» — фото бара россыпью; список фото собирается
+            скриптом из public/uploads/showcase (см. Wall.jsx). */}
+        <Wall tx={tx} />
         <Team tx={tx} />
         <Menu tx={tx} />
         <Events tx={tx} lang={lang} />

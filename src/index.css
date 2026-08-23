@@ -1617,6 +1617,106 @@ html { scroll-behavior: smooth; }
   .shelf-modal__text { font-size: 19px; }
 }
 
+/* ── ДРЕЙФУЮЩАЯ СТЕНА (секция «Стена памяти») ─────────────────────────────────────────────
+   Колонки с фото, каждое чуть повёрнуто; при прокрутке колонки разъезжаются
+   в разные стороны. Двигается только transform по переменной --drift, которую
+   пишет секция (см. Gallery.jsx): ни ширины, ни отступы не пересчитываются,
+   поэтому браузеру остаётся только композитинг. */
+.wall {
+  position: relative;
+  padding: clamp(60px, 10vh, 110px) 0 clamp(70px, 11vh, 130px);
+  background: var(--bg);
+  overflow: hidden; /* повороты и дрейф уводят края плиток за границы секции */
+}
+.wall__inner { max-width: 940px; margin: 0 auto clamp(26px, 4vh, 52px); padding: 0 6%; }
+.wall__title {
+  font-family: 'Baskerville', serif;
+  font-size: clamp(26px, 4.4vh, 54px);
+  font-weight: 900;
+  text-align: center;
+  margin: 0;
+  color: var(--text);
+  line-height: 1;
+}
+
+.wall__grid {
+  --drift: 0;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(10px, 1.4vw, 20px);
+  padding: 0 clamp(10px, 2vw, 28px);
+  /* Стена — полоса фиксированной высоты, а не бесконечная лента: 47 кадров
+     в столбик растянули бы секцию на восемь экранов. Что не влезло — уходит
+     под обрез, и дрейф показывает разные куски. */
+  height: clamp(420px, 68vh, 760px);
+  overflow: hidden;
+  /* Края растворяются, чтобы обрез не читался как «страницу оторвали». */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 8%, #000 88%, transparent 100%);
+          mask-image: linear-gradient(180deg, transparent 0, #000 8%, #000 88%, transparent 100%);
+}
+.wall__col {
+  --col-speed: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.4vw, 20px);
+  /* Дрейф: -1…1 от прогресса прокрутки × скорость колонки × амплитуда,
+     плюс стартовый сдвиг колонки (ломает ровный верхний край). */
+  transform: translate3d(0, calc(var(--col-offset, 0px) + var(--drift) * var(--col-speed) * -72px), 0);
+  will-change: transform;
+}
+.wall__item {
+  position: relative;
+  margin: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .34); /* статичная глубина, как у карточек */
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform .35s cubic-bezier(.16, 1, .3, 1);
+}
+.wall__item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Фото приглушены под тёмную тему (стена — фон-настроение, а не витрина).
+   Именно затемняющий слой, а не filter на картинке: filter заставляет браузер
+   перерисовывать каждый снимок при прокрутке — на 1920 это давало 8 длинных
+   кадров из 86, с оверлеем их ноль. */
+.wall__item::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: color-mix(in srgb, var(--bg) 26%, transparent);
+  pointer-events: none;
+}
+.wall__item:hover::after { background: transparent; }
+/* Наведение: плитка выравнивается и чуть подаётся вперёд — тот же язык, что
+   .u-glare (подъём), но без блика: на фото он читался бы как засветка. */
+.wall__item:hover {
+  transform: rotate(0deg) scale(1.03);
+  z-index: 2;
+}
+
+/* Телефон: «рассыпанность» почти убрана (угол режется в Gallery.jsx), плитки
+   ставим ровнее и мельче — иначе на 390px это грязь, а не стена. */
+@media (max-width: 560px) {
+  .wall__grid { padding: 0 10px; gap: 8px; height: clamp(380px, 56vh, 520px); }
+  .wall__col { gap: 8px; }
+  .wall__item { border-radius: 4px; box-shadow: 0 10px 22px rgba(0, 0, 0, .3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Дрейфа нет вовсе: раскладка статична, наклон остаётся — он не движение. */
+  .wall__col { transform: translate3d(0, var(--col-offset, 0px), 0); will-change: auto; }
+  .wall__item { transition: none; }
+  .wall__item:hover { transform: rotate(var(--tilt, 0deg)); }
+}
+
 /* ── TEAM ──────────────────────────────────────────────── */
 .team {
   padding: clamp(70px, 12vh, 130px) 6%;

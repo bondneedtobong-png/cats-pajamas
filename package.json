@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "node scripts/generate-gallery-manifest.mjs",
     "build": "vite build && node scripts/prerender-menu.mjs && node scripts/prerender-home.mjs",
+    "prebuild": "node scripts/generate-gallery-manifest.mjs",
+    "gallery": "node scripts/generate-gallery-manifest.mjs",
     "preview": "vite preview",
     "start:api": "node server.js",
     "start:bot": "node bot-start.js"

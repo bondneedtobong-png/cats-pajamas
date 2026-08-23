@@ -1,0 +1,381 @@
+{
+  "generatedAt": "2026-08-23T02:47:47.327Z",
+  "photos": [
+    {
+      "tag": "band-live",
+      "seq": 1,
+      "src": "/uploads/showcase-web/band-live_01__IMG_6760.webp",
+      "srcSm": "/uploads/showcase-web/band-live_01__IMG_6760.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "band-live",
+      "seq": 2,
+      "src": "/uploads/showcase-web/band-live_02__IMG_7188.webp",
+      "srcSm": "/uploads/showcase-web/band-live_02__IMG_7188.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guest-hatman",
+      "seq": 1,
+      "src": "/uploads/showcase-web/guest-hatman_01__IMG_6624.webp",
+      "srcSm": "/uploads/showcase-web/guest-hatman_01__IMG_6624.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guest-hatman",
+      "seq": 2,
+      "src": "/uploads/showcase-web/guest-hatman_02__IMG_6639.webp",
+      "srcSm": "/uploads/showcase-web/guest-hatman_02__IMG_6639.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guest-hatman",
+      "seq": 3,
+      "src": "/uploads/showcase-web/guest-hatman_03__IMG_7037.webp",
+      "srcSm": "/uploads/showcase-web/guest-hatman_03__IMG_7037.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guests-couple",
+      "seq": 1,
+      "src": "/uploads/showcase-web/guests-couple_01__IMG_6604.webp",
+      "srcSm": "/uploads/showcase-web/guests-couple_01__IMG_6604.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "guests-duo",
+      "seq": 1,
+      "src": "/uploads/showcase-web/guests-duo_01__IMG_2234.webp",
+      "srcSm": "/uploads/showcase-web/guests-duo_01__IMG_2234.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guests-duo",
+      "seq": 2,
+      "src": "/uploads/showcase-web/guests-duo_02__IMG_6870.webp",
+      "srcSm": "/uploads/showcase-web/guests-duo_02__IMG_6870.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guests-duo",
+      "seq": 3,
+      "src": "/uploads/showcase-web/guests-duo_03__IMG_6939.webp",
+      "srcSm": "/uploads/showcase-web/guests-duo_03__IMG_6939.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "guests-duo",
+      "seq": 4,
+      "src": "/uploads/showcase-web/guests-duo_04__IMG_7975.webp",
+      "srcSm": "/uploads/showcase-web/guests-duo_04__IMG_7975.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "guests-group",
+      "seq": 1,
+      "src": "/uploads/showcase-web/guests-group_01__IMG_2228.webp",
+      "srcSm": "/uploads/showcase-web/guests-group_01__IMG_2228.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "guests-group",
+      "seq": 2,
+      "src": "/uploads/showcase-web/guests-group_02__IMG_2588.webp",
+      "srcSm": "/uploads/showcase-web/guests-group_02__IMG_2588.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guests-group",
+      "seq": 3,
+      "src": "/uploads/showcase-web/guests-group_03__IMG_2612.webp",
+      "srcSm": "/uploads/showcase-web/guests-group_03__IMG_2612.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "guests-group",
+      "seq": 4,
+      "src": "/uploads/showcase-web/guests-group_04__IMG_9646.webp",
+      "srcSm": "/uploads/showcase-web/guests-group_04__IMG_9646.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "guests-group",
+      "seq": 5,
+      "src": "/uploads/showcase-web/guests-group_05__IMG_9701.webp",
+      "srcSm": "/uploads/showcase-web/guests-group_05__IMG_9701.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guests-solo",
+      "seq": 1,
+      "src": "/uploads/showcase-web/guests-solo_01__IMG_2213.webp",
+      "srcSm": "/uploads/showcase-web/guests-solo_01__IMG_2213.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guests-solo",
+      "seq": 2,
+      "src": "/uploads/showcase-web/guests-solo_02__IMG_7161.webp",
+      "srcSm": "/uploads/showcase-web/guests-solo_02__IMG_7161.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guests-solo",
+      "seq": 3,
+      "src": "/uploads/showcase-web/guests-solo_03__IMG_9679.webp",
+      "srcSm": "/uploads/showcase-web/guests-solo_03__IMG_9679.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "guests-solo",
+      "seq": 4,
+      "src": "/uploads/showcase-web/guests-solo_04__IMG_9684.webp",
+      "srcSm": "/uploads/showcase-web/guests-solo_04__IMG_9684.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "interior-bar",
+      "seq": 1,
+      "src": "/uploads/showcase-web/interior-bar_01__IMG_2300.webp",
+      "srcSm": "/uploads/showcase-web/interior-bar_01__IMG_2300.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "interior-bar",
+      "seq": 2,
+      "src": "/uploads/showcase-web/interior-bar_02__IMG_8064.webp",
+      "srcSm": "/uploads/showcase-web/interior-bar_02__IMG_8064.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "interior-drinks",
+      "seq": 1,
+      "src": "/uploads/showcase-web/interior-drinks_01__IMG_2359.webp",
+      "srcSm": "/uploads/showcase-web/interior-drinks_01__IMG_2359.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "interior-drinks",
+      "seq": 2,
+      "src": "/uploads/showcase-web/interior-drinks_02__IMG_6992.webp",
+      "srcSm": "/uploads/showcase-web/interior-drinks_02__IMG_6992.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "interior-drinks",
+      "seq": 3,
+      "src": "/uploads/showcase-web/interior-drinks_03__IMG_7112.webp",
+      "srcSm": "/uploads/showcase-web/interior-drinks_03__IMG_7112.sm.webp",
+      "w": 900,
+      "h": 1351
+    },
+    {
+      "tag": "interior-drinks",
+      "seq": 4,
+      "src": "/uploads/showcase-web/interior-drinks_04__IMG_8424.webp",
+      "srcSm": "/uploads/showcase-web/interior-drinks_04__IMG_8424.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "interior-event",
+      "seq": 1,
+      "src": "/uploads/showcase-web/interior-event_01__IMG_9656.webp",
+      "srcSm": "/uploads/showcase-web/interior-event_01__IMG_9656.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "interior-still",
+      "seq": 1,
+      "src": "/uploads/showcase-web/interior-still_01__IMG_2292.webp",
+      "srcSm": "/uploads/showcase-web/interior-still_01__IMG_2292.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "interior-still",
+      "seq": 2,
+      "src": "/uploads/showcase-web/interior-still_02__IMG_6592.webp",
+      "srcSm": "/uploads/showcase-web/interior-still_02__IMG_6592.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "interior-still",
+      "seq": 3,
+      "src": "/uploads/showcase-web/interior-still_03__IMG_7997.webp",
+      "srcSm": "/uploads/showcase-web/interior-still_03__IMG_7997.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "interior-still",
+      "seq": 4,
+      "src": "/uploads/showcase-web/interior-still_04__IMG_8455.webp",
+      "srcSm": "/uploads/showcase-web/interior-still_04__IMG_8455.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-baldduo",
+      "seq": 1,
+      "src": "/uploads/showcase-web/staff-baldduo_01__IMG_7010.webp",
+      "srcSm": "/uploads/showcase-web/staff-baldduo_01__IMG_7010.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-baldduo",
+      "seq": 2,
+      "src": "/uploads/showcase-web/staff-baldduo_02__IMG_8451.webp",
+      "srcSm": "/uploads/showcase-web/staff-baldduo_02__IMG_8451.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "staff-curlywoman",
+      "seq": 1,
+      "src": "/uploads/showcase-web/staff-curlywoman_01__IMG_6893.webp",
+      "srcSm": "/uploads/showcase-web/staff-curlywoman_01__IMG_6893.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-curlywoman",
+      "seq": 2,
+      "src": "/uploads/showcase-web/staff-curlywoman_02__IMG_8289.webp",
+      "srcSm": "/uploads/showcase-web/staff-curlywoman_02__IMG_8289.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-group",
+      "seq": 1,
+      "src": "/uploads/showcase-web/staff-group_01__IMG_9602.webp",
+      "srcSm": "/uploads/showcase-web/staff-group_01__IMG_9602.sm.webp",
+      "w": 900,
+      "h": 600
+    },
+    {
+      "tag": "staff-stripedtie",
+      "seq": 1,
+      "src": "/uploads/showcase-web/staff-stripedtie_01__IMG_9620.webp",
+      "srcSm": "/uploads/showcase-web/staff-stripedtie_01__IMG_9620.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-stripedtie",
+      "seq": 2,
+      "src": "/uploads/showcase-web/staff-stripedtie_02__IMG_9661.webp",
+      "srcSm": "/uploads/showcase-web/staff-stripedtie_02__IMG_9661.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-stripedtie",
+      "seq": 3,
+      "src": "/uploads/showcase-web/staff-stripedtie_03__IMG_9685.webp",
+      "srcSm": "/uploads/showcase-web/staff-stripedtie_03__IMG_9685.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-stripedtie",
+      "seq": 4,
+      "src": "/uploads/showcase-web/staff-stripedtie_04__IMG_9718.webp",
+      "srcSm": "/uploads/showcase-web/staff-stripedtie_04__IMG_9718.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-work",
+      "seq": 1,
+      "src": "/uploads/showcase-web/staff-work_01__IMG_2512.webp",
+      "srcSm": "/uploads/showcase-web/staff-work_01__IMG_2512.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-work",
+      "seq": 2,
+      "src": "/uploads/showcase-web/staff-work_02__IMG_6767.webp",
+      "srcSm": "/uploads/showcase-web/staff-work_02__IMG_6767.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-work",
+      "seq": 3,
+      "src": "/uploads/showcase-web/staff-work_03__IMG_6839.webp",
+      "srcSm": "/uploads/showcase-web/staff-work_03__IMG_6839.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-work",
+      "seq": 4,
+      "src": "/uploads/showcase-web/staff-work_04__IMG_6879.webp",
+      "srcSm": "/uploads/showcase-web/staff-work_04__IMG_6879.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-work",
+      "seq": 5,
+      "src": "/uploads/showcase-web/staff-work_05__IMG_8110.webp",
+      "srcSm": "/uploads/showcase-web/staff-work_05__IMG_8110.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-work",
+      "seq": 6,
+      "src": "/uploads/showcase-web/staff-work_06__IMG_8169.webp",
+      "srcSm": "/uploads/showcase-web/staff-work_06__IMG_8169.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-work",
+      "seq": 7,
+      "src": "/uploads/showcase-web/staff-work_07__IMG_8333.webp",
+      "srcSm": "/uploads/showcase-web/staff-work_07__IMG_8333.sm.webp",
+      "w": 900,
+      "h": 1350
+    },
+    {
+      "tag": "staff-work",
+      "seq": 8,
+      "src": "/uploads/showcase-web/staff-work_08__IMG_9590.webp",
+      "srcSm": "/uploads/showcase-web/staff-work_08__IMG_9590.sm.webp",
+      "w": 900,
+      "h": 1350
+    }
+  ]
+}

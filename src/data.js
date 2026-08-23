@@ -27,6 +27,7 @@ export const translations = {
     heroNext: 'Открыть карту',
 
     aboutLabel: 'Глава I · Легенда бара',
+    wallLabel: 'Глава II · Стена памяти', wallTitle: 'Вечера, которые были',
     aboutQuote: '«Здесь джаз звучит даже в тишине»',
     aboutReviewsLabel: 'Гости говорят',
     aboutPressLabel: 'Упоминания в изданиях',
@@ -49,7 +50,7 @@ export const translations = {
       'Это место для тех, кто ценит вкус и чувствует разницу между хорошим и посредственным, — для неспешного вечера с любимым человеком или близкими по духу. Сюда приходят не торопясь: медленно потягивать бокал, говорить обо всём на свете и уходить лишь тогда, когда по-настоящему насытишься — и напитками, и самим вечером. Загляните — и просто расскажите, что вам по вкусу.',
     ],
 
-    menuLabel: 'Глава III · Карта бара', menuTitle: 'Меню',
+    menuLabel: 'Глава IV · Карта бара', menuTitle: 'Меню',
     menuClassics: 'Классика', menuSignature: 'Авторский',
     menuCta: 'Забронировать столик',
     menuLoading: 'Загружаем меню…',
@@ -57,7 +58,7 @@ export const translations = {
     menuStoryLabel: 'О разделе',
     menuPrintLink: 'Открыть карту отдельной страницей',
 
-    eventsLabel: 'Глава IV · Вечерняя афиша', eventsTitle: 'Джазовая программа',
+    eventsLabel: 'Глава V · Вечерняя афиша', eventsTitle: 'Джазовая программа',
     eventsLoading: 'Загружаем события…',
     eventsEmpty: 'Ближайших событий пока нет — загляните позже.',
     eventsPhoto: 'Фото', close: 'Закрыть',
@@ -69,7 +70,7 @@ export const translations = {
     galleryLabel: 'Глава IV · Каждый гость — своя бутылка', galleryTitle: 'Полка воспоминаний',
     galleryIntro: 'Каждый отзыв гостя становится бутылкой на нашей полке. Загляните — вдруг узнаете чей-то вечер.',
 
-    teamLabel: 'Глава II · За барной стойкой', teamTitle: 'Мастера за стойкой',
+    teamLabel: 'Глава III · За барной стойкой', teamTitle: 'Мастера за стойкой',
     teamSub: 'Каждый из наших барменов — это история, прожитая в коктейлях.',
     teamLoading: 'Загружаем команду…',
     teamEmpty: 'Скоро здесь появится команда.',
@@ -130,7 +131,7 @@ export const translations = {
     bkTgFallbackText2: 'Оставьте заявку в Telegram — что-нибудь придумаем 🎷',
     bkTgFallbackBtn: 'Написать в Telegram',
 
-    contactsLabel: 'Глава V · Как нас найти', contactsTitle: 'Найти бар',
+    contactsLabel: 'Глава VI · Как нас найти', contactsTitle: 'Найти бар',
     addressLabel: 'Адрес', address: 'г. Самара, ул. Куйбышева, 98',
     hoursLabel: 'Часы работы',
     daysWeek: 'Пн – Чт, Вс', daysWend: 'Пт – Сб',
@@ -152,6 +153,7 @@ export const translations = {
     heroNext: 'Open the Menu',
 
     aboutLabel: 'Chapter I · The Legend',
+    wallLabel: 'Chapter II · Wall of Memories', wallTitle: 'Nights That Happened',
     aboutQuote: '"Where jazz plays even in the silence"',
     aboutReviewsLabel: 'Guests Say',
     aboutPressLabel: 'In the Press',
@@ -168,7 +170,7 @@ export const translations = {
 
     // NB: cocktail content itself is RU-only (owner's decision) — these are
     // just the surrounding UI labels for the EN toggle.
-    menuLabel: 'Chapter III · The Bar List', menuTitle: 'Menu',
+    menuLabel: 'Chapter IV · The Bar List', menuTitle: 'Menu',
     menuClassics: 'Classic', menuSignature: 'Signature',
     menuCta: 'Reserve a Table',
     menuLoading: 'Loading the menu…',
@@ -176,7 +178,7 @@ export const translations = {
     menuStoryLabel: 'About this section',
     menuPrintLink: 'Open the menu as a separate page',
 
-    eventsLabel: 'Chapter IV · Evening Bill', eventsTitle: 'The Jazz Program',
+    eventsLabel: 'Chapter V · Evening Bill', eventsTitle: 'The Jazz Program',
     eventsLoading: 'Loading events…',
     eventsEmpty: 'No upcoming events yet — check back soon.',
     eventsPhoto: 'Photo', close: 'Close',
@@ -188,7 +190,7 @@ export const translations = {
     galleryLabel: 'Chapter IV · Every Guest, Their Own Bottle', galleryTitle: 'Shelf of Memories',
     galleryIntro: 'Every guest review becomes a bottle on our shelf. Take a look — you might recognize someone\'s evening.',
 
-    teamLabel: 'Chapter II · Behind the Bar', teamTitle: 'Masters Behind the Bar',
+    teamLabel: 'Chapter III · Behind the Bar', teamTitle: 'Masters Behind the Bar',
     teamSub: 'Each of our bartenders is a story lived through cocktails.',
     teamLoading: 'Loading the team…',
     teamEmpty: 'The team page is coming soon.',
@@ -249,7 +251,7 @@ export const translations = {
     bkTgFallbackText2: 'Drop us a line on Telegram — we\'ll figure something out 🎷',
     bkTgFallbackBtn: 'Message us on Telegram',
 
-    contactsLabel: 'Chapter V · Find Us', contactsTitle: 'Find The Bar',
+    contactsLabel: 'Chapter VI · Find Us', contactsTitle: 'Find The Bar',
     addressLabel: 'Address', address: 'Samara, Kuybysheva St, 98',
     hoursLabel: 'Hours',
     daysWeek: 'Mon – Thu, Sun', daysWend: 'Fri – Sat',

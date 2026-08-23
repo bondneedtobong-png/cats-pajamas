@@ -5,3 +5,8 @@ dist
 .env.*
 !.env.example
 .deploy-info
+
+# Оригиналы фото для «Дрейфующей стены»: кадры с камеры по 5–8 МБ (245 МБ на
+# папку). В репо и на прод уезжают только сжатые webp из showcase-web/,
+# их собирает scripts/generate-gallery-manifest.mjs.
+public/uploads/showcase/
