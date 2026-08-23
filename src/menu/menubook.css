@@ -21,107 +21,172 @@
   --mbook-rule:     #C2B9A8;  /* линии рамки */
   --mbook-gold:     #9A7B2E;
 
-  --mbook-page-h: clamp(330px, 58vh, 560px);
-  /* Лист A5, как в печати, но не шире того, что осталось от экрана после
-     колонки пузырей и стрелок: иначе разворот вылезает за вьюпорт (ловили на
-     375px). Второй аргумент min() — эта самая доступная ширина. */
-  --mbook-fit: calc((100vw - 440px) / 2);
-  --mbook-page-w: min(calc(var(--mbook-page-h) * 0.71), var(--mbook-fit));
+  /* Книга «в длину»: лист заметно вытянут по вертикали (правка владельца
+     2026-08-23), поэтому пропорция уже печатной A5 — 0.55 вместо 0.71. */
+  --mbook-page-h: clamp(420px, 78vh, 780px);
+  --mbook-ratio: 0.55;
+  /* …но не шире того, что осталось от экрана после колонок пузырей и витрины:
+     иначе разворот вылезает за вьюпорт. */
+  --mbook-fit: calc((100vw - 620px) / 2);
+  --mbook-page-w: min(calc(var(--mbook-page-h) * var(--mbook-ratio)), var(--mbook-fit));
   --mbook-flip: 420ms;
 
+  /* Слева пузыри, справа витрина коктейлей, книга — ровно по центру страницы:
+     колонки по краям одинаковой ширины, книга в auto-колонке между ними. */
   display: grid;
-  grid-template-columns: minmax(150px, 200px) minmax(0, 1fr);
+  grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
   align-items: center;
-  gap: clamp(10px, 2vw, 34px);
+  gap: clamp(10px, 1.6vw, 28px);
 }
 
-/* ─── Пузыри: самостоятельные плавающие элементы, без рамки и подложки ───── */
+/* ─── Пузыри: самостоятельные плавающие кружки, без рамки и подложки ─────── */
 
 .mbook__bubbles {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  max-height: calc(var(--mbook-page-h) + 40px);
+  align-self: center;
+  /* Поле пузырей не тянет секцию вверх-вниз: оно ровно с книгу, длинный
+     список прокручивается внутри и растворяется по краям. */
+  max-height: var(--mbook-page-h);
   overflow-y: auto;
-  padding: 4px 8px 20px 2px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(var(--gold-rgb), .22) transparent;
-  /* Список длиннее книги — гасим низ, чтобы обрезанный пузырь не выглядел
-     обрубком, а читался как «дальше есть ещё». */
-  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 26px), transparent 100%);
+  padding: 6px 4px 14px;
+  scrollbar-width: none;
+  mask-image: linear-gradient(180deg, transparent 0, #000 6%, #000 92%, transparent 100%);
   transition: opacity .5s ease;
 }
-.mbook--closed .mbook__bubbles { opacity: .55; } /* приглушены, но кликабельны: пузырь сам откроет книгу */
+.mbook__bubbles::-webkit-scrollbar { width: 0; height: 0; }
+.mbook--closed .mbook__bubbles { opacity: .6; } /* приглушены, но кликабельны: пузырь сам откроет книгу */
 .mbook__bubbles-title {
   font-family: 'Baskerville', serif;
   font-style: italic;
-  font-size: 17px;
+  font-size: clamp(15px, 1.5vw, 19px);
   color: var(--text);
-  margin: 0 0 6px;
+  margin: 0 0 14px;
+  text-align: center;
 }
-.mbook__bubbles-label {
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 8.5px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(var(--gold-rgb), .62);
-  margin: 12px 0 4px;
+.mbook__bubble-field {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(6px, 0.8vw, 12px);
 }
-.mbook__bubble-group { display: contents; }
-.mbook__bubble-nest { display: contents; }
-.mbook__bubble-kids { display: contents; }
 
 .mbook__bubble {
   position: relative;
-  flex-shrink: 0;
-  max-width: 100%;
-  border: 1px solid rgba(var(--gold-rgb), .28);
-  border-radius: 999px;
-  background: rgba(var(--bg-rgb), .55);
-  color: var(--text-mid);
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 11px;
-  letter-spacing: .3px;
-  text-align: left;
-  padding: 6px 13px;
+  flex: 0 0 auto;
+  width: var(--mbook-bubble-size);
+  height: var(--mbook-bubble-size);
+  margin-left: var(--mbook-bubble-shift);
+  padding: 0;
+  border: 0;
+  background: none;
   cursor: pointer;
-  /* Только transform/opacity: тень-подсветка живёт в ::before и гасится
-     прозрачностью, а не анимацией box-shadow. */
-  transition: transform .22s ease, color .22s ease, border-color .22s ease;
+  /* Покачивание — как у пузырька в бокале. Разовые фазы у каждого пузыря,
+     вне экрана всё останавливается (.is-offscreen ниже). */
+  animation: mbookBubbleFloat var(--mbook-bubble-dur, 8s) ease-in-out var(--mbook-bubble-delay, 0s) infinite;
 }
-.mbook__bubble::before {
+.mbook__bubble-body {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 10%;
+  border: 1px solid rgba(var(--gold-rgb), .45);
+  backdrop-filter: blur(2px);
+  /* Стекло, а не тёмный кругляш: блик сверху-слева, лёгкий золотой ободок,
+     фон почти прозрачный — под пузырём читается паттерн бутылок. */
+  background:
+    radial-gradient(52% 42% at 30% 24%, rgba(255, 255, 255, .30), rgba(255, 255, 255, 0) 68%),
+    radial-gradient(120% 120% at 50% 58%, rgba(var(--gold-rgb), .20), rgba(var(--bg-rgb), .22) 74%);
+  box-shadow:
+    inset 0 -10px 18px rgba(0, 0, 0, .22),
+    inset 0 10px 18px rgba(255, 255, 255, .10),
+    inset 0 0 0 1px rgba(255, 255, 255, .06),
+    0 8px 20px rgba(0, 0, 0, .3);
+  transition: transform .25s ease, border-color .25s ease;
+}
+.mbook__bubble-body::after {
+  /* Ореол зажигается прозрачностью, а не анимацией тени. */
   content: '';
   position: absolute;
-  inset: -2px;
-  border-radius: inherit;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .45), 0 0 16px rgba(var(--gold-rgb), .35);
+  inset: -6px;
+  border-radius: 50%;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .5), 0 0 22px rgba(var(--gold-rgb), .45);
   opacity: 0;
-  transition: opacity .22s ease;
+  transition: opacity .25s ease;
   pointer-events: none;
 }
-.mbook__bubble:hover,
-.mbook__bubble:focus-visible {
-  transform: translateY(-2px) scale(1.035);
-  color: var(--text);
-  border-color: rgba(var(--gold-rgb), .6);
+.mbook__bubble-text {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: clamp(8.5px, .66vw, 10.5px);
+  line-height: 1.22;
+  letter-spacing: .2px;
+  text-align: center;
+  color: var(--text-mid);
+  transition: color .25s ease;
 }
-.mbook__bubble:hover::before,
-.mbook__bubble:focus-visible::before { opacity: 1; }
-.mbook__bubble.is-open {
-  color: var(--gold);
-  border-color: rgba(var(--gold-rgb), .75);
-  background: rgba(var(--gold-rgb), .1);
+.mbook__bubble:hover .mbook__bubble-body,
+.mbook__bubble:focus-visible .mbook__bubble-body {
+  transform: translateY(-3px) scale(1.06);
+  border-color: rgba(var(--gold-rgb), .65);
 }
-.mbook__bubble--parent {
-  font-family: 'Baskerville', serif;
-  font-size: 13px;
-  letter-spacing: .6px;
-  padding: 7px 15px;
-  color: var(--text);
-  border-color: rgba(var(--gold-rgb), .45);
+.mbook__bubble:hover .mbook__bubble-body::after,
+.mbook__bubble:focus-visible .mbook__bubble-body::after { opacity: 1; }
+.mbook__bubble:hover .mbook__bubble-text,
+.mbook__bubble:focus-visible .mbook__bubble-text { color: var(--text); }
+
+.mbook__bubble.is-open .mbook__bubble-body {
+  border-color: rgba(var(--gold-rgb), .8);
+  background:
+    radial-gradient(75% 65% at 32% 28%, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(120% 120% at 50% 50%, rgba(var(--gold-rgb), .28), rgba(var(--bg-rgb), .7) 72%);
 }
-.mbook__bubble--kid { margin-left: 14px; font-size: 10.5px; }
+.mbook__bubble.is-open .mbook__bubble-text { color: var(--gold); }
+
+/* Курсор вошёл в поле — пузыри замирают: по движущейся мишени неудобно
+   попадать (тот же приём, что в «Стене памяти»: наведение останавливает ленту). */
+.mbook__bubble-field:hover .mbook__bubble { animation-play-state: paused; }
+
+@keyframes mbookBubbleFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+
+/* ─── Витрина коктейлей справа ──────────────────────────────────────────── */
+
+.mbook__showcase {
+  position: relative;
+  align-self: center;
+  height: var(--mbook-page-h);
+  overflow: hidden;
+  /* Края ленты растворяются, а не обрубаются. */
+  mask-image: linear-gradient(180deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+.mbook__showcase--empty { background: none; }
+.mbook__drift {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: mbookDrift var(--mbook-drift, 40s) linear infinite;
+  will-change: transform;
+}
+.mbook__drift--paused { animation-play-state: paused; }
+@keyframes mbookDrift {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+.mbook__shot {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 3px;
+  border: 1px solid rgba(var(--gold-rgb), .16);
+}
+.mbook__shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* Вне экрана всё живое замирает — иначе бесконечные анимации жгут GPU. */
+.mbook.is-offscreen .mbook__bubble,
+.mbook .is-offscreen .mbook__drift,
+.mbook.is-offscreen .mbook__drift { animation-play-state: paused; }
 
 /* ─── Сцена и книга ─────────────────────────────────────────────────────── */
 
@@ -489,7 +554,7 @@
 .mbook__arrow:disabled { opacity: .25; cursor: default; }
 
 .mbook__foot {
-  grid-column: 2;
+  grid-column: 1 / -1;
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -519,27 +584,20 @@
   .mbook {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
-    --mbook-page-h: clamp(320px, 52vh, 460px);
+    --mbook-page-h: clamp(340px, 56vh, 520px);
     --mbook-fit: calc((100vw - 150px) / 2); /* пузыри переехали наверх, по бокам только стрелки */
   }
-  /* На узком экране пузыри превращаются в ряд чипов над книгой — но всё так
-     же парят сами по себе, без рамки и подложки. */
-  .mbook__bubbles {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    max-height: none;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 2px 2px 10px;
-    gap: 6px;
-  }
-  .mbook__bubbles-title, .mbook__bubbles-label { display: none; }
+  /* Витрину на узком экране пока не показываем — мобильную раскладку доводим
+     отдельно, после десктопа (договорённость с владельцем). */
+  .mbook__showcase { display: none; }
+  /* Пузыри — рядом над книгой (мобильную раскладку доводим отдельно). */
+  .mbook__bubbles { overflow-x: auto; padding-bottom: 6px; }
+  .mbook__bubbles-title { display: none; }
+  .mbook__bubble-field { flex-wrap: nowrap; justify-content: flex-start; }
+  .mbook__bubble { animation: none; margin-left: 0; }
   /* Книга занимает почти всю ширину — смещать закрытую обложку уже некуда,
      иначе она уезжает за край экрана. */
   .mbook--closed .mbook__book { transform: translateX(3%); }
-  .mbook__bubble { white-space: nowrap; }
-  .mbook__bubble--kid { margin-left: 0; }
   .mbook__foot { grid-column: 1; }
 }
 
@@ -568,6 +626,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .mbook__bubble { animation: none; }
+  .mbook__drift { animation: none; }
+  .mbook__bubble-body,
   .mbook__book,
   .mbook__spread,
   .mbook__cover,
@@ -576,6 +637,7 @@
   .mbook__bubble::before,
   .mbook__arrow { transition: none; }
   .mbook__leaf--fwd, .mbook__leaf--back { animation: none; }
-  .mbook__bubble:hover, .mbook__bubble:focus-visible,
+  .mbook__bubble:hover .mbook__bubble-body,
+  .mbook__bubble:focus-visible .mbook__bubble-body,
   .mbook--closed .mbook__cover:hover { transform: none; }
 }

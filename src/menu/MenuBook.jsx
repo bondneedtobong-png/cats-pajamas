@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildBook, buildNav, spreadOfPage } from './bookSpreads.js';
+import MenuShowcase from './MenuShowcase.jsx';
 import './menubook.css';
 
 // Секция «Меню» как настоящая книга бара: закрытая обложка (тёмно-фиолетовый
@@ -11,9 +12,12 @@ import './menubook.css';
 // золотисто-серые арт-деко рамки с веерами, заголовок раздела капителью
 // Baskerville, «объём ⋯⋯ цена» с пунктирным лидером.
 //
-// Пузыри слева НЕ часть книги: это самостоятельные плавающие элементы —
-// быстрый переход к разделу (клик → книга перелистывает к его первому
-// развороту). Обычное листание — стрелки и клик по левому/правому листу.
+// Пузыри слева НЕ часть книги: самостоятельные плавающие кружки — быстрый
+// переход к разделу (клик → книга перелистывает к его первому развороту).
+// В пузырях только верхний уровень: у «Виски» один пузырь на весь блок, чтобы
+// не перегружать (Шотландия/Ирландия/Америка внутри книги остаются своими
+// разворотами). Обычное листание — стрелки и клик по левому/правому листу.
+// Справа — витрина коктейлей (MenuShowcase), фото медленно стекают вниз.
 //
 // Движение: только transform/opacity; всё бесконечное здесь запрещено
 // (правило проекта), анимации разовые и выключаются при prefers-reduced-motion.
@@ -24,12 +28,25 @@ import './menubook.css';
    фото логобука тиснение видно только на свету, а не как яркий логотип. */
 const MARK_PATH = 'M560.4,234.13c-0.04-1.23-0.18-2.31-1.08-3.23c-0.19-0.19-0.41-0.35-0.62-0.52c-3.91-3.21-8.7-5.31-13.35-7.19c-10.86-4.38-22.44-6.97-33.95-8.94c-21.18-3.62-42.71-5.04-64.17-5.5c-26.81-0.58-53.76,0.1-80.46,2.71c-16.25,1.59-32.56,3.85-48.37,8.02c-7.64,2.02-15.37,4.46-22.38,8.18c-1.29,0.68-2.55,1.42-3.72,2.28c-0.42,0.31-0.89,0.6-1.25,0.98c-1.15,1.19-1.08,2.75-1.07,4.29c0.02,3.39,0.33,6.77,0.8,10.13c3.77,26.5,21.09,48.42,42.61,63.31c10.56,7.31,22.05,12.98,33.57,18.59c9.98,4.86,20.16,9.88,28.88,16.83c9.11,7.26,16.2,16.47,19.7,27.67c4.33,13.89,4.38,28.95,5,43.37c1.34,31.27,1.27,62.59,0.98,93.88c-0.14,15.01,0.42,30.31-1.57,45.23c-1.59,11.89-5.5,23.26-12.08,33.31c-11.56,17.68-29.98,29.57-49.09,37.76c-9.22,3.95-18.81,7.05-28.5,9.66c-1.82,0.49-2.94,2.49-2.44,4.3c0.55,2.01,2.43,2.72,4.3,2.44c0.47-0.07,0.94-0.13,1.4-0.2c0.5-0.07,1.01-0.14,1.51-0.21c0.11-0.01,0.24-0.03,0.42-0.06c0.43-0.06,0.85-0.11,1.27-0.17c4.77-0.62,9.56-1.19,14.34-1.72c15.07-1.67,30.19-2.95,45.34-3.7c32.98-1.63,65.97,0.33,98.8,3.55c7.78,0.76,15.56,1.58,23.32,2.56c0.21,0.04,0.41,0.07,0.61,0.07c0,0,0,0,0.01,0c1.88,0.24,3.5-1.78,3.5-3.5c0-0.6-0.14-1.11-0.38-1.56c-0.36-0.82-1.06-1.51-2.19-1.82c-20.2-5.46-40.2-13.18-57.04-25.84c-8.26-6.21-15.63-13.81-21.17-22.55c-6.42-10.14-10.16-21.58-11.59-33.47c-1.83-15.13-1.31-30.59-1.45-45.8c-0.14-15.58-0.22-31.17-0.09-46.75c0.13-15.72,0.47-31.43,1.17-47.13c0.64-14.24,0.75-29.09,5.27-42.75c7.49-22.64,28.94-34.06,49.05-43.82c23.55-11.44,46.84-24.52,61.75-46.83c7.27-10.87,12.18-23.31,13.84-36.3C560.22,240.54,560.49,237.32,560.4,234.13z M335.03,641.29C334.79,641.32,334.82,641.32,335.03,641.29L335.03,641.29z';
 
-// Позиций на страницу — по ширине экрана (на узком листе их физически меньше).
-// Считаем это же число в раскладке, поэтому пагинация и вёрстка не расходятся.
-function perPageFor(width) {
-  if (width >= 1280) return 6;
-  if (width >= 1000) return 5;
-  return 4;
+// Позиций на страницу — по РЕАЛЬНОЙ высоте листа (та же формула, что в CSS:
+// --mbook-page-h = clamp(420px, 78vh, 780px)). Считаем здесь то же число, что
+// потом верстается, поэтому пагинация и вёрстка не расходятся: на высоком
+// экране лист длинный и позиций влезает больше, на коротком ноуте — меньше.
+const PAGE_H = (height) => Math.min(780, Math.max(420, height * 0.78));
+function perPageFor(width, height) {
+  const pageH = width <= 1000 ? Math.min(520, Math.max(340, height * 0.56)) : PAGE_H(height);
+  const free = pageH - 190;      // шапка раздела + поля листа
+  const row = width >= 1280 ? 74 : 66; // позиция с составом и строкой цены
+  return Math.max(3, Math.min(9, Math.floor(free / row)));
+}
+
+/** Диаметр пузыря под длину названия: короткие — мелкие, длинные — крупнее. */
+function bubbleSize(title) {
+  const n = String(title).length;
+  if (n <= 5) return 66;
+  if (n <= 10) return 80;
+  if (n <= 16) return 94;
+  return 106;
 }
 
 const FLIP_MS = 420;   // полный переворот листа
@@ -136,7 +153,9 @@ function BookPage({ page, side }) {
 /* ── Книга целиком ───────────────────────────────────────────────────────── */
 
 export default function MenuBook({ menu, stories, printLink }) {
-  const [width, setWidth] = useState(() => (typeof window === 'undefined' ? 1440 : window.innerWidth));
+  const [size, setSize] = useState(() => (typeof window === 'undefined'
+    ? { w: 1440, h: 900 }
+    : { w: window.innerWidth, h: window.innerHeight }));
   const [closed, setClosed] = useState(true);
   const [spread, setSpread] = useState(0);
   const [flip, setFlip] = useState(null); // { dir, id, front, back, frozen }
@@ -145,6 +164,7 @@ export default function MenuBook({ menu, stories, printLink }) {
   const at = useRef(0);         // текущий разворот без ожидания ре-рендера
   const alive = useRef(true);
   const navRef = useRef(null);
+  const rootRef = useRef(null);
 
   // Флаг «компонент ещё жив» для асинхронной анимации. Ставим его В эффекте,
   // а не только снимаем в его уборке: в StrictMode эффект монтируется дважды
@@ -156,12 +176,12 @@ export default function MenuBook({ menu, stories, printLink }) {
   }, []);
 
   useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
+    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener('resize', onResize, { passive: true });
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const perPage = perPageFor(width);
+  const perPage = perPageFor(size.w, size.h);
   const { spreads, jumps } = useMemo(() => buildBook(menu, stories, perPage), [menu, stories, perPage]);
   const nav = useMemo(() => buildNav(menu), [menu]);
   const last = Math.max(0, spreads.length - 1);
@@ -245,6 +265,19 @@ export default function MenuBook({ menu, stories, printLink }) {
     if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(spread - 1); }
   };
 
+  // Пузыри покачиваются бесконечно — вне экрана ставим на паузу, чтобы не
+  // жечь GPU (правило проекта; тот же приём, что в «Стене памяти»).
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const io = new IntersectionObserver(
+      ([entry]) => root.classList.toggle('is-offscreen', !entry.isIntersecting),
+      { threshold: 0 },
+    );
+    io.observe(root);
+    return () => io.disconnect();
+  }, []);
+
   // Пузырь открытого раздела подтягиваем в видимую часть списка: на десктопе
   // колонка длиннее книги, на телефоне это горизонтальный ряд чипов.
   useEffect(() => {
@@ -265,6 +298,13 @@ export default function MenuBook({ menu, stories, printLink }) {
   const leftPage = flip?.frozen.side === 'left' ? flip.frozen.page : cur[0];
   const rightPage = flip?.frozen.side === 'right' ? flip.frozen.page : cur[1];
 
+  // Пузыри: верхний уровень карты. Надгруппа («Виски») даёт один пузырь на
+  // весь блок — её дети живут только внутри книги.
+  const bubbles = useMemo(
+    () => nav.flatMap((group) => group.entries.map((e) => ({ key: e.key, title: e.title, kids: e.children || [] }))),
+    [nav],
+  );
+
   const jumpTo = (key) => {
     const page = jumps.get(key);
     if (page === undefined) return;
@@ -273,52 +313,43 @@ export default function MenuBook({ menu, stories, printLink }) {
   };
 
   // Подсветка активного пузыря: какие разделы лежат на открытом развороте.
+  // У «Виски» пузырь горит и на разворотах его детей.
   const openTitles = new Set([leftPage?.title, rightPage?.title].filter(Boolean));
+  const openKeys = new Set(
+    bubbles.filter((b) => openTitles.has(b.title) || b.kids.some((k) => openTitles.has(k.title))).map((b) => b.key),
+  );
 
   return (
-    <div className={`mbook${closed ? ' mbook--closed' : ''}`} onKeyDown={onKeyDown}>
+    <div className={`mbook${closed ? ' mbook--closed' : ''}`} ref={rootRef} onKeyDown={onKeyDown}>
       {/* Пузыри — самостоятельные плавающие элементы слева, без рамки и подложки */}
       <nav className="mbook__bubbles" ref={navRef} aria-label="Быстрый переход по разделам меню">
         <p className="mbook__bubbles-title">Что вы ищете?</p>
-        {nav.map((group) => (
-          <div className="mbook__bubble-group" key={group.id}>
-            <p className="mbook__bubbles-label">{group.title}</p>
-            {group.entries.map((entry) => (
-              entry.type === 'parent' ? (
-                <div className="mbook__bubble-nest" key={entry.key}>
-                  <button
-                    type="button"
-                    className="mbook__bubble mbook__bubble--parent"
-                    onClick={() => jumpTo(entry.key)}
-                  >
-                    {entry.title}
-                  </button>
-                  <div className="mbook__bubble-kids">
-                    {entry.children.map((kid) => (
-                      <button
-                        type="button"
-                        key={kid.key}
-                        className={`mbook__bubble mbook__bubble--kid${openTitles.has(kid.title) ? ' is-open' : ''}`}
-                        onClick={() => jumpTo(kid.key)}
-                      >
-                        {kid.title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  key={entry.key}
-                  className={`mbook__bubble${openTitles.has(entry.title) ? ' is-open' : ''}`}
-                  onClick={() => jumpTo(entry.key)}
-                >
-                  {entry.title}
-                </button>
-              )
-            ))}
-          </div>
-        ))}
+        <div className="mbook__bubble-field">
+          {bubbles.map((bubble, i) => (
+            <button
+              type="button"
+              key={bubble.key}
+              className={`mbook__bubble${openKeys.has(bubble.key) ? ' is-open' : ''}`}
+              // Размер — от длины названия, смещение и фаза покачивания — от
+              // номера: поле пузырей выглядит живым, но раскладка стабильна
+              // (никакого Math.random, иначе прыгало бы на каждом ре-рендере).
+              style={{
+                '--mbook-bubble-size': `${bubbleSize(bubble.title)}px`,
+                '--mbook-bubble-shift': `${(i % 3) * 10 - 10}px`,
+                '--mbook-bubble-delay': `${(i % 5) * 0.7}s`,
+                '--mbook-bubble-dur': `${7 + (i % 4)}s`,
+              }}
+              onClick={() => jumpTo(bubble.key)}
+            >
+              {/* Два слоя нарочно: на кнопке живёт покачивание (transform), на
+                  теле — hover-подъём. Один элемент не может делать оба
+                  transform одновременно — анимация перебивает hover. */}
+              <span className="mbook__bubble-body">
+                <span className="mbook__bubble-text">{bubble.title}</span>
+              </span>
+            </button>
+          ))}
+        </div>
       </nav>
 
       <div className="mbook__stage">
@@ -385,6 +416,8 @@ export default function MenuBook({ menu, stories, printLink }) {
           aria-label="Следующий разворот"
         >›</button>
       </div>
+
+      <MenuShowcase />
 
       <div className="mbook__foot">
         <span className="mbook__pager">

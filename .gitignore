@@ -10,3 +10,7 @@ dist
 # папку). В репо и на прод уезжают только сжатые webp из showcase-web/,
 # их собирает scripts/generate-gallery-manifest.mjs.
 public/uploads/showcase/
+
+# Оригиналы фото витрины коктейлей у книги-меню — в репо уезжают только
+# сжатые webp из cocktails-web/ (тот же скрипт).
+public/uploads/cocktails/
