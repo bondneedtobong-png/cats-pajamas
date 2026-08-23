@@ -1,23 +1,21 @@
-import { Fragment, useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useReveal } from '../useReveal.js';
 import { BAR_MENU, CATEGORY_STORIES } from '../menu/barMenuData.js';
 import BarMenuService from '../menu/BarMenuService.js';
 import AuthService from '../auth/AuthService.js';
-import { CategoryCard } from '../menu/MenuCard.jsx';
+import MenuBook from '../menu/MenuBook.jsx';
 import '../menu/barmenu-editor.css'; // стили кнопки/редактора — грузим сразу (крошечные), чтобы кнопка не была без стиля до первого открытия
 
 // Редактор нужен только админам — грузим его JS-чанк лениво, при открытии,
 // чтобы не тащить логику правки в бандл лендинга для обычных гостей.
 const MenuInlineEditor = lazy(() => import('../menu/MenuInlineEditor.jsx'));
 
-// Секция «Меню» — интерактивное бар-меню (переделка 2026-07-05 по
-// макету владельца): слева вертикальные кнопки категорий (по одной на каждый
-// раздел бумажного меню), в центре «разворот» из одной-двух карточек выбранной
-// категории, справа — короткая история раздела. Карусель коктейлей из БД
-// убрана с этой страницы. Полная карта одной простынёй живёт на /menu
-// (пререндерится для SEO) — сюда ведёт мелкая ссылка из панели истории.
-// Категории длиннее SPLIT_AT позиций делятся на два листа, как разворот.
-const SPLIT_AT = 9;
+// Секция «Меню» — барная карта как настоящая книга бара (переделка 2026-08-23
+// по логобуку, стр. 43–44): закрытая обложка → разворот на два листа →
+// непрерывное листание по всей карте. Сама книга и её навигация-пузыри живут
+// в MenuBook.jsx, раскладка по страницам — в menu/bookSpreads.js.
+// Полная карта одной простынёй по-прежнему на /menu (пререндер для SEO) —
+// туда ведёт мелкая ссылка под книгой.
 
 export default function Menu({ tx }) {
   const r0 = useReveal(0);
@@ -26,7 +24,6 @@ export default function Menu({ tx }) {
   // карту из БД, когда она приедет. При недоступном API остаётся статика.
   const [menu, setMenu] = useState(BAR_MENU);
   const [stories, setStories] = useState(CATEGORY_STORIES);
-  const [activeTitle, setActiveTitle] = useState(BAR_MENU[0].categories[0].title);
   const [editing, setEditing] = useState(false);
   const isAdmin = AuthService.isAdmin();
 
@@ -37,15 +34,6 @@ export default function Menu({ tx }) {
     });
     return () => { alive = false; };
   }, []);
-
-  const flatCats = menu.flatMap(g => g.categories);
-  const cat = flatCats.find(c => c.title === activeTitle) || flatCats[0];
-  const story = stories[cat.title] || '';
-
-  const split = cat.items.length > SPLIT_AT;
-  const half = Math.ceil(cat.items.length / 2);
-
-  let btnIndex = 0; // сквозной индекс для каскадной анимации появления кнопок
 
   return (
     <section id="menu" className="menu">
@@ -78,59 +66,7 @@ export default function Menu({ tx }) {
               </div>
             )}
 
-            <div className="mbk">
-              {/* Кнопки категорий — по одной на каждый раздел бумажного меню */}
-              <nav className="mbk__nav" aria-label="Разделы меню">
-                {menu.map((group) => {
-                  // Третий уровень: у раздела с parent («Виски») над первым из
-                  // них печатаем подпись надгруппы, сами кнопки — с отступом.
-                  let sub = '';
-                  return (
-                    <Fragment key={group.id}>
-                      <span className="mbk__nav-label">{group.title}</span>
-                      {group.categories.map((c) => {
-                        const openSub = c.parent && c.parent !== sub ? c.parent : '';
-                        sub = c.parent || '';
-                        return (
-                          <Fragment key={c.title}>
-                            {openSub && <span className="mbk__nav-sublabel">{openSub}</span>}
-                            <button
-                              type="button"
-                              className={`mbk__nav-btn u-glare${c.parent ? ' mbk__nav-btn--sub' : ''}${c.title === cat.title ? ' mbk__nav-btn--active' : ''}`}
-                              style={{ '--i': btnIndex++ }}
-                              onClick={() => setActiveTitle(c.title)}
-                            >
-                              {c.title}
-                            </button>
-                          </Fragment>
-                        );
-                      })}
-                    </Fragment>
-                  );
-                })}
-              </nav>
-
-              {/* Разворот: длинная категория раскладывается на два листа */}
-              <div className={`mbk__spread${split ? '' : ' mbk__spread--single'}`}>
-                {split ? (
-                  <>
-                    <CategoryCard cat={{ ...cat, items: cat.items.slice(0, half), quote: null }} />
-                    <CategoryCard cat={{ ...cat, items: cat.items.slice(half) }} showHead={false} />
-                  </>
-                ) : (
-                  <CategoryCard cat={cat} />
-                )}
-              </div>
-
-              {/* Немного истории про выбранный раздел */}
-              <aside className="mbk__story">
-                <span className="mbk__story-label">{tx.menuStoryLabel}</span>
-                {cat.parent && <span className="mbk__story-parent">{cat.parent}</span>}
-                <h3 className="mbk__story-title">{cat.title}</h3>
-                <p className="mbk__story-text">{story}</p>
-                <a className="mbk__story-link u-glare" href="/menu">{tx.menuPrintLink} ›</a>
-              </aside>
-            </div>
+            <MenuBook menu={menu} stories={stories} printLink={tx.menuPrintLink} />
           </>
         )}
       </div>

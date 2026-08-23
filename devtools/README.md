@@ -12,6 +12,8 @@
 | `reveal_e2e.mjs` | лендинг в настоящем Chromium (Playwright): reveal-анимации при быстрой прокрутке + правила перерисовки шапки. Нужен запущенный dev-сервер |
 | `menu_xlsx_import.mjs` | прогон парсера барной карты из .xlsx без браузера |
 | `menu_import_test.mjs` | тест импорта на реальной книге владельца (`seed/menu-26.06.xlsx`): третий уровень «Виски», плоские соседи, санитайзер API, маркап /menu и JSON-LD |
+| `menu_book_test.mjs` | тест раскладки книги-меню (`src/menu/bookSpreads.js`): непрерывная последовательность разворотов, ничего не потеряно, пузыри ведут на первый разворот раздела |
+| `seed_bar_menu.mjs` | заливает карту из .xlsx в песочницу через настоящий POST /api/bar-menu — смотреть книгу и /menu на данных владельца |
 
 ## Запуск (из корня `cats-pajamas-club/`)
 
@@ -31,6 +33,9 @@ node devtools/bot_e2e.mjs   # ждём "ALL SCENARIOS PASS"
 # 4) Импорт барной карты из Excel (фикстура — книга владельца)
 node devtools/menu_import_test.mjs   # ждём "ALL SCENARIOS PASS"
 node devtools/menu_xlsx_import.mjs devtools/seed/menu-26.06.xlsx   # дерево глазами
+node devtools/menu_book_test.mjs     # раскладка книги-меню, ждём "ALL SCENARIOS PASS"
+#    посмотреть книгу на данных владельца: подними sandbox.mjs, затем
+node devtools/seed_bar_menu.mjs <admin токен>
 
 # 5) Лендинг в реальном браузере (нужен `npm run dev` в соседнем окне)
 node devtools/reveal_e2e.mjs            # ждём "ALL SCENARIOS PASS"
