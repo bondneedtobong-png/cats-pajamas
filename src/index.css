@@ -1670,14 +1670,17 @@ html { scroll-behavior: smooth; }
   from { transform: translate3d(0, -50%, 0); }
   to   { transform: translate3d(0, 0, 0); }
 }
-.wall__col:hover .wall__track,
-.wall__col:focus-within .wall__track { animation-play-state: paused; }
+/* Пауза колонки: класс ставит Wall.jsx по X курсора, а не CSS :hover.
+   :hover проваливался в зазоры между колонками и между кадрами — курсор вёлся
+   вдоль стены, и лента дёргалась «стоп-поехали». */
+.wall__track--paused { animation-play-state: paused; }
 /* Секция уехала с экрана — бесконечная анимация встаёт (класс ставит
    IntersectionObserver в Wall.jsx). */
 .wall.is-offscreen .wall__track { animation-play-state: paused; }
 
 .wall__item {
   position: relative;
+  transition: box-shadow .28s ease, border-color .28s ease;
   /* Отступ именно margin, а не gap у ленты: при gap половина высоты не
      совпадает с шагом дублирования и в стыке появляется рывок. */
   margin: 0 0 clamp(8px, 1vw, 16px);
@@ -1688,17 +1691,25 @@ html { scroll-behavior: smooth; }
   box-shadow: 0 12px 28px rgba(0, 0, 0, .32);
 }
 .wall__item img { display: block; width: 100%; height: 100%; object-fit: cover; }
-/* Фото приглушены под тёмную тему; на наведении снимок оживает — но геометрия
-   не меняется, соседи не двигаются. */
+/* Фото приглушены под тёмную тему. Подсветка — у КОНКРЕТНОГО снимка под
+   курсором, а не у всей колонки: затемнение уходит, появляется золотая
+   обводка и мягкое свечение. Геометрия не меняется, соседи не двигаются. */
 .wall__item::after {
   content: '';
   position: absolute; inset: 0;
   background: color-mix(in srgb, var(--bg) 30%, transparent);
   pointer-events: none;
-  transition: background .3s ease;
+  transition: background .28s ease;
 }
-.wall__col:hover .wall__item::after { background: color-mix(in srgb, var(--bg) 12%, transparent); }
-.wall__item:hover::after { background: transparent; }
+.wall__item--hot {
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 1px var(--gold),
+    0 0 22px rgba(var(--gold-rgb), .35),
+    0 16px 34px rgba(0, 0, 0, .45);
+  z-index: 2;
+}
+.wall__item--hot::after { background: transparent; }
 
 @media (max-width: 760px) {
   .wall__grid { padding: 0 8px; gap: 8px; height: clamp(480px, 76vh, 640px); }
@@ -1708,7 +1719,7 @@ html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   /* Бесконечного движения нет вовсе — стена просто стоит. */
   .wall__track { animation: none; transform: none; will-change: auto; }
-  .wall__item::after { transition: none; }
+  .wall__item, .wall__item::after { transition: none; }
 }
 
 /* ── TEAM ──────────────────────────────────────────────── */

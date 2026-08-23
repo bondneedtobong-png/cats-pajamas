@@ -18,9 +18,9 @@ import manifest from '../data/galleryPhotos.generated.json';
 
 const PHOTOS = Array.isArray(manifest?.photos) ? manifest.photos : [];
 
-// Скорость дрейфа: пикселей в секунду. Колонки идут вразнобой, иначе стена
-// едет одним куском и читается как одна большая картинка.
-const SPEEDS = [26, 34, 21, 30, 24, 37, 28];
+// Скорость дрейфа, пикселей в секунду — одна на все колонки (просьба
+// владельца: как у самой быстрой из прежнего разнобоя).
+const SPEED = 37;
 
 // Колонки по размеру экрана. Снимки нужны мелкие (просьба владельца), поэтому
 // колонок много: на 1920 плитка выходит ~250px. Брейкпоинт бургер-меню (900px)
@@ -110,7 +110,12 @@ function buildColumns(photos, columnCount) {
 export default function Wall({ tx }) {
   const [columnCount, setColumnCount] = useState(() => (typeof window === 'undefined' ? 5 : columnsFor(window.innerWidth, window.innerHeight)));
   const sectionRef = useRef(null);
+  const gridRef = useRef(null);
   const trackRefs = useRef([]);
+  const colRefs = useRef([]);
+  // Что сейчас под курсором: колонка (её лента стоит) и конкретный снимок
+  // (он подсвечен). Держим в state, а не в CSS :hover — см. onPointerMove.
+  const [hot, setHot] = useState({ col: -1, key: '' });
   const r0 = useReveal(0);
   const r1 = useReveal(100);
 
@@ -131,11 +136,10 @@ export default function Wall({ tx }) {
   // поэтому длинная колонка едет дольше, а скорость на глаз одинаковая.
   useLayoutEffect(() => {
     const measure = () => {
-      trackRefs.current.forEach((track, i) => {
+      trackRefs.current.forEach((track) => {
         if (!track) return;
         const loop = track.scrollHeight / 2; // лента продублирована
-        const speed = SPEEDS[i % SPEEDS.length];
-        track.style.setProperty('--dur', `${Math.max(12, loop / speed).toFixed(1)}s`);
+        track.style.setProperty('--dur', `${Math.max(12, loop / SPEED).toFixed(1)}s`);
       });
     };
     measure();
@@ -144,6 +148,26 @@ export default function Wall({ tx }) {
     trackRefs.current.forEach((t) => t && ro.observe(t));
     return () => ro.disconnect();
   }, [columns]);
+
+  // Наведение считаем сами, а не через CSS :hover на колонке. У :hover две
+  // дыры, обе владелец и поймал: между колонками и между снимками есть зазоры,
+  // и курсор, ведомый вдоль стены, постоянно проваливается в них — лента
+  // дёргается «стоп-поехали». Здесь колонка считается по X курсора, поэтому
+  // остаётся замершей, пока курсор в её полосе, даже если он между кадрами.
+  // Подсветка при этом честно привязана к конкретному снимку под курсором.
+  const onPointerMove = (e) => {
+    if (e.pointerType === 'touch') return; // на тач-экране «наведения» нет
+    const x = e.clientX;
+    const col = colRefs.current.findIndex((el) => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return x >= r.left && x <= r.right;
+    });
+    const fig = e.target.closest?.('.wall__item');
+    const key = fig?.dataset.key || '';
+    setHot((prev) => (prev.col === col && prev.key === key ? prev : { col, key }));
+  };
+  const onPointerLeave = () => setHot({ col: -1, key: '' });
 
   // Вне экрана лента стоит: бесконечная анимация не должна жечь батарею,
   // пока секции не видно.
@@ -170,14 +194,29 @@ export default function Wall({ tx }) {
         <h2 ref={r1} className="reveal wall__title">{tx.wallTitle}</h2>
       </div>
 
-      <div className="wall__grid">
+      <div
+        className="wall__grid"
+        ref={gridRef}
+        onPointerMove={onPointerMove}
+        onPointerLeave={onPointerLeave}
+      >
         {columns.map((col, ci) => (
-          <div key={ci} className="wall__col">
-            <div className="wall__track" ref={(el) => { trackRefs.current[ci] = el; }}>
+          <div key={ci} className="wall__col" ref={(el) => { colRefs.current[ci] = el; }}>
+            <div
+              className={`wall__track${hot.col === ci ? ' wall__track--paused' : ''}`}
+              ref={(el) => { trackRefs.current[ci] = el; }}
+            >
               {/* Лента продублирована — на этом держится бесшовный круг:
                   сдвиг ровно на половину высоты возвращает картинку в исходную. */}
-              {[...col, ...col].map((p, i) => (
-                <figure key={`${p.src}-${i}`} className="wall__item" style={{ aspectRatio: `${p.w} / ${p.h}` }}>
+              {[...col, ...col].map((p, i) => {
+                const key = `${p.src}-${i}`;
+                return (
+                <figure
+                  key={key}
+                  data-key={key}
+                  className={`wall__item${hot.key === key ? ' wall__item--hot' : ''}`}
+                  style={{ aspectRatio: `${p.w} / ${p.h}` }}
+                >
                   <img
                     src={p.src}
                     srcSet={p.srcSm ? `${p.srcSm} 480w, ${p.src} 900w` : undefined}
@@ -190,7 +229,8 @@ export default function Wall({ tx }) {
                     draggable="false"
                   />
                 </figure>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
