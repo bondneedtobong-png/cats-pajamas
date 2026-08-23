@@ -3,6 +3,9 @@ import { BAR_MENU, CATEGORY_STORIES } from '../../src/menu/barMenuData.js';
 
 // Барная карта редактируется владельцем и хранится одним jsonb-блобом в
 // app_config['bar_menu'] = { menu: [...группы], stories: {...} }.
+// Категории внутри группы — плоский список; третий уровень (надгруппа вроде
+// «Виски» над Шотландией и Ирландией) выражен полем category.parent —
+// названием надгруппы у каждого её раздела.
 // Пока владелец ничего не сохранил (конфиг пуст/битый) — отдаём статическую
 // карту из репозитория (src/menu/barMenuData.js), чтобы сайт и /menu никогда
 // не остались без меню. Правки владельца попадают в SEO-пререндер только на
@@ -32,6 +35,7 @@ function cleanCategory(c) {
     items: (Array.isArray(c?.items) ? c.items : []).map(cleanItem).filter(Boolean),
   };
   const unit = str(c?.unit, 40); if (unit) out.unit = unit;
+  const parent = str(c?.parent, 120); if (parent && parent !== title) out.parent = parent;
   const qText = str(c?.quote?.text, 400);
   if (qText) out.quote = { text: qText, author: str(c?.quote?.author, 120) };
   return out;

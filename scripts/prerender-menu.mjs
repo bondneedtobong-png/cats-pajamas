@@ -10,7 +10,7 @@
 // SEO-снапшот только на следующем деплое (снапшот пересобирается при build).
 import 'dotenv/config';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { BAR_MENU as STATIC_MENU } from '../src/menu/barMenuData.js';
 
@@ -72,7 +72,8 @@ function cardHtml(cat) {
   const quote = cat.quote
     ? `<figure class="bmn-quote"><blockquote class="bmn-quote__text">«${esc(cat.quote.text)}»</blockquote><figcaption class="bmn-quote__sign">${esc(cat.quote.author)}</figcaption></figure>`
     : '';
-  return `<article class="bmn-card"><div class="bmn-card__inner">${corners}${fans}<h3 class="bmn-card__title">${esc(cat.title)}</h3>${cat.unit ? `<p class="bmn-card__unit">${esc(cat.unit)}</p>` : ''}<ul class="bmn-card__list">${cat.items.map(i => itemHtml(i, cat.unit)).join('')}</ul>${quote}</div></article>`;
+  const parent = cat.parent ? `<p class="bmn-card__parent">${esc(cat.parent)}</p>` : '';
+  return `<article class="bmn-card"><div class="bmn-card__inner">${corners}${fans}${parent}<h3 class="bmn-card__title">${esc(cat.title)}</h3>${cat.unit ? `<p class="bmn-card__unit">${esc(cat.unit)}</p>` : ''}<ul class="bmn-card__list">${cat.items.map(i => itemHtml(i, cat.unit)).join('')}</ul>${quote}</div></article>`;
 }
 
 function pageHtml(menu) {
@@ -85,22 +86,42 @@ function pageHtml(menu) {
 
 // ─── JSON-LD schema.org/Menu — цены из данных, без выдумок ──────────────────
 const priceOf = (p) => (String(p).split('/')[0].match(/[\d\s]+/) || [''])[0].replace(/\s/g, '');
+const sectionOf = (c) => ({
+  '@type': 'MenuSection',
+  name: c.title,
+  hasMenuItem: c.items.map(i => ({
+    '@type': 'MenuItem',
+    name: i.name,
+    ...(i.origin ? { description: i.origin } : {}),
+    offers: { '@type': 'Offer', priceCurrency: 'RUB', price: priceOf(i.price) },
+  })),
+});
+
+// Разделы с parent («Виски» → Шотландия, Ирландия…) уходят в схему вложенной
+// MenuSection, а не соседями: у schema.org для этого есть hasMenuSection.
+function sectionsOf(categories) {
+  const out = [];
+  const subs = new Map();
+  for (const c of categories) {
+    if (!c.parent) { out.push(sectionOf(c)); continue; }
+    let sub = subs.get(c.parent);
+    if (!sub) {
+      sub = { '@type': 'MenuSection', name: c.parent, hasMenuSection: [] };
+      subs.set(c.parent, sub);
+      out.push(sub);
+    }
+    sub.hasMenuSection.push(sectionOf(c));
+  }
+  return out;
+}
+
 const buildSchema = (menu) => ({
   '@context': 'https://schema.org',
   '@type': 'Menu',
   name: "Барная карта The Cat's Pajamas Club",
   url: 'https://cats-pajamas.ru/menu/',
   inLanguage: 'ru',
-  hasMenuSection: menu.flatMap(g => g.categories.map(c => ({
-    '@type': 'MenuSection',
-    name: c.title,
-    hasMenuItem: c.items.map(i => ({
-      '@type': 'MenuItem',
-      name: i.name,
-      ...(i.origin ? { description: i.origin } : {}),
-      offers: { '@type': 'Offer', priceCurrency: 'RUB', price: priceOf(i.price) },
-    })),
-  }))),
+  hasMenuSection: menu.flatMap(g => sectionsOf(g.categories)),
 });
 
 // ─── Сборка dist/menu/index.html из dist/index.html ─────────────────────────
@@ -130,4 +151,9 @@ async function main() {
   console.log(`[prerender-menu] dist/menu/index.html: ${menu.length} групп, ${items} позиций, ${(html.length / 1024).toFixed(0)} КБ`);
 }
 
-main().catch((e) => { console.error('[prerender-menu] ошибка:', e); process.exit(1); });
+// Как скрипт (npm run build) — собираем файл; как импорт (devtools-тест
+// импорта меню) — отдаём чистые сборщики маркапа и схемы, ничего не пишем.
+const runAsScript = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
+if (runAsScript) main().catch((e) => { console.error('[prerender-menu] ошибка:', e); process.exit(1); });
+
+export { pageHtml, buildSchema };

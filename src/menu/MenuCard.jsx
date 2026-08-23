@@ -71,6 +71,8 @@ export function CategoryCard({ cat, showHead = true }) {
         <span className="bmn-card__fan bmn-card__fan--top"><Fan flip /></span>
         <span className="bmn-card__fan bmn-card__fan--bottom"><Fan /></span>
 
+        {/* cat.parent — надгруппа третьего уровня («Виски» над «Шотландией») */}
+        {showHead && cat.parent && <p className="bmn-card__parent">{cat.parent}</p>}
         {showHead && <h3 className="bmn-card__title">{cat.title}</h3>}
         {showHead && cat.unit && <p className="bmn-card__unit">{cat.unit}</p>}
 

@@ -171,6 +171,14 @@
   margin: 3px 0;
 }
 .mbk-edit-catrow .mbk__nav-btn { flex: 1; min-width: 0; }
+/* Третий уровень: подпись надгруппы и её разделы с отступом (кнопки ⇥/⇤) */
+.mbk-edit-subhead {
+  display: flex;
+  align-items: center;
+  margin: 8px 0 2px 10px;
+}
+.mbk__nav--edit .mbk-edit-sublabel { flex: 1; min-width: 0; margin: 0; }
+.mbk-edit-catrow--sub { margin-left: 10px; }
 
 /* ─── Карточка в режиме правки: позиция + столбец управления ───────────────── */
 .bmn-item.bmn-item--edit {

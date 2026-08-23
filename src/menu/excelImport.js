@@ -15,15 +15,35 @@ import { readWorkbook } from './xlsx.js';
 //     цены = состав коктейля. Определяется автоматически по чередованию.
 //   • длинный текст в дальней колонке → описание раздела: оно попадает в
 //     панель «О разделе» (stories) на сайте.
+//   • заголовок-«надгруппа» из списка SUBGROUPS → третий уровень: идущие под
+//     ним разделы получают parent («Виски» → Шотландия/Ирландия/…).
 
 const RUB = '₽';
 const NBSP = ' ';
 
 const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 const isVolume = (s) => /\d/.test(s) && /(мл|л\.|гр|г\.|шт)/i.test(s);
-const hasDigit = (s) => /\d/.test(s);
+// Цена — ячейка целиком из числа (возможно «300/600» и с «р.»/«₽»), а не любая
+// с цифрой: в дальней колонке рядом стоит цитата с годом («…, 1887»), и по
+// «есть цифра» она однажды уехала в цену вместо неё (файл владельца, июнь).
+const isPrice = (s) => /^\d[\d\s.,/]*\s*(р\.?|руб\.?|₽)?$/i.test(clean(s));
 const norm = (s) => clean(s).toLowerCase().replace(/ё/g, 'е');
 const slug = (s) => norm(s).replace(/[^a-zа-я0-9]+/gi, '-').replace(/(^-|-$)/g, '') || 'g';
+
+// Надгруппы: заголовок, под которым идёт несколько разделов одного рода
+// («Виски» над Шотландией, Ирландией, Америкой и «Виски со Всего Мира»).
+// Общего сигнала для них в книге нет: дочерние заголовки набраны ровно так же,
+// как соседние разделы (Джин, Коньяк…), а конец блока ничем не помечен —
+// проверено на файле владельца (styles.xml: ни отступов, ни outline level).
+// Поэтому список известных надгрупп явный: сверяем по нормализованному тексту.
+// Незнакомые надгруппы по-прежнему не гадаем — см. предупреждение ниже.
+const SUBGROUPS = [
+  { title: 'Виски', children: ['Шотландия', 'Ирландия', 'Америка', 'Виски со Всего Мира'] },
+];
+const SUBGROUP_BY_TITLE = new Map(SUBGROUPS.map((s) => [
+  norm(s.title),
+  { title: s.title, children: new Set(s.children.map(norm)) },
+]));
 
 /** «500» → «500 ₽»; «300/600 р.» → «300/600 ₽»; всё прочее — как есть. */
 function price(raw) {
@@ -55,7 +75,7 @@ function readRow(row) {
     .map(([, v]) => v);
 
   const vol = rest.find(isVolume) || '';
-  const money = rest.filter((v) => v !== vol && hasDigit(v)).pop() || '';
+  const money = rest.filter((v) => v !== vol && isPrice(v)).pop() || '';
   // Дальняя длинная ячейка без цены — описание/цитата раздела.
   const note = rest.find((v) => v !== vol && v !== money && clean(v).length > 30) || '';
 
@@ -101,7 +121,8 @@ function foldUnit(cat) {
   return cat;
 }
 
-function buildSheet(sheet, warnings) {
+/** Лист книги → группы. Экспортируется ради devtools/menu_import_test.mjs. */
+export function buildSheet(sheet, warnings) {
   const rows = sheet.rows;
   const parsed = rows.map(readRow);
   const pairs = isPairsSheet(rows, parsed);
@@ -125,20 +146,29 @@ function buildSheet(sheet, warnings) {
   let group = null;
   let cat = null;
   let lastItem = null;
+  let subgroup = null;       // открытая надгруппа из SUBGROUPS (пока идут её разделы)
+  let subgroupEmpty = false; // её заголовок прочитан, но ни одного раздела ещё нет
 
   const openGroup = (title) => {
     group = { id: slug(title), title, categories: [] };
     groups.push(group);
     cat = null;
   };
-  const openCat = (title) => {
+  // parent — название надгруппы («Виски»), если раздел вложен в неё третьим
+  // уровнем. Категории остаются плоским списком по порядку файла: связь с
+  // надгруппой держит поле parent, а не вложенный массив (так все читатели
+  // карты — сайт, /menu, пререндер, редактор — продолжают работать как были).
+  const openCat = (title, parent = '') => {
     if (!group) openGroup(fallbackGroup);
-    cat = { title, items: [], story: '' };
+    cat = { title, ...(parent ? { parent } : {}), items: [], story: '' };
     group.categories.push(cat);
   };
 
   parsed.forEach((p, i) => {
     if (p.kind === 'item') {
+      // Позиция сразу под заголовком надгруппы, без заголовка раздела: значит
+      // в этом файле «Виски» — обычный раздел, а не третий уровень.
+      if (subgroupEmpty) { openCat(subgroup.title); subgroup = null; subgroupEmpty = false; }
       if (!cat) openCat(fallbackCat);
       cat.items.push(p.item);
       lastItem = p.item;
@@ -155,15 +185,28 @@ function buildSheet(sheet, warnings) {
       return;
     }
 
+    // Надгруппа из списка: сам заголовок разделом не становится — он лишь
+    // открывает третий уровень для следующих за ним знакомых разделов.
+    const known = SUBGROUP_BY_TITLE.get(norm(p.text));
+    if (known) { subgroup = known; subgroupEmpty = true; lastItem = null; return; }
+    if (subgroup && subgroup.children.has(norm(p.text))) {
+      openCat(p.text, subgroup.title);
+      subgroupEmpty = false;
+      lastItem = null;
+      if (p.note && cat && !cat.story) cat.story = p.note;
+      return;
+    }
+    subgroup = null; subgroupEmpty = false; // чужой заголовок — блок надгруппы кончился
+
     if (groupWeight !== null && p.weight === groupWeight) openGroup(p.text);
     else openCat(p.text);
     lastItem = null;
     if (p.note && cat && !cat.story) cat.story = p.note;
   });
 
-  // Заголовок-«надгруппа» посреди листа (напр. «Виски» над Шотландией и
-  // Ирландией) режет список так, что ВСЁ идущее после него попадает в эту
-  // группу — включая соседние разделы (Джин, Коньяк…): где кончается его блок,
+  // Незнакомый (не из SUBGROUPS) заголовок-«надгруппа» посреди листа режет
+  // список так, что ВСЁ идущее после него попадает в эту группу — включая
+  // соседние разделы (Джин, Коньяк…): где кончается его блок,
   // в таблице ничем не помечено. Если до него уже были категории, такой
   // группировке верить нельзя — сводим лист в одну группу и говорим об этом.
   if (groupWeight !== null && groups.length > 1 && groups[0].title === fallbackGroup) {
@@ -171,7 +214,7 @@ function buildSheet(sheet, warnings) {
     groups.slice(1).forEach((g) => {
       const names = g.categories.slice(0, 4).map((c) => c.title).join(', ');
       warnings.push(
-        `Лист «${sheet.name}»: «${g.title}» — заголовок над несколькими разделами, ` +
+        `Лист «${sheet.name}»: «${g.title}» — незнакомый заголовок над несколькими разделами, ` +
         'но где его блок кончается, в таблице не помечено. Группу не создавали, ' +
         `разделы (${names}…) в общем списке. Сгруппировать или переименовать — в редакторе.`,
       );
@@ -210,7 +253,7 @@ export async function importMenuFromExcel(source, keepStories = {}) {
       .map((c) => {
         const story = clean(c.story) || kept.get(norm(c.title)) || '';
         if (story) stories[c.title] = story;
-        return foldUnit({ title: c.title, items: c.items });
+        return foldUnit({ title: c.title, ...(c.parent ? { parent: c.parent } : {}), items: c.items });
       });
     if (!categories.length) continue;
     let id = g.id;

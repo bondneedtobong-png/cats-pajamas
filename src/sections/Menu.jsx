@@ -81,22 +81,33 @@ export default function Menu({ tx }) {
             <div className="mbk">
               {/* Кнопки категорий — по одной на каждый раздел бумажного меню */}
               <nav className="mbk__nav" aria-label="Разделы меню">
-                {menu.map((group) => (
-                  <Fragment key={group.id}>
-                    <span className="mbk__nav-label">{group.title}</span>
-                    {group.categories.map((c) => (
-                      <button
-                        key={c.title}
-                        type="button"
-                        className={`mbk__nav-btn u-glare${c.title === cat.title ? ' mbk__nav-btn--active' : ''}`}
-                        style={{ '--i': btnIndex++ }}
-                        onClick={() => setActiveTitle(c.title)}
-                      >
-                        {c.title}
-                      </button>
-                    ))}
-                  </Fragment>
-                ))}
+                {menu.map((group) => {
+                  // Третий уровень: у раздела с parent («Виски») над первым из
+                  // них печатаем подпись надгруппы, сами кнопки — с отступом.
+                  let sub = '';
+                  return (
+                    <Fragment key={group.id}>
+                      <span className="mbk__nav-label">{group.title}</span>
+                      {group.categories.map((c) => {
+                        const openSub = c.parent && c.parent !== sub ? c.parent : '';
+                        sub = c.parent || '';
+                        return (
+                          <Fragment key={c.title}>
+                            {openSub && <span className="mbk__nav-sublabel">{openSub}</span>}
+                            <button
+                              type="button"
+                              className={`mbk__nav-btn u-glare${c.parent ? ' mbk__nav-btn--sub' : ''}${c.title === cat.title ? ' mbk__nav-btn--active' : ''}`}
+                              style={{ '--i': btnIndex++ }}
+                              onClick={() => setActiveTitle(c.title)}
+                            >
+                              {c.title}
+                            </button>
+                          </Fragment>
+                        );
+                      })}
+                    </Fragment>
+                  );
+                })}
               </nav>
 
               {/* Разворот: длинная категория раскладывается на два листа */}
@@ -114,6 +125,7 @@ export default function Menu({ tx }) {
               {/* Немного истории про выбранный раздел */}
               <aside className="mbk__story">
                 <span className="mbk__story-label">{tx.menuStoryLabel}</span>
+                {cat.parent && <span className="mbk__story-parent">{cat.parent}</span>}
                 <h3 className="mbk__story-title">{cat.title}</h3>
                 <p className="mbk__story-text">{story}</p>
                 <a className="mbk__story-link u-glare" href="/menu">{tx.menuPrintLink} ›</a>

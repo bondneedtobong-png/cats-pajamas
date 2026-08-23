@@ -11,6 +11,7 @@
 | `bot_e2e.mjs` | реальный `buildBot()`+`handleUpdate()` против мока, перехват `api.telegram.org`; 50 проверок бот-сценариев |
 | `reveal_e2e.mjs` | лендинг в настоящем Chromium (Playwright): reveal-анимации при быстрой прокрутке + правила перерисовки шапки. Нужен запущенный dev-сервер |
 | `menu_xlsx_import.mjs` | прогон парсера барной карты из .xlsx без браузера |
+| `menu_import_test.mjs` | тест импорта на реальной книге владельца (`seed/menu-26.06.xlsx`): третий уровень «Виски», плоские соседи, санитайзер API, маркап /menu и JSON-LD |
 
 ## Запуск (из корня `cats-pajamas-club/`)
 
@@ -27,7 +28,11 @@ npm run dev            # удали .env.development.local, чтобы верн�
 # 3) Бот-сценарии
 node devtools/bot_e2e.mjs   # ждём "ALL SCENARIOS PASS"
 
-# 4) Лендинг в реальном браузере (нужен `npm run dev` в соседнем окне)
+# 4) Импорт барной карты из Excel (фикстура — книга владельца)
+node devtools/menu_import_test.mjs   # ждём "ALL SCENARIOS PASS"
+node devtools/menu_xlsx_import.mjs devtools/seed/menu-26.06.xlsx   # дерево глазами
+
+# 5) Лендинг в реальном браузере (нужен `npm run dev` в соседнем окне)
 node devtools/reveal_e2e.mjs            # ждём "ALL SCENARIOS PASS"
 node devtools/reveal_e2e.mjs https://cats-pajamas.ru   # можно прогнать и по проду
 ```

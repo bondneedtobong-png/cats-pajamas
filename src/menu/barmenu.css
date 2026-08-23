@@ -138,6 +138,15 @@
 .bmn-corner--bl { bottom: 5px; left: 5px; transform: scaleY(-1); }
 .bmn-corner--br { bottom: 5px; right: 5px; transform: scale(-1, -1); }
 
+/* Надгруппа над названием раздела: «Виски» → «Шотландия» */
+.bmn-card__parent {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 9px;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: rgba(var(--bmn-gold-rgb), 0.62);
+  margin: 12px 0 -6px;
+}
 .bmn-card__title {
   font-family: 'Baskerville', serif;
   font-style: italic;

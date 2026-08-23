@@ -8,7 +8,9 @@ import { Fan, CornerFan } from './MenuCard.jsx';
 // рендерит ту же раскладку секции «Меню» (.mbk — кнопки слева, карточка в центре,
 // история справа), но её тексты/цены/объёмы правятся прямо на месте (см.
 // EditableText — шрифты остаются «как на сайте»). Слева можно добавлять и удалять
-// группы/категории, в карточке — позиции. Правим единым листом (в один столбец
+// группы/категории и вкладывать категорию в надгруппу третьего уровня («Виски»
+// над Шотландией и Ирландией — кнопки ⇥/⇤, подпись надгруппы правится на месте),
+// в карточке — позиции. Правим единым листом (в один столбец
 // удобнее, чем в два узких): на сайте длинная категория сама раскладывается на
 // два листа и растёт вниз (это делает просмотр в Menu.jsx, правка не мешает). На
 // «Сохранить» вся карта уходит одним блобом в POST /api/bar-menu (сервер
@@ -18,7 +20,8 @@ let _uid = 1;
 const key = () => `k${_uid++}`;
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const newItem = () => ({ _k: key(), name: '', origin: '', volume: '', price: '' });
-const newCat = () => ({ _k: key(), title: 'Новая категория', unit: '', story: '', quote: { text: '', author: '' }, items: [newItem()] });
+const newCat = () => ({ _k: key(), title: 'Новая категория', parent: '', unit: '', story: '', quote: { text: '', author: '' }, items: [newItem()] });
+const NEW_SUBGROUP = 'Новая надгруппа';
 const hasContent = (c) => c.items.some((it) => (it.name || '').trim());
 
 // {menu, stories} с сервера → рабочая модель: у каждой категории свои поля
@@ -32,6 +35,7 @@ function toDraft(initial) {
     categories: (g.categories || []).map((c) => ({
       _k: key(),
       title: c.title || '',
+      parent: c.parent || '', // надгруппа третьего уровня, если раздел вложен
       unit: c.unit || '',
       story: stories[c.title] || '',
       quote: { text: c.quote?.text || '', author: c.quote?.author || '' },
@@ -50,6 +54,7 @@ function fromDraft(draft) {
     title: g.title,
     categories: g.categories.map((c) => ({
       title: c.title,
+      ...(c.parent ? { parent: c.parent } : {}),
       ...(c.unit ? { unit: c.unit } : {}),
       ...(c.quote?.text ? { quote: { text: c.quote.text, author: c.quote.author } } : {}),
       items: c.items.map((it) => ({
@@ -85,6 +90,9 @@ export default function MenuInlineEditor({ initial, onCancel, onSaved }) {
   };
 
   const cat = draft[sel.g]?.categories[sel.c] || null;
+  // Последняя напечатанная надгруппа по группам — чтобы её подпись в списке
+  // слева появлялась один раз, над первым из её разделов.
+  const subs = [];
 
   // ─── группы ────────────────────────────────────────────────────────────────
   const addGroup = () => mutate((d) => {
@@ -140,6 +148,18 @@ export default function MenuInlineEditor({ initial, onCancel, onSaved }) {
       clampSel(d);
     });
   };
+  // Третий уровень: раздел «вкладывается» в надгруппу — у него появляется
+  // parent с её названием. Надгруппа не отдельный объект, а именно это поле:
+  // так плоский список категорий (и все его читатели) остаётся как был.
+  const indentCat = (gi, ci) => mutate((d) => {
+    const arr = d[gi].categories;
+    arr[ci].parent = (ci > 0 && arr[ci - 1].parent) || NEW_SUBGROUP;
+  });
+  const outdentCat = (gi, ci) => mutate((d) => { d[gi].categories[ci].parent = ''; });
+  const renameSubgroup = (gi, from, v) => mutate((d) => {
+    d[gi].categories.forEach((c) => { if (c.parent === from) c.parent = v; });
+  });
+
   const patchCat = (field, v) => mutate((d) => { d[sel.g].categories[sel.c][field] = v; });
   const patchQuote = (field, v) => mutate((d) => { d[sel.g].categories[sel.c].quote[field] = v; });
 
@@ -246,19 +266,37 @@ export default function MenuInlineEditor({ initial, onCancel, onSaved }) {
               </div>
               {group.categories.map((c, ci) => {
                 const active = sel.g === gi && sel.c === ci;
+                // Подпись надгруппы печатаем над первым её разделом; правка
+                // подписи переименовывает parent сразу у всех её разделов.
+                const openSub = c.parent && c.parent !== subs[gi] ? c.parent : '';
+                subs[gi] = c.parent || '';
                 return (
-                  <div className={`mbk-edit-catrow${active ? ' mbk-edit-catrow--active' : ''}`} key={c._k}>
-                    <button
-                      type="button"
-                      className={`mbk__nav-btn${active ? ' mbk__nav-btn--active' : ''}`}
-                      onClick={() => setSel({ g: gi, c: ci })}
-                    >
-                      {c.title || 'Без названия'}
-                    </button>
-                    <button className="mbk-mini" onClick={() => moveCat(gi, ci, -1)} disabled={ci === 0} title="Выше" aria-label="Категорию выше">↑</button>
-                    <button className="mbk-mini" onClick={() => moveCat(gi, ci, 1)} disabled={ci === group.categories.length - 1} title="Ниже" aria-label="Категорию ниже">↓</button>
-                    <button className="mbk-mini mbk-mini--danger" onClick={() => delCat(gi, ci)} title="Удалить категорию" aria-label="Удалить категорию">✕</button>
-                  </div>
+                  <Fragment key={c._k}>
+                    {openSub && (
+                      <div className="mbk-edit-subhead">
+                        <EditableText
+                          tag="span" className="mbk__nav-sublabel mbk-edit-sublabel"
+                          value={openSub} onChange={(v) => renameSubgroup(gi, openSub, v)}
+                          placeholder="Название надгруппы"
+                        />
+                      </div>
+                    )}
+                    <div className={`mbk-edit-catrow${c.parent ? ' mbk-edit-catrow--sub' : ''}${active ? ' mbk-edit-catrow--active' : ''}`}>
+                      <button
+                        type="button"
+                        className={`mbk__nav-btn${active ? ' mbk__nav-btn--active' : ''}`}
+                        onClick={() => setSel({ g: gi, c: ci })}
+                      >
+                        {c.title || 'Без названия'}
+                      </button>
+                      {c.parent
+                        ? <button className="mbk-mini" onClick={() => outdentCat(gi, ci)} title="Вынести из надгруппы" aria-label="Вынести из надгруппы">⇤</button>
+                        : <button className="mbk-mini" onClick={() => indentCat(gi, ci)} title="Вложить в надгруппу (напр. «Виски»)" aria-label="Вложить в надгруппу">⇥</button>}
+                      <button className="mbk-mini" onClick={() => moveCat(gi, ci, -1)} disabled={ci === 0} title="Выше" aria-label="Категорию выше">↑</button>
+                      <button className="mbk-mini" onClick={() => moveCat(gi, ci, 1)} disabled={ci === group.categories.length - 1} title="Ниже" aria-label="Категорию ниже">↓</button>
+                      <button className="mbk-mini mbk-mini--danger" onClick={() => delCat(gi, ci)} title="Удалить категорию" aria-label="Удалить категорию">✕</button>
+                    </div>
+                  </Fragment>
                 );
               })}
               <button type="button" className="mbk-edit-add mbk-edit-add--sub" onClick={() => addCat(gi)}>+ категория</button>
@@ -281,6 +319,7 @@ export default function MenuInlineEditor({ initial, onCancel, onSaved }) {
         {/* Справа: история раздела (правится прямо в панели) */}
         <aside className="mbk__story mbk__story--edit">
           <span className="mbk__story-label">О разделе</span>
+          {cat?.parent && <span className="mbk__story-parent">{cat.parent}</span>}
           <h3 className="mbk__story-title">{cat?.title || 'Новая категория'}</h3>
           {cat && (
             <EditableText
@@ -310,6 +349,7 @@ function EditCard({ cat, items, offset, total, showHead, showQuote, isLast, h })
         <span className="bmn-card__fan bmn-card__fan--top"><Fan flip /></span>
         <span className="bmn-card__fan bmn-card__fan--bottom"><Fan /></span>
 
+        {showHead && cat.parent && <p className="bmn-card__parent">{cat.parent}</p>}
         {showHead && (
           <EditableText
             tag="h3" className="bmn-card__title"

@@ -14,9 +14,12 @@ console.log('Листы:', report.sheets.join(' | '));
 console.log(`Групп: ${report.groups}, категорий: ${report.categories}, позиций: ${report.items}, описаний: ${report.stories}\n`);
 for (const g of menu) {
   console.log(`■ ${g.title}  [${g.id}]`);
+  let sub = '';
   for (const c of g.categories) {
+    if (c.parent !== sub) { sub = c.parent || ''; if (sub) console.log(`   ▸ ${sub}`); }
     const st = stories[c.title] ? ` · о разделе: «${stories[c.title].slice(0, 50)}…»` : '';
-    console.log(`   · ${c.title} — ${c.items.length} поз.${c.unit ? ` (объём ${c.unit})` : ''}${st}`);
+    const pad = c.parent ? '      ' : '   ';
+    console.log(`${pad}· ${c.title} — ${c.items.length} поз.${c.unit ? ` (объём ${c.unit})` : ''}${st}`);
   }
 }
 console.log('\nПримеры позиций:');
