@@ -1746,7 +1746,16 @@ html { scroll-behavior: smooth; }
 
 /* ── TEAM ──────────────────────────────────────────────── */
 .team {
-  padding: clamp(70px, 12vh, 130px) 6%;
+  /* Секция барменов держится в один экран (просьба владельца 2026-08-27):
+     ряд аватарок, цитата и три кадра должны быть видны разом, без прокрутки.
+     Поэтому вертикальные поля скромнее, а внутренние размеры считаются от
+     высоты вьюпорта (vh), а не от ширины. */
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  /* Контент центрируется по высоте секции, поэтому большие поля не нужны:
+     запаса сверху хватает, чтобы фикс-шапка (76px) не накрыла подпись главы. */
+  padding: clamp(84px, 10vh, 104px) 5% clamp(24px, 3.4vh, 40px);
   position: relative;
   overflow: hidden;
 }
@@ -1789,11 +1798,12 @@ html { scroll-behavior: smooth; }
   margin: 0 auto;
 }
 .tm3 {
-  margin-top: clamp(10px, 2vh, 24px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(14px, 2.4vh, 26px);
+  /* Все вертикальные размеры внутри — от высоты экрана: секция обязана
+     умещаться целиком (аватарки + цитата + три кадра). */
+  gap: clamp(6px, 1.2vh, 15px);
   width: 100%;
 }
 
@@ -1803,15 +1813,18 @@ html { scroll-behavior: smooth; }
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: clamp(10px, 1.6vw, 24px);
-  padding: 6px 2px 14px;
+  gap: clamp(8px, 1.2vw, 18px);
+  /* Кружки съезжают по вертикали (--ava-shift), поэтому сверху нужен запас —
+     иначе верхний ряд наезжает на подпись главы. */
+  padding: 18px 2px 10px;
   width: 100%;
 }
 .tm3__ava {
   position: relative;
   flex: 0 0 auto;
-  width: var(--ava, 104px);
-  height: var(--ava, 104px);
+  /* Кружок не крупнее 11% высоты экрана — на ноутбуке ряд не съедает пол-экрана. */
+  width: min(var(--ava, 104px), 9.5vh);
+  height: min(var(--ava, 104px), 9.5vh);
   border-radius: 50%;
   border: 1px solid rgba(var(--gold-rgb), .3);
   background-color: var(--bg2);
@@ -1841,7 +1854,7 @@ html { scroll-behavior: smooth; }
   display: grid;
   place-items: center;
   font-family: 'Baskerville', serif;
-  font-size: calc(var(--ava, 104px) * .34);
+  font-size: calc(min(var(--ava, 104px), 9.5vh) * .34);
   color: rgba(var(--gold-rgb), .55);
 }
 /* Имя появляется у активного и под курсором — постоянные подписи превратили бы
@@ -1869,7 +1882,7 @@ html { scroll-behavior: smooth; }
 .tm3__name {
   font-family: 'Baskerville', serif;
   font-weight: 400;
-  font-size: clamp(30px, 5vw, 56px);
+  font-size: clamp(24px, 3.6vh, 42px);
   line-height: 1.1;
   letter-spacing: .5px;
   color: var(--text);
@@ -1880,47 +1893,69 @@ html { scroll-behavior: smooth; }
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--gold);
-  margin-top: 8px;
+  margin-top: 5px;
 }
 .tm3__spec {
   font-family: 'Involve', serif;
   font-style: italic;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-dim);
-  margin-top: 4px;
+  margin-top: 3px;
 }
 .tm3__bio {
-  max-width: 68ch;
+  max-width: 96ch;
   margin: 0;
   text-align: center;
-  font-size: clamp(14px, 1.7vh, 16px);
-  line-height: 1.75;
+  font-size: clamp(12px, 1.55vh, 14.5px);
+  line-height: 1.62;
   color: var(--text-mid);
+  /* В один экран влезают четыре строки; полный текст открывается кнопкой —
+     прятать биографию насовсем нечестно, а растягивать секцию нельзя. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.tm3__bio--open { -webkit-line-clamp: unset; overflow: visible; }
+.tm3__bio-more {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-top: 2px;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--gold);
+  cursor: pointer;
 }
 
 /* Цитата в латунной табличке */
 .tm3__quote {
   position: relative;
   margin: 0;
-  padding: clamp(26px, 3.8vh, 46px) clamp(32px, 4vw, 60px);
-  max-width: 760px;
+  padding: clamp(12px, 1.9vh, 22px) clamp(26px, 3.2vw, 48px);
+  max-width: 720px;
   width: 100%;
   text-align: center;
 }
 .tm3__quote-text {
   font-family: 'Jar Binks', cursive;
-  font-size: clamp(28px, 4.2vh, 42px);
-  line-height: 1.5;
+  font-size: clamp(19px, 2.8vh, 29px);
+  line-height: 1.4;
   color: color-mix(in srgb, var(--gold) 72%, #fff);
   margin: 0;
 }
 
 /* Лента из трёх кадров: маленький — крупный — средний (эскиз владельца). */
+/* Ряд кадров задаётся ВЫСОТОЙ (доля экрана), ширина каждого следует за ней
+   через aspect-ratio: фото остаются небольшими и не растягивают секцию. */
 .tm3__shots {
-  display: grid;
-  grid-template-columns: 0.85fr 1.3fr 1fr;
-  align-items: end;
-  gap: clamp(10px, 1.6vw, 22px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: clamp(10px, 1.4vw, 20px);
+  height: clamp(140px, 26vh, 280px);
   width: 100%;
 }
 .tm3__shot {
@@ -1932,7 +1967,12 @@ html { scroll-behavior: smooth; }
   background: var(--bg2);
   box-shadow: 0 16px 34px rgba(0, 0, 0, .35);
   aspect-ratio: 4 / 5;
+  height: 100%;
+  flex: 0 0 auto;
 }
+/* Маленький слева, крупный по центру, средний справа — как на эскизе. */
+.tm3__shot--work { height: 76%; }
+.tm3__shot--fun  { height: 88%; }
 .tm3__shot img {
   width: 100%;
   height: 100%;
@@ -1944,9 +1984,10 @@ html { scroll-behavior: smooth; }
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 26px 14px 10px;
-  font-size: 10px;
-  letter-spacing: 2.2px;
+  padding: 20px 10px 8px;
+  font-size: 9px;
+  letter-spacing: 1.6px;
+  white-space: nowrap;
   text-transform: uppercase;
   color: var(--text-mid);
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .7));
@@ -1960,6 +2001,9 @@ html { scroll-behavior: smooth; }
 .tm3__shot-stub {
   position: absolute;
   inset: 0;
+  /* Место снизу под подпись слота — иначе на низком экране «Снимок скоро»
+     наезжает на «ЗА СТОЙКОЙ». */
+  padding-bottom: 22px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1980,9 +2024,8 @@ html { scroll-behavior: smooth; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-top: clamp(4px, 1vh, 12px);
 }
 .tm3__join-text {
   margin: 0;
@@ -2000,13 +2043,28 @@ html { scroll-behavior: smooth; }
   font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  padding: 12px 20px;
+  padding: 9px 18px;
   cursor: pointer;
 }
 
+/* Низкий экран (ноутбук 1366×700): биография ужимается до трёх строк, кадры
+   становятся ниже — секция всё равно обязана уместиться целиком. */
+@media (max-height: 800px) {
+  .tm3__bio { -webkit-line-clamp: 2; }
+  .tm3__shots { height: clamp(130px, 23vh, 220px); }
+}
+
 @media (max-width: 900px) {
+  /* На телефоне один экран физически не собрать — возвращаем обычную прокрутку. */
+  .team { min-height: 0; display: block; padding-top: clamp(56px, 8vh, 90px); }
+  .tm3__bio { -webkit-line-clamp: unset; overflow: visible; }
+  .tm3__bio-more { display: none; }
+  .tm3__shots { display: grid; grid-template-columns: 1fr; height: auto; }
+  .tm3__shot, .tm3__shot--work, .tm3__shot--fun { height: auto; width: 100%; }
   .tm3__ring {
     flex-wrap: nowrap;
+    /* overflow-x режет и по вертикали — оставляем место подписи под кружком. */
+    padding-bottom: 24px;
     overflow-x: auto;
     justify-content: flex-start;
     scrollbar-width: none;
@@ -2017,7 +2075,6 @@ html { scroll-behavior: smooth; }
   .tm3__ava:hover { transform: none; }
   .tm3__ava--on { transform: scale(1.04); }
   /* Кадры в столбик: парадный первым — он главный. */
-  .tm3__shots { grid-template-columns: 1fr; }
   .tm3__shot--hero { order: -1; }
   .tm3__quote-text { font-size: clamp(26px, 8vw, 38px); }
   /* Пустые кадры на телефоне не должны занимать по экрану каждый. */

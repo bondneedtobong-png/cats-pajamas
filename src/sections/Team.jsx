@@ -63,6 +63,7 @@ export default function Team({ tx }) {
   const [idx,      setIdx]      = useState(0);
   const [loading,  setLoading]  = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [bioOpen,  setBioOpen]  = useState(false);
   const r0 = useReveal(0);
 
   useEffect(() => {
@@ -75,6 +76,9 @@ export default function Team({ tx }) {
   }, []);
 
   const current = members[idx];
+  // Длинную биографию в один экран не уместить — показываем начало и даём
+  // раскрыть по кнопке (порог подобран по самой длинной биографии команды).
+  const bioLong = (current?.bio || '').length > 240;
 
   return (
     <section id="team" className="team">
@@ -106,7 +110,7 @@ export default function Team({ tx }) {
                       backgroundPosition: focus.pos,
                     }}
                     aria-pressed={i === idx}
-                    onClick={() => setIdx(i)}
+                    onClick={() => { setIdx(i); setBioOpen(false); }}
                   >
                     {!m.photoUrl && <span className="tm3__ava-letter">{m.name.slice(0, 1)}</span>}
                     <span className="tm3__ava-name">{m.name}</span>
@@ -122,7 +126,16 @@ export default function Team({ tx }) {
               {current.spec && <div className="tm3__spec">{current.spec}</div>}
             </header>
 
-            {current.bio && <p className="tm3__bio">{current.bio}</p>}
+            {current.bio && (
+              <>
+                <p className={`tm3__bio${bioOpen ? ' tm3__bio--open' : ''}`}>{current.bio}</p>
+                {bioLong && (
+                  <button type="button" className="tm3__bio-more" onClick={() => setBioOpen((v) => !v)}>
+                    {bioOpen ? 'Свернуть' : 'Читать дальше'}
+                  </button>
+                )}
+              </>
+            )}
 
             {/* Цитата — латунная табличка (вариант владельца) */}
             <figure className="tm3__quote">
