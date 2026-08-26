@@ -100,6 +100,9 @@ export const translations = {
     // ─── Бронирование v2 (план зала + заявка) ───
     // Страница /booking v3 (рестайлинг 2026-08-26): шапка-обложка, шаги и
     // «как это работает» вместо пустой панели.
+    // Подписи кадров в секции «Бармены» v3 (2026-08-27)
+    teamShotWork: 'За стойкой', teamShotHero: 'Портрет', teamShotFun: 'Вне смены',
+    teamShotSoon: 'Снимок скоро',
     bkPageKicker: 'Займите свой столик',
     bkPageTitle: 'Бронирование',
     bkPageLead: 'Выберите вечер, время прихода и стол на плане зала. Заявку подтверждает бармен.',
@@ -229,6 +232,8 @@ export const translations = {
     phoneLabel: 'Phone',
 
     // ─── Booking v2 (floor plan + request) ───
+    teamShotWork: 'Behind the bar', teamShotHero: 'Portrait', teamShotFun: 'Off duty',
+    teamShotSoon: 'Photo coming',
     bkPageKicker: 'Take your seat',
     bkPageTitle: 'Book a table',
     bkPageLead: 'Pick an evening, an arrival time and a table on the floor plan. A bartender confirms every request.',

@@ -1159,6 +1159,8 @@ function TeamModal({ initial, onSave, onClose }) {
   const [quote,       setQuote]       = useState(initial?.quote || '');
   const [quoteSource, setQuoteSource] = useState(initial?.quoteSource || '');
   const [photoUrl,    setPhotoUrl]    = useState(initial?.photoUrl || '');
+  const [photoWorkUrl, setPhotoWorkUrl] = useState(initial?.photoWorkUrl || '');
+  const [photoFunUrl,  setPhotoFunUrl]  = useState(initial?.photoFunUrl || '');
   const [active,      setActive]      = useState(initial?.active !== false);
   const [err,         setErr]         = useState('');
   const [saving,      setSaving]      = useState(false);
@@ -1168,7 +1170,7 @@ function TeamModal({ initial, onSave, onClose }) {
     setErr('');
     setSaving(true);
     try {
-      await onSave({ name, role, spec, bio, quote, quoteSource, photoUrl, active });
+      await onSave({ name, role, spec, bio, quote, quoteSource, photoUrl, photoWorkUrl, photoFunUrl, active });
     } catch (ex) {
       setErr(ex.message);
       setSaving(false);
@@ -1210,8 +1212,20 @@ function TeamModal({ initial, onSave, onClose }) {
             <input className="adm-form-input" type="text" value={quoteSource} onChange={e => setQuoteSource(e.target.value)} placeholder="Гарри Крэддок, «The Savoy Cocktail Book»" />
           </div>
           <div className="adm-form-field">
-            <label className="adm-form-lbl">ССЫЛКА НА ФОТО</label>
-            <input className="adm-form-input" type="text" value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="https://..." />
+            <label className="adm-form-lbl">ПАРАДНОЕ ФОТО (центр секции + аватарка)</label>
+            <input className="adm-form-input" type="text" value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="/uploads/team/имя.jpg" />
+          </div>
+          {/* Секция «Бармены» v3 (2026-08-27): три кадра на человека. Пустые
+              слоты сайт показывает заглушкой — заполняются по мере съёмки. */}
+          <div className="adm-form-row">
+            <div className="adm-form-field">
+              <label className="adm-form-lbl">ФОТО «В РАБОТЕ» (слева)</label>
+              <input className="adm-form-input" type="text" value={photoWorkUrl} onChange={e => setPhotoWorkUrl(e.target.value)} placeholder="/uploads/team/имя-work.jpg" />
+            </div>
+            <div className="adm-form-field">
+              <label className="adm-form-lbl">ФОТО «В НАСТРОЕНИИ» (справа)</label>
+              <input className="adm-form-input" type="text" value={photoFunUrl} onChange={e => setPhotoFunUrl(e.target.value)} placeholder="/uploads/team/имя-fun.jpg" />
+            </div>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'rgba(242,237,228,0.6)', cursor: 'pointer' }}>
             <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />

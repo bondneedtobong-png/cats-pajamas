@@ -4,26 +4,26 @@ import QuoteFrame from '../ui/QuoteFrame.jsx';
 import TeamService from '../team/TeamService.js';
 import ApplicationsService from '../team/ApplicationsService.js';
 
-// Секция «Бармены» v2 (макет владельца, 2026-07-05): слева большой портрет,
-// в центре имя/должность/стаж + биография + книжная цитата с источником,
-// справа навигация по сотрудникам (кнопки с фото-фоном, кадр по глазам) и
-// блок «попасть в команду». Стрелки-переключалки убраны — только кнопки.
-// Если у бармена не заполнена цитата в админке, берём из запасного пула
-// (реальные цитаты с источниками — не выдумки).
-// В текстах цитат НЕ используем длинное тире: в рукописном Jar Binks оно
-// рендерится жирной золотой чертой и ломает строку (просьба владельца —
-// только точки и запятые).
-const FALLBACK_QUOTES = [
-  { text: 'Пейте быстро, пока коктейль смеётся над вами!', source: 'Гарри Крэддок, «The Savoy Cocktail Book»' },
-  { text: 'Я могу устоять перед чем угодно, кроме искушения.', source: 'Оскар Уайльд, «Веер леди Уиндермир»' },
-  { text: 'Один мартини в самый раз, два слишком много, а три недостаточно.', source: 'Джеймс Тёрбер' },
-  { text: 'Вино. Одна из самых цивилизованных вещей на свете.', source: 'Эрнест Хемингуэй, «Смерть после полудня»' },
-];
+// Секция «Бармены» v3 (макет владельца, 2026-08-27): сверху ряд круглых
+// аватарок-переключателей, под ними имя и биография, дальше цитата в латунной
+// табличке и лента из трёх кадров — «в работе» (слева, маленький), парадный
+// (по центру, крупный) и «в настроении» (справа).
+//
+// Прежняя раскладка v2 (портрет слева, список-кнопки справа) удалена целиком.
+//
+// Тексты цитат владелец переписывает заново — до этого во всех карточках стоит
+// одна заглушка (QUOTE_STUB), цитаты из БД временно не показываются. Когда
+// новые тексты появятся, убрать QUOTE_STUB и вернуть current.quote.
+const QUOTE_STUB = 'Упс! Извините, текст временно украли, вернем его чуть позже!';
 
-// Кадрирование фото в кнопках навигации: единый шаблон «глаза + верх головы»
-// (референс владельца — кадр Дениса). Портреты сняты с разного расстояния,
-// поэтому у каждого свой зум (size) и точка фокуса (pos) — подобраны по
-// реальным фото. Ключ — имя файла: смена фото в админке вернёт дефолт.
+// Кружки разного размера — как на эскизе владельца. Размер зависит от номера,
+// а не от случайности: раскладка не должна прыгать на каждом ре-рендере.
+const AVA_SIZES = [104, 128, 92, 116, 98, 122, 88, 110];
+const avaSize = (i) => AVA_SIZES[i % AVA_SIZES.length];
+
+// Кадрирование аватарок: портреты сняты с разного расстояния, поэтому у
+// каждого свой зум и точка фокуса — подобраны по реальным фото. Ключ — имя
+// файла: смена фото в админке вернёт дефолт.
 const PHOTO_FOCUS = {
   'shamusar.jpg':  { size: '210% auto', pos: '31% 19%' },
   'aleksey.jpg':   { size: '210% auto', pos: '58% 30%' },
@@ -35,15 +35,27 @@ const PHOTO_FOCUS = {
 const DEFAULT_FOCUS = { size: 'cover', pos: '50% 22%' };
 const focusFor = (url) => PHOTO_FOCUS[(url || '').split('/').pop()] || DEFAULT_FOCUS;
 
-// Оформление рамки цитаты. Владелец сравнивает вживую: ?quote=fan|card|plate.
-// Когда выберет — значение станет дефолтом, лишние варианты уедут из
-// QuoteFrame.jsx и index.css.
-const QUOTE_VARIANTS = ['fan', 'card', 'plate'];
-const QUOTE_VARIANT = 'fan';
-function quoteVariant() {
-  if (typeof window === 'undefined') return QUOTE_VARIANT;
-  const q = new URLSearchParams(window.location.search).get('quote');
-  return QUOTE_VARIANTS.includes(q) ? q : QUOTE_VARIANT;
+/** Знак-креманка для пустых слотов — вместо серого прямоугольника. */
+function CoupeSign() {
+  return (
+    <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"
+      fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+      <path d="M3.5 5.5 L20.5 5.5 L12 15 Z" />
+      <path d="M12 15 L12 20 M8 20 L16 20" />
+    </svg>
+  );
+}
+
+/** Кадр ленты: фото или заглушка «снимок скоро». */
+function Shot({ url, kind, caption, alt, soon }) {
+  return (
+    <figure className={`tm3__shot tm3__shot--${kind}${url ? '' : ' tm3__shot--empty'}`}>
+      {url
+        ? <img src={url} alt={alt} loading="lazy" />
+        : <span className="tm3__shot-stub"><CoupeSign /><span className="tm3__shot-soon">{soon}</span></span>}
+      <figcaption className="tm3__shot-cap">{caption}</figcaption>
+    </figure>
+  );
 }
 
 export default function Team({ tx }) {
@@ -63,13 +75,10 @@ export default function Team({ tx }) {
   }, []);
 
   const current = members[idx];
-  const quote = current?.quote
-    ? { text: current.quote.replace(/^«|»$/g, ''), source: current.quoteSource }
-    : FALLBACK_QUOTES[idx % FALLBACK_QUOTES.length];
 
   return (
     <section id="team" className="team">
-      <div className="team__inner team__inner--profile">
+      <div className="team__inner team__inner--stage">
         <div ref={r0} className="reveal" style={{ textAlign: 'center' }}>
           <span className="sec-label">{tx.teamLabel}</span>
         </div>
@@ -78,66 +87,60 @@ export default function Team({ tx }) {
         {!loading && !current && <p className="team__note">{tx.teamEmpty}</p>}
 
         {!loading && current && (
-          <div className="tm2">
-            {/* Портрет */}
-            <div className="tm2__photo" key={current.id}>
-              {current.photoUrl && <img src={current.photoUrl} alt={current.name} loading="lazy" />}
+          <div className="tm3">
+            {/* Ряд аватарок — он же переключатель бармена */}
+            <nav className="tm3__ring" aria-label="Наши бармены">
+              {members.map((m, i) => {
+                const focus = focusFor(m.photoUrl);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`tm3__ava${i === idx ? ' tm3__ava--on' : ''}`}
+                    style={{
+                      '--ava': `${avaSize(i)}px`,
+                      // Кружки стоят не по линейке, а вразнобой — как на эскизе.
+                      '--ava-shift': `${((i % 4) - 1.5) * 10}px`,
+                      backgroundImage: m.photoUrl ? `url(${m.photoUrl})` : undefined,
+                      backgroundSize: focus.size,
+                      backgroundPosition: focus.pos,
+                    }}
+                    aria-pressed={i === idx}
+                    onClick={() => setIdx(i)}
+                  >
+                    {!m.photoUrl && <span className="tm3__ava-letter">{m.name.slice(0, 1)}</span>}
+                    <span className="tm3__ava-name">{m.name}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Имя · должность · стаж */}
+            <header className="tm3__head" key={current.id}>
+              <h2 className="tm3__name">{current.name}</h2>
+              {current.role && <div className="tm3__role">{current.role}</div>}
+              {current.spec && <div className="tm3__spec">{current.spec}</div>}
+            </header>
+
+            {current.bio && <p className="tm3__bio">{current.bio}</p>}
+
+            {/* Цитата — латунная табличка (вариант владельца) */}
+            <figure className="tm3__quote">
+              <QuoteFrame />
+              <blockquote className="tm3__quote-text">{QUOTE_STUB}</blockquote>
+            </figure>
+
+            {/* Три кадра: в работе · парадный · в настроении */}
+            <div className="tm3__shots">
+              <Shot kind="work" url={current.photoWorkUrl} caption={tx.teamShotWork} soon={tx.teamShotSoon} alt={`${current.name} за работой`} />
+              <Shot kind="hero" url={current.photoUrl} caption={tx.teamShotHero} soon={tx.teamShotSoon} alt={current.name} />
+              <Shot kind="fun" url={current.photoFunUrl} caption={tx.teamShotFun} soon={tx.teamShotSoon} alt={`${current.name}, кадр вне смены`} />
             </div>
 
-            {/* Имя+стаж и био+цитата — один грид-элемент (.tm2__content), чтобы
-                фото/сайдбар справа не растягивали их порознь (см. .tm2 в CSS) */}
-            <div className="tm2__content">
-              {/* Имя · должность · стаж */}
-              <header className="tm2__head">
-                <h2 className="tm2__name">{current.name}</h2>
-                {current.role && <div className="tm2__role">{current.role}</div>}
-                {current.spec && <div className="tm2__spec">{current.spec}</div>}
-              </header>
-
-              {/* Биография + книжная цитата */}
-              <div className="tm2__body">
-                {current.bio && <p className="tm2__bio">{current.bio}</p>}
-                {quote && (
-                  <figure className="tm2__quote">
-                    <QuoteFrame variant={quoteVariant()} />
-                    <blockquote className="tm2__quote-text">«{quote.text}»</blockquote>
-                    {quote.source && <figcaption className="tm2__quote-src">— {quote.source}</figcaption>}
-                  </figure>
-                )}
-              </div>
+            <div className="tm3__join">
+              <p className="tm3__join-text">{tx.teamJoinAsk}</p>
+              <button className="tm3__join-btn u-glare" onClick={() => setShowForm(true)}>{tx.teamJoinShare}</button>
             </div>
-
-            {/* Навигация по сотрудникам + анкета */}
-            <aside className="tm2__side">
-              <nav className="tm2__nav" aria-label="Наши бармены">
-                {members.map((m, i) => {
-                  const focus = focusFor(m.photoUrl);
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      className={`tm2__nav-btn u-glare${i === idx ? ' tm2__nav-btn--active' : ''}`}
-                      style={{
-                        '--i': i,
-                        backgroundImage: m.photoUrl
-                          ? `linear-gradient(90deg, rgba(9,7,18,.86) 34%, rgba(9,7,18,.30)), url(${m.photoUrl})`
-                          : undefined,
-                        backgroundSize: focus.size,
-                        backgroundPosition: focus.pos,
-                      }}
-                      onClick={() => setIdx(i)}
-                    >
-                      <span className="tm2__nav-name">{m.name}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-
-              <div className="tm2__join">
-                <p className="tm2__join-text">{tx.teamJoinAsk}</p>
-                <button className="tm2__join-btn u-glare" onClick={() => setShowForm(true)}>{tx.teamJoinShare}</button>
-              </div>
-            </aside>
           </div>
         )}
       </div>

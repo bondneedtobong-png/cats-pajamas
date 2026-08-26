@@ -103,7 +103,9 @@ section('Уважение к содержимому');
 const { pages } = buildBook(menu, stories, 6);
 const first = pages.find((p) => p && p.story);
 ok(!!first, 'страница с «О разделе» существует');
-ok(first.items.length <= 4, 'на такой странице позиций меньше — текст занимает место',
+// STORY_COST = 1 с 2026-08-27: «О разделе» набрано мелким рукописным шрифтом и
+// занимает одну строку-позицию, а не две, как раньше.
+ok(first.items.length <= 5, 'на такой странице позиций меньше — текст занимает место',
   `позиций ${first.items.length}`);
 const quoted = pages.filter((p) => p && p.quote);
 ok(quoted.every((p) => {

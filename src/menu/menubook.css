@@ -23,8 +23,8 @@
 
   /* Книга «в длину»: лист заметно вытянут по вертикали (правка владельца
      2026-08-23), поэтому пропорция уже печатной A5 — 0.55 вместо 0.71. */
-  --mbook-page-h: clamp(420px, 78vh, 780px);
-  --mbook-ratio: 0.55;
+  --mbook-page-h: clamp(440px, 84vh, 820px);
+  --mbook-ratio: 0.6;
   /* …но не шире того, что осталось от экрана после колонок пузырей и витрины:
      иначе разворот вылезает за вьюпорт. */
   --mbook-fit: calc((100vw - 620px) / 2);
@@ -35,7 +35,7 @@
      Один множитель на все размеры листа: меняется в одном месте, вёрстка
      остаётся пропорциональной. Пагинация знает про него (perPageFor в
      MenuBook.jsx) — иначе позиции полезли бы за край листа. */
-  --mbook-fs: 1.3;
+  --mbook-fs: 1.56;
 
   /* Слева пузыри, справа витрина коктейлей, книга — ровно по центру страницы:
      колонки по краям одинаковой ширины, книга в auto-колонке между ними. */
@@ -161,41 +161,11 @@
 }
 .mbook__bubble.is-open .mbook__bubble-text { color: var(--gold); }
 
-/* ─── Оформления пузырей ────────────────────────────────────────────────────
-   Владелец сравнивает варианты вживую: ?bubbles=glass|brass|paper|wax в адресе
-   страницы (MenuBook.jsx читает параметр). По умолчанию — стекло. Выбранный
-   станет значением BUBBLE_STYLE, остальные удалим — держать четыре навсегда
-   незачем. */
-
-/* Латунный жетон: бронза, гравировка, тиснёный кот. Золото приглушено — по
-   логобуку им нельзя заливать крупные площади, поэтому это тёмная бронза
-   с золотым ребром, а не золотая монета. */
-.mbook__bubbles--brass .mbook__bubble-body {
-  border-color: rgba(var(--gold-rgb), .55);
-  background:
-    radial-gradient(58% 48% at 32% 26%, rgba(255, 232, 176, .30), rgba(255, 232, 176, 0) 70%),
-    linear-gradient(150deg, #6B5320 0%, #4A3A17 42%, #2E230F 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 236, 190, .35),
-    inset 0 -8px 16px rgba(0, 0, 0, .45),
-    0 8px 20px rgba(0, 0, 0, .45);
-}
-.mbook__bubbles--brass .mbook__bubble-body::before {
-  /* Гравированное кольцо по краю жетона. */
-  content: '';
-  position: absolute;
-  inset: 7%;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 232, 176, .22);
-  pointer-events: none;
-}
-.mbook__bubbles--brass .mbook__bubble .cs { color: rgba(255, 238, 198, .82); }
-.mbook__bubbles--brass .mbook__bubble:hover .cs { color: #FFF0CE; }
-.mbook__bubbles--brass .mbook__bubble-text { color: rgba(255, 238, 198, .74); }
-.mbook__bubbles--brass .mbook__bubble.is-open .mbook__bubble-body { border-color: var(--gold); }
-
-/* Бумажный стикер: тот же лён и та же чёрная краска, что на страницах книги —
-   будто наклейки из самого меню. Каждый чуть повёрнут (стабильно, от номера). */
+/* ─── Пузыри-наклейки ────────────────────────────────────────────────────────
+   Выбор владельца 2026-08-27 из четырёх витринных вариантов (стекло, латунный
+   жетон, бумага, сургуч) — оставлена бумага: тот же лён и та же чёрная краска,
+   что на страницах книги, будто наклейки из самого меню. Остальные варианты
+   удалены вместе с параметром ?bubbles. */
 .mbook__bubbles--paper .mbook__bubble-body {
   border: 1px solid rgba(122, 112, 92, .5);
   backdrop-filter: none;
@@ -203,6 +173,7 @@
     repeating-linear-gradient(90deg, rgba(0, 0, 0, .022) 0 1px, transparent 1px 3px),
     radial-gradient(70% 60% at 30% 24%, #FBF8F1, #EDE8DC 78%);
   box-shadow: 0 10px 22px rgba(0, 0, 0, .45), inset 0 0 0 3px rgba(255, 255, 255, .5);
+  /* Каждая наклейка чуть повёрнута — стабильно, от номера (см. MenuBook.jsx). */
   transform: rotate(var(--mbook-bubble-tilt, 0deg));
 }
 .mbook__bubbles--paper .mbook__bubble .cs { color: #2A2118; }
@@ -214,47 +185,9 @@
 .mbook__bubbles--paper .mbook__bubble:focus-visible .mbook__bubble-body {
   transform: rotate(var(--mbook-bubble-tilt, 0deg)) translateY(-3px) scale(1.06);
 }
-.mbook__bubbles--paper .mbook__bubble.is-open .mbook__bubble-body { border-color: var(--gold); }
-
-/* Сургучная печать: фирменный #371931, оттиск золотом, рваного края нет —
-   вместо него мягкий валик по краю (тень + подсветка). */
-.mbook__bubbles--wax .mbook__bubble-body {
-  border: 0;
-  backdrop-filter: none;
-  background:
-    radial-gradient(60% 50% at 32% 26%, rgba(255, 214, 168, .16), rgba(255, 214, 168, 0) 66%),
-    radial-gradient(120% 120% at 50% 55%, #4A2140 0%, #371931 55%, #24101F 100%);
-  box-shadow:
-    inset 0 2px 3px rgba(255, 220, 180, .18),
-    inset 0 -10px 20px rgba(0, 0, 0, .5),
-    0 10px 22px rgba(0, 0, 0, .5);
-  transform: rotate(var(--mbook-bubble-tilt, 0deg));
-}
-.mbook__bubbles--wax .mbook__bubble-body::before {
-  content: '';
-  position: absolute;
-  inset: 9%;
-  border-radius: 50%;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45), inset 0 -1px 1px rgba(255, 220, 180, .12);
-  pointer-events: none;
-}
-.mbook__bubbles--wax .mbook__bubble .cs { color: rgba(var(--gold-rgb), .78); }
-.mbook__bubbles--wax .mbook__bubble:hover .cs { color: var(--gold); }
-.mbook__bubbles--wax .mbook__bubble-text { color: rgba(198, 191, 181, .72); }
-.mbook__bubbles--wax .mbook__bubble:hover .mbook__bubble-body,
-.mbook__bubbles--wax .mbook__bubble:focus-visible .mbook__bubble-body {
-  transform: rotate(var(--mbook-bubble-tilt, 0deg)) translateY(-3px) scale(1.06);
-}
-
-
-/* Открытый раздел в каждом оформлении отмечается по-своему: заливка «стекла»
-   на бумаге и сургуче выглядела бы кляксой. */
-.mbook__bubbles--brass .mbook__bubble.is-open .mbook__bubble-body {
-  background:
-    radial-gradient(58% 48% at 32% 26%, rgba(255, 240, 200, .42), rgba(255, 240, 200, 0) 70%),
-    linear-gradient(150deg, #8A6C29 0%, #5E4A1D 45%, #3A2C12 100%);
-}
+/* Открытый раздел: бумага светлеет и получает золотой кант. */
 .mbook__bubbles--paper .mbook__bubble.is-open .mbook__bubble-body {
+  border-color: var(--gold);
   background:
     repeating-linear-gradient(90deg, rgba(0, 0, 0, .022) 0 1px, transparent 1px 3px),
     radial-gradient(70% 60% at 30% 24%, #FFFDF7, #F3EEE0 78%);
@@ -264,17 +197,6 @@
     0 0 0 2px rgba(var(--gold-rgb), .55);
 }
 .mbook__bubbles--paper .mbook__bubble.is-open .mbook__bubble-text { color: #16130F; }
-.mbook__bubbles--wax .mbook__bubble.is-open .mbook__bubble-body {
-  background:
-    radial-gradient(60% 50% at 32% 26%, rgba(255, 224, 178, .22), rgba(255, 224, 178, 0) 66%),
-    radial-gradient(120% 120% at 50% 55%, #5C2A50 0%, #431E3B 55%, #2B1425 100%);
-  box-shadow:
-    inset 0 2px 3px rgba(255, 220, 180, .22),
-    inset 0 -10px 20px rgba(0, 0, 0, .5),
-    0 10px 22px rgba(0, 0, 0, .5),
-    0 0 0 1px rgba(var(--gold-rgb), .5);
-}
-.mbook__bubbles--wax .mbook__bubble.is-open .mbook__bubble-text { color: var(--gold); }
 
 /* Курсор вошёл в поле — пузыри замирают: по движущейся мишени неудобно
    попадать (тот же приём, что в «Стене памяти»: наведение останавливает ленту). */
@@ -432,7 +354,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: clamp(28px, 5vh, 46px) clamp(20px, 3.4vw, 40px) clamp(24px, 4vh, 38px);
+  padding: clamp(20px, 3.6vh, 34px) clamp(16px, 2.6vw, 32px) clamp(16px, 2.8vh, 26px);
   text-align: center;
   overflow: hidden;
 }
@@ -469,26 +391,30 @@
   color: var(--mbook-ink-dim);
   margin: 0;
 }
+/* «О разделе» — рукописный Jar Binks, как в цитатах (просьба владельца
+   2026-08-27), и на 30% мельче основного кегля: текст-примечание не должен
+   спорить с позициями и съедать страницу. */
 .mbook__story {
-  font-family: 'Involve', serif;
-  font-style: italic;
-  font-size: calc(clamp(10px, 1.35vh, 12.5px) * var(--mbook-fs));
-  line-height: 1.55;
+  font-family: 'Jar Binks', cursive;
+  font-size: calc(clamp(10px, 1.35vh, 12.5px) * var(--mbook-fs) * 1.0);
+  line-height: 1.5;
   color: var(--mbook-ink-mid);
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   flex-shrink: 0;
 }
 
 .mbook__items {
   list-style: none;
-  margin: clamp(10px, 2vh, 20px) 0 0;
+  margin: clamp(6px, 1.3vh, 13px) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  /* Позиции распределяются по высоте листа, как в печатном меню, а не жмутся
-     к заголовку (логобук, стр. 44). */
-  justify-content: space-evenly;
-  gap: clamp(6px, 1.2vh, 14px);
+  /* Плотный печатный набор: позиции идут подряд с небольшим воздухом.
+     Прежнее space-evenly растягивало их на всю высоту листа — на крупном
+     кегле это съедало по позиции с каждой страницы (правка владельца
+     2026-08-27: «ставить напитки компактнее друг к другу»). */
+  justify-content: flex-start;
+  gap: clamp(4px, 0.85vh, 10px);
   flex: 1;
   min-height: 0;
 }
@@ -496,21 +422,24 @@
 .mbook__item-name {
   font-family: 'Avenir Next', sans-serif;
   font-size: calc(clamp(10px, 1.5vh, 14px) * var(--mbook-fs));
-  line-height: 1.3;
+  line-height: 1.22;
   color: var(--mbook-ink);
 }
 .mbook__item-origin {
   font-family: 'Involve', serif;
   font-style: italic;
-  font-size: calc(clamp(8.5px, 1.15vh, 11px) * var(--mbook-fs));
-  line-height: 1.35;
+  /* Состав — вспомогательная строка: держим её на 15% мельче общего кегля,
+     иначе длинные рецепты уезжают на три строки и лист вмещает на позицию
+     меньше (компромисс уплотнения 2026-08-27). */
+  font-size: calc(clamp(8.5px, 1.15vh, 11px) * var(--mbook-fs) * 0.86);
+  line-height: 1.28;
   color: var(--mbook-ink-dim);
 }
 .mbook__item-line {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-top: 2px;
+  margin-top: 1px;
   font-size: calc(clamp(9px, 1.2vh, 11.5px) * var(--mbook-fs));
 }
 .mbook__item-vol {
@@ -714,7 +643,7 @@
   .mbook {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
-    --mbook-page-h: clamp(340px, 56vh, 520px);
+    --mbook-page-h: clamp(360px, 60vh, 560px);
     --mbook-fit: calc((100vw - 150px) / 2); /* пузыри переехали наверх, по бокам только стрелки */
   }
   /* Витрину на узком экране пока не показываем — мобильную раскладку доводим

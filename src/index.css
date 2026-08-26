@@ -1778,185 +1778,256 @@ html { scroll-behavior: smooth; }
   margin: 0 0 32px;
 }
 
-/* ── Бармены v2 (.tm2): портрет слева, имя+био+цитата в центре, справа
-   кнопки-сотрудники с фото-фоном и анкета (макет владельца, 2026-07-05).
-   Редизайн 2026-07-08: секция растёт по контенту вместо принудительного
-   вмещения в 100vh — фото-колонка получает высоту сама, по сумме строк
-   head+body (grid делает это естественно). Grid-areas — чтобы на мобиле
-   переставить блоки в нужный порядок. ── */
-.team__inner--profile {
+/* ── Бармены v3 (.tm3) — макет владельца 2026-08-27 ───────────────────────────
+   Сверху ряд круглых аватарок (он же переключатель), под ними имя и биография,
+   дальше цитата в латунной табличке и лента из трёх кадров: «за стойкой»
+   (слева, маленький), парадный (центр, крупный) и «вне смены» (справа).
+   Раскладка v2 (портрет слева + список-кнопки справа) удалена целиком.
+   Движение только transform/opacity, ничего бесконечного. ── */
+.team__inner--stage {
   max-width: 1460px;
   margin: 0 auto;
 }
-.tm2 {
+.tm3 {
   margin-top: clamp(10px, 2vh, 24px);
-  display: grid;
-  /* Раньше head/body были отдельными строками грида (спанились фото/сайдбаром
-     на две строки сразу) — у CSS Grid тогда нет другого выбора, кроме как
-     добивать НЕДОСТАЮЩУЮ для фото/сайдбара высоту в обе auto-строки, и у
-     бармена с короткой био «шапка» (имя/роль/стаж) раздувалась пустым местом
-     снизу, а био визуально съезжала вниз (реальный баг, короткие био —
-     Денис/Александр; пробовал зафиксировать head через max-content — не
-     помогло, браузер всё равно растягивал её под спан). Теперь head+body —
-     один элемент .tm2__content (одна строка грида), а внутри него обычный
-     flex-column: лишняя высota, если она вообще нужна, достаётся снизу под
-     цитатой, а не расталкивает имя/стаж и био. */
-  grid-template-areas: 'photo content side';
-  grid-template-columns: minmax(260px, 400px) minmax(0, 1fr) 250px;
-  gap: clamp(14px, 2vw, 30px);
-  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 2.4vh, 26px);
+  width: 100%;
 }
 
-.tm2__photo {
-  grid-area: photo;
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, .32); /* мягкая статичная глубина (план v4 §C.5) */
+/* Ряд аватарок: кружки разного размера, стоят вразнобой (см. --ava-shift). */
+.tm3__ring {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(10px, 1.6vw, 24px);
+  padding: 6px 2px 14px;
+  width: 100%;
 }
-.tm2__photo img {
+.tm3__ava {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--ava, 104px);
+  height: var(--ava, 104px);
+  border-radius: 50%;
+  border: 1px solid rgba(var(--gold-rgb), .3);
+  background-color: var(--bg2);
+  background-repeat: no-repeat;
+  padding: 0;
+  cursor: pointer;
+  /* Неактивные приглушены — активный бармен читается мгновенно. */
+  filter: grayscale(.45) brightness(.72);
+  transform: translateY(var(--ava-shift, 0));
+  transition: transform .25s ease, filter .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+.tm3__ava:hover,
+.tm3__ava:focus-visible {
+  filter: grayscale(0) brightness(.95);
+  border-color: rgba(var(--gold-rgb), .6);
+  transform: translateY(calc(var(--ava-shift, 0px) - 3px)) scale(1.04);
+}
+.tm3__ava--on {
+  filter: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(var(--gold-rgb), .45), 0 10px 26px rgba(0, 0, 0, .45);
+  transform: translateY(var(--ava-shift, 0)) scale(1.06);
+}
+.tm3__ava-letter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: 'Baskerville', serif;
+  font-size: calc(var(--ava, 104px) * .34);
+  color: rgba(var(--gold-rgb), .55);
+}
+/* Имя появляется у активного и под курсором — постоянные подписи превратили бы
+   ряд в частокол текста. */
+.tm3__ava-name {
+  position: absolute;
+  left: 50%;
+  bottom: -17px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-dim);
+  opacity: 0;
+  transition: opacity .25s ease;
+  pointer-events: none;
+}
+.tm3__ava:hover .tm3__ava-name,
+.tm3__ava:focus-visible .tm3__ava-name { opacity: 1; }
+.tm3__ava--on .tm3__ava-name { opacity: 1; color: var(--gold); }
+
+/* Имя · должность · стаж */
+.tm3__head { text-align: center; }
+.tm3__name {
+  font-family: 'Baskerville', serif;
+  font-weight: 400;
+  font-size: clamp(30px, 5vw, 56px);
+  line-height: 1.1;
+  letter-spacing: .5px;
+  color: var(--text);
+  margin: 0;
+}
+.tm3__role {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-top: 8px;
+}
+.tm3__spec {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+.tm3__bio {
+  max-width: 68ch;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(14px, 1.7vh, 16px);
+  line-height: 1.75;
+  color: var(--text-mid);
+}
+
+/* Цитата в латунной табличке */
+.tm3__quote {
+  position: relative;
+  margin: 0;
+  padding: clamp(26px, 3.8vh, 46px) clamp(32px, 4vw, 60px);
+  max-width: 760px;
+  width: 100%;
+  text-align: center;
+}
+.tm3__quote-text {
+  font-family: 'Jar Binks', cursive;
+  font-size: clamp(28px, 4.2vh, 42px);
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--gold) 72%, #fff);
+  margin: 0;
+}
+
+/* Лента из трёх кадров: маленький — крупный — средний (эскиз владельца). */
+.tm3__shots {
+  display: grid;
+  grid-template-columns: 0.85fr 1.3fr 1fr;
+  align-items: end;
+  gap: clamp(10px, 1.6vw, 22px);
+  width: 100%;
+}
+.tm3__shot {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg2);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .35);
+  aspect-ratio: 4 / 5;
+}
+.tm3__shot img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-
-.tm2__content {
-  grid-area: content;
-  min-width: 0;
+.tm3__shot-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 26px 14px 10px;
+  font-size: 10px;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .7));
+}
+/* Пустой слот: фото ещё не снято — рамка со знаком-креманкой, а не дыра. */
+.tm3__shot--empty {
+  border-style: dashed;
+  border-color: rgba(var(--gold-rgb), .28);
+  box-shadow: none;
+}
+.tm3__shot-stub {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(14px, 2vw, 30px);
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: rgba(var(--gold-rgb), .45);
 }
+.tm3__shot-soon {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: .4px;
+  color: var(--text-dim);
+}
+.tm3__shot--empty .tm3__shot-cap { background: none; color: var(--text-dim); }
 
-.tm2__name {
-  font-family: 'Baskerville', serif;
-  font-weight: 700;
-  font-size: clamp(30px, 5.8vh, 56px);
-  line-height: 1.05;
-  margin: 0 0 6px;
-  color: var(--text);
+.tm3__join {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: clamp(4px, 1vh, 12px);
 }
-.tm2__role {
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 11px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 4px;
-}
-.tm2__spec {
+.tm3__join-text {
+  margin: 0;
   font-family: 'Involve', serif;
   font-style: italic;
   font-size: 14px;
   color: var(--text-dim);
 }
-
-.tm2__body {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(12px, 2.4vh, 24px);
-}
-.tm2__bio {
-  font-family: 'Avenir Next', sans-serif;
-  font-size: clamp(13px, 1.9vh, 15px);
-  line-height: 1.75;
-  color: var(--text-mid, rgba(242,237,228,.78));
-  margin: 0;
-  max-width: 62ch;
-}
-.tm2__quote { position: relative; margin: 0; padding: clamp(20px, 3vh, 34px) clamp(26px, 4vw, 48px); }
-/* Jar Binks рукописный и мелким нечитаем — держим крупно (правило ≥28px,
-   размер и светлота подняты по прямой просьбе владельца: на тёмном фоне
-   тонкий рукописный штрих читается только крупным и светлым) */
-.tm2__quote-text {
-  font-family: 'Jar Binks', cursive;
-  font-size: clamp(36px, 5.6vh, 54px);
-  line-height: 1.5;
-  color: color-mix(in srgb, var(--gold) 72%, #fff);
-  margin: 0;
-}
-.tm2__quote-src {
-  font-family: 'Involve', serif;
-  font-style: italic;
-  font-size: clamp(12px, 1.8vh, 14px);
-  color: var(--text-dim);
-  margin-top: 8px;
+.tm3__join-btn {
+  border: 1px solid rgba(var(--gold-rgb), .5);
+  border-radius: 10px;
+  background: rgba(var(--gold-rgb), .08);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 12px 20px;
+  cursor: pointer;
 }
 
-/* ── Оформление цитаты бармена (ui/QuoteFrame.jsx) ─────────────────────────
-   Три подачи на выбор владельца: ?quote=fan|card|plate. Дефолт — «веер»
-   (тот же орнамент, что на страницах книги-меню: секции говорят одним
-   языком). Декор статичный: цитата и так самый громкий элемент секции. */
-.qfr { position: absolute; inset: 0; pointer-events: none; color: rgba(198, 191, 181, .5); }
-
-/* Вариант «веер»: двойная линия рамки + веерные медальоны сверху и снизу. */
-.qfr--fan .qfr__box {
-  position: absolute;
-  inset: 0;
-  border: 1px solid rgba(198, 191, 181, .22);
-  box-shadow: inset 0 0 0 4px rgba(var(--bg-rgb), .0), inset 0 0 0 5px rgba(198, 191, 181, .10);
-}
-.qfr__medal {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  line-height: 0;
-  padding: 0 10px;
-  background: var(--bg);
-  color: rgba(var(--gold-rgb), .55);
-}
-.qfr__medal--top { top: -16px; }
-.qfr__medal--bottom { bottom: -16px; }
-.qfr__fan--flip { transform: scaleY(-1); }
-.qfr--fan .qfr__mark {
-  position: absolute;
-  font-family: 'Baskerville', serif;
-  font-size: 64px;
-  line-height: 1;
-  color: rgba(var(--gold-rgb), .32);
-}
-.qfr--fan .qfr__mark--left { top: 2px; left: 8px; }
-.qfr--fan .qfr__mark--right { bottom: -22px; right: 10px; }
-
-/* Вариант «карточка»: без рамки — две золотые линейки, кавычка и знак-креманка. */
-.qfr--card .qfr__rule {
-  position: absolute;
-  left: 12%;
-  right: 12%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), .5), transparent);
-}
-.qfr--card .qfr__rule--top { top: 0; }
-.qfr--card .qfr__rule--bottom { bottom: 0; }
-.qfr--card .qfr__rule--top::after,
-.qfr--card .qfr__rule--bottom::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), .22), transparent);
-}
-.qfr--card .qfr__rule--top::after { top: 4px; }
-.qfr--card .qfr__rule--bottom::after { bottom: 4px; }
-.qfr--card .qfr__mark {
-  position: absolute;
-  top: 6px; left: 10px;
-  font-family: 'Baskerville', serif;
-  font-size: 72px;
-  line-height: 1;
-  color: rgba(var(--gold-rgb), .28);
-}
-.qfr--card .qfr__sign {
-  position: absolute;
-  right: 14px; bottom: 10px;
-  line-height: 0;
-  color: rgba(var(--gold-rgb), .45);
+@media (max-width: 900px) {
+  .tm3__ring {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+    mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 94%, transparent 100%);
+  }
+  .tm3__ring::-webkit-scrollbar { height: 0; }
+  .tm3__ava,
+  .tm3__ava:hover { transform: none; }
+  .tm3__ava--on { transform: scale(1.04); }
+  /* Кадры в столбик: парадный первым — он главный. */
+  .tm3__shots { grid-template-columns: 1fr; }
+  .tm3__shot--hero { order: -1; }
+  .tm3__quote-text { font-size: clamp(26px, 8vw, 38px); }
+  /* Пустые кадры на телефоне не должны занимать по экрану каждый. */
+  .tm3__shot--empty { aspect-ratio: 16 / 10; }
 }
 
-/* Вариант «латунная табличка»: тёплая пластина с гравировкой и заклёпками.
-   Заливка приглушённая — золото по логобуку остаётся акцентом, а не фоном. */
+/* ── Латунная табличка цитаты (ui/QuoteFrame.jsx) ──────────────────────────
+   Выбор владельца 2026-08-27 из трёх вариантов (веер, карточка, табличка).
+   Заливка приглушённая: золото по логобуку — акцент, а не фон. */
+.qfr { position: absolute; inset: 0; pointer-events: none; }
 .qfr--plate {
   border-radius: 4px;
   background: linear-gradient(155deg, rgba(107, 83, 32, .30), rgba(46, 35, 15, .34));
@@ -1978,121 +2049,6 @@ html { scroll-behavior: smooth; }
 .qfr--plate .qfr__rivet--tr { top: 6px; right: 6px; }
 .qfr--plate .qfr__rivet--bl { bottom: 6px; left: 6px; }
 .qfr--plate .qfr__rivet--br { bottom: 6px; right: 6px; }
-
-@media (max-width: 600px) {
-  .qfr--fan .qfr__mark { font-size: 44px; }
-  .qfr--card .qfr__mark { font-size: 52px; }
-  .qfr__medal--top { top: -12px; }
-  .qfr__medal--bottom { bottom: -12px; }
-}
-
-/* Правая колонка: кнопки-сотрудники (фото-фон, кадр по глазам) + анкета */
-.tm2__side {
-  grid-area: side;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.tm2__nav {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 2px;
-}
-.tm2__nav-btn {
-  flex-shrink: 0; /* не сжиматься в переполненной колонке (см. .mbk__nav-btn) */
-  position: relative;
-  height: 56px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background-color: var(--bg2);
-  background-size: cover;
-  /* кадрируем по верхней трети портрета — в кнопку попадают глаза */
-  background-position: 50% 22%;
-  color: var(--text);
-  font-family: 'Baskerville', serif;
-  font-size: 16px;
-  letter-spacing: .5px;
-  text-align: left;
-  padding: 0 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  transition: transform .25s cubic-bezier(.34,1.56,.64,1), border-color .2s, opacity .2s;
-  opacity: .82;
-  animation: mbkBtnIn 0.45s ease backwards;
-  animation-delay: calc(var(--i) * 60ms);
-}
-.tm2__nav-btn:hover { opacity: 1; border-color: rgba(var(--gold-rgb), .45); }
-.tm2__nav-btn--active {
-  opacity: 1;
-  border-color: rgba(var(--gold-rgb), .7);
-  box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb), .35);
-}
-.tm2__nav-name { position: relative; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
-
-.tm2__join {
-  margin-top: auto;
-  border: 1px dashed rgba(var(--gold-rgb), .35);
-  border-radius: 10px;
-  padding: 14px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex-shrink: 0;
-}
-.tm2__join-text {
-  font-family: 'Involve', serif;
-  font-style: italic;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-dim);
-  margin: 0;
-}
-.tm2__join-btn {
-  border: 1px solid rgba(var(--gold-rgb), .5);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--gold);
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 10.5px;
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
-  padding: 10px 14px;
-  cursor: pointer;
-  transition: border-color .2s, transform .2s;
-}
-.tm2__join-btn:hover { border-color: var(--gold); transform: translateY(-1px); }
-
-@media (prefers-reduced-motion: reduce) {
-  .tm2__nav-btn { animation: none; transition: border-color .2s, opacity .2s; }
-  .tm2__join-btn:hover { transform: none; }
-}
-
-/* Мобильный порядок: фото → имя+био+цитата → кнопки лентой → анкета
-   (head и body теперь один элемент .tm2__content — см. комментарий у .tm2) */
-@media (max-width: 900px) {
-  .tm2 { display: flex; flex-direction: column; gap: 16px; }
-  .tm2__photo { order: 1; max-height: 46vh; aspect-ratio: 3 / 4; margin: 0 auto; width: min(100%, 340px); }
-  .tm2__content { order: 2; }
-  .tm2__head { text-align: center; }
-  .tm2__bio { max-width: none; }
-  .tm2__side { order: 3; }
-  .tm2__nav {
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: visible;
-    padding-bottom: 6px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .tm2__nav-btn { width: 150px; height: 52px; flex-shrink: 0; }
-  .tm2__join { margin-top: 4px; }
-  /* Цитата на телефоне: крупно, но по ширине экрана (375–414px проверено) */
-  .tm2__quote-text { font-size: clamp(32px, 9.2vw, 44px); line-height: 1.5; }
-  .tm2__bio { font-size: 14px; line-height: 1.75; }
-}
 
 /* ── Team carousel (one member in view + side arrows) ─────────── */
 /* Arrows sit outside the card (left/right, vertically centered on it) so

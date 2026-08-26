@@ -294,6 +294,12 @@ create index if not exists team_members_sort_idx on public.team_members (sort_or
 alter table public.team_members add column if not exists bio text default '';
 alter table public.team_members add column if not exists quote_source text default '';
 
+-- Секция «Бармены» v3 (2026-08-27, макет владельца): три кадра на бармена —
+-- "в работе" (слева, маленький), парадный (по центру, photo_url) и "в настроении"
+-- (справа). Старое photo_url остаётся парадным кадром и аватаркой в кружке.
+alter table public.team_members add column if not exists photo_work_url text default '';
+alter table public.team_members add column if not exists photo_fun_url  text default '';
+
 -- ─── Заявки «стать барменом» ─────────────────────────────────────────────────
 -- Сохраняются в БД И пушатся в Telegram админам (TELEGRAM_ADMIN_IDS) — best-effort,
 -- сбой отправки не блокирует сохранение самой заявки.

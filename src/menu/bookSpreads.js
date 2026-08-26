@@ -18,7 +18,7 @@
 //     чётного пустым листом.
 
 /** Сколько позиций «стоит» блок «О разделе» на первой странице категории. */
-const STORY_COST = 2;
+const STORY_COST = 1;
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-zа-я0-9]+/gi, '-').replace(/(^-|-$)/g, '');
 

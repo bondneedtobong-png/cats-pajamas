@@ -12,6 +12,8 @@ function rowToMember(r) {
     quote: r.quote || '',
     quoteSource: r.quote_source || '',
     photoUrl: r.photo_url || '',
+    photoWorkUrl: r.photo_work_url || '',
+    photoFunUrl: r.photo_fun_url || '',
     sortOrder: r.sort_order,
     active: r.active,
     createdAt: r.created_at,
@@ -42,6 +44,8 @@ export async function createTeamMember(input) {
     quote: input.quote?.trim() || '',
     quote_source: input.quoteSource?.trim() || '',
     photo_url: input.photoUrl?.trim() || '',
+    photo_work_url: input.photoWorkUrl?.trim() || '',
+    photo_fun_url: input.photoFunUrl?.trim() || '',
     sort_order: nextOrder,
     active: input.active !== false,
   };
@@ -58,7 +62,9 @@ export async function updateTeamMember(id, input) {
   if ('bio' in input)         patch.bio          = input.bio?.trim() || '';
   if ('quote' in input)       patch.quote        = input.quote?.trim() || '';
   if ('quoteSource' in input) patch.quote_source = input.quoteSource?.trim() || '';
-  if ('photoUrl' in input)    patch.photo_url    = input.photoUrl?.trim() || '';
+  if ('photoUrl' in input)     patch.photo_url      = input.photoUrl?.trim() || '';
+  if ('photoWorkUrl' in input) patch.photo_work_url = input.photoWorkUrl?.trim() || '';
+  if ('photoFunUrl' in input)  patch.photo_fun_url  = input.photoFunUrl?.trim() || '';
   if ('active' in input)      patch.active       = !!input.active;
 
   const { data, error } = await supabase.from('team_members').update(patch).eq('id', id).select().single();
