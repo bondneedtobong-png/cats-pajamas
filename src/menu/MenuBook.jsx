@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildBook, buildNav, spreadOfPage } from './bookSpreads.js';
 import MenuShowcase from './MenuShowcase.jsx';
+import MenuSticker from './MenuSticker.jsx';
 import './menubook.css';
 
 // Секция «Меню» как настоящая книга бара: закрытая обложка (тёмно-фиолетовый
@@ -31,20 +32,36 @@ import './menubook.css';
 // потом верстается, поэтому пагинация и вёрстка не расходятся: на высоком
 // экране лист длинный и позиций влезает больше, на коротком ноуте — меньше.
 const PAGE_H = (height) => Math.min(780, Math.max(420, height * 0.78));
+// Множитель кегля страницы. ⚠️ Должен совпадать с --mbook-fs в menubook.css:
+// текст крупнее — позиций на лист влезает меньше, иначе они лезут за рамку.
+const FS = 1.3;
 function perPageFor(width, height) {
   const pageH = width <= 1000 ? Math.min(520, Math.max(340, height * 0.56)) : PAGE_H(height);
-  const free = pageH - 190;      // шапка раздела + поля листа
-  const row = width >= 1280 ? 74 : 66; // позиция с составом и строкой цены
-  return Math.max(3, Math.min(9, Math.floor(free / row)));
+  const free = pageH - (120 * FS + 70); // шапка раздела (растёт с кеглем) + поля листа
+  const row = (width >= 1280 ? 74 : 66) * FS; // позиция с составом и строкой цены
+  return Math.max(2, Math.min(9, Math.floor(free / row)));
 }
 
-/** Диаметр пузыря под длину названия: короткие — мелкие, длинные — крупнее. */
+/** Диаметр пузыря под длину названия: короткие — мелкие, длинные — крупнее.
+ *  Со стикером кот занимает верхнюю половину кружка, поэтому пузыри крупнее,
+ *  чем в текстовой версии. */
 function bubbleSize(title) {
   const n = String(title).length;
-  if (n <= 5) return 66;
-  if (n <= 10) return 80;
-  if (n <= 16) return 94;
-  return 106;
+  if (n <= 5) return 92;
+  if (n <= 10) return 104;
+  if (n <= 16) return 116;
+  return 126;
+}
+
+// Оформление пузырей. Владелец выбирает вживую: ?bubbles=glass|brass|paper|wax
+// в адресе страницы. Когда выберет — значение станет дефолтом, лишние стили
+// уедут из menubook.css.
+const BUBBLE_STYLES = ['glass', 'brass', 'paper', 'wax'];
+const BUBBLE_STYLE = 'glass';
+function bubbleStyle() {
+  if (typeof window === 'undefined') return BUBBLE_STYLE;
+  const q = new URLSearchParams(window.location.search).get('bubbles');
+  return BUBBLE_STYLES.includes(q) ? q : BUBBLE_STYLE;
 }
 
 const FLIP_MS = 420;   // полный переворот листа
@@ -336,7 +353,7 @@ export default function MenuBook({ menu, stories, printLink }) {
   return (
     <div className={`mbook mbook--${mode}${closed ? ' mbook--closed' : ''}`} ref={rootRef} onKeyDown={onKeyDown}>
       {/* Пузыри — самостоятельные плавающие элементы слева, без рамки и подложки */}
-      <nav className="mbook__bubbles" ref={navRef} aria-label="Быстрый переход по разделам меню">
+      <nav className={`mbook__bubbles mbook__bubbles--${bubbleStyle()}`} ref={navRef} aria-label="Быстрый переход по разделам меню">
         <p className="mbook__bubbles-title">Что вы ищете?</p>
         <div className="mbook__bubble-field">
           {bubbles.map((bubble, i) => (
@@ -352,6 +369,8 @@ export default function MenuBook({ menu, stories, printLink }) {
                 '--mbook-bubble-shift': `${(i % 3) * 10 - 10}px`,
                 '--mbook-bubble-delay': `${(i % 5) * 0.7}s`,
                 '--mbook-bubble-dur': `${7 + (i % 4)}s`,
+                // Наклон — для «наклеек» и «печатей»: чётные влево, нечётные вправо.
+                '--mbook-bubble-tilt': `${((i % 5) - 2) * 2.2}deg`,
               }}
               onClick={() => jumpTo(bubble.key)}
             >
@@ -359,6 +378,9 @@ export default function MenuBook({ menu, stories, printLink }) {
                   теле — hover-подъём. Один элемент не может делать оба
                   transform одновременно — анимация перебивает hover. */}
               <span className="mbook__bubble-body">
+                {/* Кот в настроении раздела: в покое стоит, на наведении
+                    оживает (правило проекта — никаких вечных анимаций). */}
+                <MenuSticker title={bubble.title} size={Math.round(bubbleSize(bubble.title) * 0.46)} />
                 <span className="mbook__bubble-text">{bubble.title}</span>
               </span>
             </button>

@@ -18,6 +18,8 @@ import { readWorkbook } from './xlsx.js';
 //   • заголовок-«надгруппа» из списка SUBGROUPS → третий уровень: идущие под
 //     ним разделы получают parent («Виски» → Шотландия/Ирландия/…).
 
+import { SUBGROUP_BY_TITLE } from './subgroups.js';
+
 const RUB = '₽';
 const NBSP = ' ';
 
@@ -37,13 +39,9 @@ const slug = (s) => norm(s).replace(/[^a-zа-я0-9]+/gi, '-').replace(/(^-|-$)/g
 // проверено на файле владельца (styles.xml: ни отступов, ни outline level).
 // Поэтому список известных надгрупп явный: сверяем по нормализованному тексту.
 // Незнакомые надгруппы по-прежнему не гадаем — см. предупреждение ниже.
-const SUBGROUPS = [
-  { title: 'Виски', children: ['Шотландия', 'Ирландия', 'Америка', 'Виски со Всего Мира'] },
-];
-const SUBGROUP_BY_TITLE = new Map(SUBGROUPS.map((s) => [
-  norm(s.title),
-  { title: s.title, children: new Set(s.children.map(norm)) },
-]));
+// Сам список живёт в subgroups.js: его же читает сайт, чиня карту старого
+// формата на лету (там parent не проставлен).
+
 
 /** «500» → «500 ₽»; «300/600 р.» → «300/600 ₽»; всё прочее — как есть. */
 function price(raw) {

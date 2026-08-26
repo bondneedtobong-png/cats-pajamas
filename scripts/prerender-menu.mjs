@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { BAR_MENU as STATIC_MENU } from '../src/menu/barMenuData.js';
+import { applySubgroups } from '../src/menu/subgroups.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const distIndex = join(root, 'dist', 'index.html');
@@ -26,7 +27,7 @@ async function loadMenu() {
     const { menu } = await getBarMenu();
     if (Array.isArray(menu) && menu.length) {
       console.log('[prerender-menu] источник: БД (app_config.bar_menu)');
-      return menu;
+      return applySubgroups(menu); // третий уровень для карт старого формата
     }
   } catch (e) {
     console.warn('[prerender-menu] БД недоступна → статический фолбэк:', e.message);

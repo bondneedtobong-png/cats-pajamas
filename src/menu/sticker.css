@@ -1,0 +1,116 @@
+/* Оживление стикеров-котов в пузырях меню (MenuSticker.jsx).
+
+   Правило проекта: ничего бесконечного на постоянно видимом элементе. Поэтому
+   в покое стикер СТАТИЧЕН — движение включает только наведение/фокус на
+   пузыре (.mbook__bubble:hover). Курсор ушёл — движение остановилось.
+   Всё анимируемое — transform/opacity; при prefers-reduced-motion всё
+   выключается, но «мимика» (подмигнул, зажмурился) остаётся статичной
+   подменой состояний, чтобы смысл эмоции не пропадал. */
+
+.cs {
+  display: block;
+  overflow: visible;
+  color: inherit;
+}
+/* Каждая деталь крутится вокруг СВОЕГО центра, а не начала координат svg. */
+.cs * { transform-box: fill-box; transform-origin: center; }
+
+/* Спецэффекты (пар, искры, огонёк, пузырьки) в покое спрятаны. */
+.cs__fx > * { opacity: 0; }
+
+/* Подмигивание: в покое оба глаза открыты. */
+.cs__wink-shut { opacity: 0; }
+
+/* Усы и предмет чуть тише основной линии — стикер не превращается в кашу. */
+.cs__whisk { opacity: .65; }
+.cs__prop { opacity: .9; }
+
+/* ─── Наведение: у каждой эмоции свой характер движения ───────────────────── */
+
+.mbook__bubble:hover .cs__ear--l,
+.mbook__bubble:focus-visible .cs__ear--l { animation: csEarL 1.1s ease-in-out infinite; }
+.mbook__bubble:hover .cs__ear--r,
+.mbook__bubble:focus-visible .cs__ear--r { animation: csEarR 1.1s ease-in-out .12s infinite; }
+
+/* Подмигнул и вернулся. */
+.mbook__bubble:hover .cs--wink .cs__wink-open,
+.mbook__bubble:focus-visible .cs--wink .cs__wink-open { animation: csHide 1.6s steps(1, end) infinite; }
+.mbook__bubble:hover .cs--wink .cs__wink-shut,
+.mbook__bubble:focus-visible .cs--wink .cs__wink-shut { animation: csShow 1.6s steps(1, end) infinite; }
+
+/* Пар над чашкой. */
+.mbook__bubble:hover .cs--steam .cs__steam--1,
+.mbook__bubble:focus-visible .cs--steam .cs__steam--1 { animation: csSteam 2.2s ease-out infinite; }
+.mbook__bubble:hover .cs--steam .cs__steam--2,
+.mbook__bubble:focus-visible .cs--steam .cs__steam--2 { animation: csSteam 2.2s ease-out .7s infinite; }
+
+/* Искры восторга. */
+.mbook__bubble:hover .cs--sparkle .cs__spark--1,
+.mbook__bubble:focus-visible .cs--sparkle .cs__spark--1 { animation: csSpark 1.5s ease-in-out infinite; }
+.mbook__bubble:hover .cs--sparkle .cs__spark--2,
+.mbook__bubble:focus-visible .cs--sparkle .cs__spark--2 { animation: csSpark 1.5s ease-in-out .45s infinite; }
+
+/* Огонёк текилы. */
+.mbook__bubble:hover .cs--flame .cs__flame,
+.mbook__bubble:focus-visible .cs--flame .cs__flame { animation: csFlame 1.1s ease-in-out infinite; }
+
+/* Пузырьки лимонада. */
+.mbook__bubble:hover .cs--fizz .cs__bub--1,
+.mbook__bubble:focus-visible .cs--fizz .cs__bub--1 { animation: csBubble 1.8s ease-in infinite; }
+.mbook__bubble:hover .cs--fizz .cs__bub--2,
+.mbook__bubble:focus-visible .cs--fizz .cs__bub--2 { animation: csBubble 1.8s ease-in .5s infinite; }
+.mbook__bubble:hover .cs--fizz .cs__bub--3,
+.mbook__bubble:focus-visible .cs--fizz .cs__bub--3 { animation: csBubble 1.8s ease-in .95s infinite; }
+
+/* Монокль и бровь виски. */
+.mbook__bubble:hover .cs--brow .cs__brow,
+.mbook__bubble:focus-visible .cs--brow .cs__brow { animation: csBrow 1.4s ease-in-out infinite; }
+.mbook__bubble:hover .cs--brow .cs__monocle,
+.mbook__bubble:focus-visible .cs--brow .cs__monocle { animation: csMonocle 1.4s ease-in-out infinite; }
+
+/* Томная качка (вермуты, коньяк, пиво). */
+.mbook__bubble:hover .cs--sway .cs__head,
+.mbook__bubble:hover .cs--sway .cs__eyes,
+.mbook__bubble:hover .cs--sway .cs__mouth,
+.mbook__bubble:focus-visible .cs--sway .cs__head,
+.mbook__bubble:focus-visible .cs--sway .cs__eyes,
+.mbook__bubble:focus-visible .cs--sway .cs__mouth { animation: csSway 2.4s ease-in-out infinite; }
+
+/* Моргание (водка, вода): глаза-щёлочки на миг схлопываются. */
+.mbook__bubble:hover .cs--blink .cs__eyes,
+.mbook__bubble:focus-visible .cs--blink .cs__eyes { animation: csBlink 2.4s ease-in-out infinite; }
+
+/* Кислая дрожь биттеров. */
+.mbook__bubble:hover .cs--shiver .cs__head,
+.mbook__bubble:hover .cs--shiver .cs__eyes,
+.mbook__bubble:hover .cs--shiver .cs__mouth,
+.mbook__bubble:focus-visible .cs--shiver .cs__head,
+.mbook__bubble:focus-visible .cs--shiver .cs__eyes,
+.mbook__bubble:focus-visible .cs--shiver .cs__mouth { animation: csShiver .32s ease-in-out infinite; }
+
+/* Бокал приподнимается за компанию — общий жест для всех эмоций. */
+.mbook__bubble:hover .cs__prop,
+.mbook__bubble:focus-visible .cs__prop { animation: csToast 1.6s ease-in-out infinite; opacity: 1; }
+
+@keyframes csEarL   { 0%, 70%, 100% { transform: rotate(0); } 82% { transform: rotate(-11deg); } }
+@keyframes csEarR   { 0%, 70%, 100% { transform: rotate(0); } 82% { transform: rotate(11deg); } }
+@keyframes csHide   { 0%, 55% { opacity: 1; } 56%, 78% { opacity: 0; } 79%, 100% { opacity: 1; } }
+@keyframes csShow   { 0%, 55% { opacity: 0; } 56%, 78% { opacity: 1; } 79%, 100% { opacity: 0; } }
+@keyframes csSteam  { 0% { opacity: 0; transform: translateY(3px) scaleY(.7); } 30% { opacity: .85; } 100% { opacity: 0; transform: translateY(-7px) scaleY(1.15); } }
+@keyframes csSpark  { 0%, 100% { opacity: 0; transform: scale(.5) rotate(-15deg); } 45% { opacity: 1; transform: scale(1) rotate(10deg); } }
+@keyframes csFlame  { 0%, 100% { opacity: .9; transform: scaleY(.92) translateY(1px); } 50% { opacity: 1; transform: scaleY(1.12) translateY(-1px); } }
+@keyframes csBubble { 0% { opacity: 0; transform: translateY(4px) scale(.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateY(-9px) scale(1); } }
+@keyframes csBrow   { 0%, 60%, 100% { transform: translateY(0); } 75% { transform: translateY(-2.4px); } }
+@keyframes csMonocle{ 0%, 60%, 100% { transform: translateY(0) rotate(0); } 75% { transform: translateY(1.4px) rotate(4deg); } }
+@keyframes csSway   { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes csBlink  { 0%, 88%, 100% { transform: scaleY(1); } 94% { transform: scaleY(.2); } }
+@keyframes csShiver { 0%, 100% { transform: translateX(-.7px); } 50% { transform: translateX(.7px); } }
+@keyframes csToast  { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-2.5px) rotate(-6deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cs *, .cs { animation: none !important; }
+  /* Мимика остаётся, но без движения: подмигнувший кот просто подмигнул. */
+  .mbook__bubble:hover .cs--wink .cs__wink-open { opacity: 0; }
+  .mbook__bubble:hover .cs--wink .cs__wink-shut { opacity: 1; }
+  .mbook__bubble:hover .cs__fx > * { opacity: .9; }
+}

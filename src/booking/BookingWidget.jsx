@@ -38,8 +38,11 @@ function isValidPhone(value) {
   return digits.length === 10 || digits.length === 11;
 }
 
-// Дата и время прихода — селекты в панели заявки (макет владельца):
-// смена даты перезагружает статусы плана, время влияет только на заявку.
+// Дата и время прихода. Раньше это были два системных <select> — на странице
+// с рисованным планом зала они выглядели как настройки принтера. Теперь ряды
+// чипов: вечер виден целиком, время выбирается одним касанием, выбранное
+// подсвечено золотом (рестайлинг /booking, 2026-08-26).
+// Смена даты перезагружает статусы плана, время влияет только на заявку.
 // allDates — полный ряд дат для подписей «Сегодня»/«Завтра» (dates может быть
 // отфильтрован: владелец закрывает даты для брони через админку).
 function WhenPicker({ dates, allDates, date, onDateChange, slots, time, onTimeChange, tx }) {
@@ -50,26 +53,70 @@ function WhenPicker({ dates, allDates, date, onDateChange, slots, time, onTimeCh
     const [, m, day] = d.split('-');
     return `${day}.${m}`;
   };
+  const weekday = (d) => new Date(d + 'T12:00:00')
+    .toLocaleDateString('ru-RU', { weekday: 'short' }).replace('.', '');
+
+  // Ряды чипов прокручиваются по горизонтали (слотов бывает под два десятка) —
+  // выбранный подтягиваем в видимую часть, иначе он теряется за краем.
+  const datesRef = useRef(null);
+  const timesRef = useRef(null);
+  useEffect(() => {
+    for (const ref of [datesRef, timesRef]) {
+      const on = ref.current?.querySelector('.bkw__chip--on');
+      if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
+  }, [date, time]);
+
   return (
-    <>
-      <div className="bkw__when">
-        <label className="bkw__field">
-          <span className="bkw__label">{tx.bkDateLabel}</span>
-          <select className="bkw__input" value={date} onChange={e => onDateChange(e.target.value)}>
-            {dates.map((d) => <option key={d} value={d}>{dateLabel(d)}</option>)}
-          </select>
-        </label>
-        <label className="bkw__field">
-          <span className="bkw__label">{tx.bkTimeLabel}</span>
-          <select className="bkw__input" value={time || ''} onChange={e => onTimeChange(e.target.value)} disabled={!slots.length}>
-            {slots.length
-              ? slots.map(t => <option key={t} value={t}>{t}</option>)
-              : <option value="">—</option>}
-          </select>
-        </label>
+    <div className="bkw__when">
+      <div className="bkw__when-block">
+        <span className="bkw__label">{tx.bkDateLabel}</span>
+        <div className="bkw__chips bkw__chips--dates" ref={datesRef} role="group" aria-label={tx.bkDateLabel}>
+          {dates.map((d) => (
+            <button
+              key={d} type="button"
+              className={`bkw__chip bkw__chip--date${d === date ? ' bkw__chip--on' : ''}`}
+              aria-pressed={d === date}
+              onClick={() => onDateChange(d)}
+            >
+              <span className="bkw__chip-main">{dateLabel(d)}</span>
+              <span className="bkw__chip-sub">{weekday(d)}</span>
+            </button>
+          ))}
+        </div>
       </div>
-      {!slots.length && <p className="bkw__closed">{tx.bkClosedToday}</p>}
-    </>
+
+      <div className="bkw__when-block">
+        <span className="bkw__label">{tx.bkTimeLabel}</span>
+        {slots.length ? (
+          <div className="bkw__chips bkw__chips--time" ref={timesRef} role="group" aria-label={tx.bkTimeLabel}>
+            {slots.map((t) => (
+              <button
+                key={t} type="button"
+                className={`bkw__chip${t === time ? ' bkw__chip--on' : ''}`}
+                aria-pressed={t === time}
+                onClick={() => onTimeChange(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="bkw__closed">{tx.bkClosedToday}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Шапка шага панели: номер, название и тонкая линейка до края. */
+function StepHead({ n, children }) {
+  return (
+    <div className="bkw__step">
+      <span className="bkw__step-num">{n}</span>
+      <span className="bkw__step-name">{children}</span>
+      <span className="bkw__step-rule" aria-hidden="true" />
+    </div>
   );
 }
 
@@ -175,16 +222,26 @@ function Panel({ table, when, date, time, tx, currentUser, onRequestAuth, onSubm
   }
 
   if (!table) {
+    // Пустая панель раньше была огромным полем с одной строчкой посередине.
+    // Теперь пустота работает: знак бара, подсказка и три шага сценария —
+    // гость видит, что будет дальше, ещё до выбора стола.
     return (
       <div className="bkw__panel">
+        <StepHead n="1">{tx.bkStepWhen}</StepHead>
         {when}
+        <StepHead n="2">{tx.bkStepTable}</StepHead>
         <div className="bkw__panel-center">
-        <img className="bkw__hint-sign" src="/uploads/logo-icon.svg" alt="" aria-hidden="true" />
-        <p className="bkw__hint-text">{tx.bkPanelHint}</p>
-        <p className="bkw__phone-note">
-          {tx.bkPanelPhone}<br />
-          <a href={BAR_PHONE.href}>{BAR_PHONE.label}</a>
-        </p>
+          <img className="bkw__hint-sign" src="/uploads/logo-icon.svg" alt="" aria-hidden="true" />
+          <p className="bkw__hint-text">{tx.bkPanelHint}</p>
+          <ol className="bkw__how">
+            <li className="bkw__how-item"><span className="bkw__how-num">1</span>{tx.bkHow1}</li>
+            <li className="bkw__how-item"><span className="bkw__how-num">2</span>{tx.bkHow2}</li>
+            <li className="bkw__how-item"><span className="bkw__how-num">3</span>{tx.bkHow3}</li>
+          </ol>
+          <p className="bkw__phone-note">
+            {tx.bkPanelPhone}<br />
+            <a href={BAR_PHONE.href}>{BAR_PHONE.label}</a>
+          </p>
         </div>
       </div>
     );
@@ -196,7 +253,9 @@ function Panel({ table, when, date, time, tx, currentUser, onRequestAuth, onSubm
 
   return (
     <div className="bkw__panel">
+      <StepHead n="1">{tx.bkStepWhen}</StepHead>
       {when}
+      <StepHead n="2">{tx.bkStepTable}</StepHead>
       <div className="bkw__table-head">
         <div>
           <div className="bkw__table-title">{tableTitle(table, tx)}</div>
@@ -231,6 +290,7 @@ function Panel({ table, when, date, time, tx, currentUser, onRequestAuth, onSubm
 
       {table.status === 'vacant' && currentUser && (
         <div className="bkw__form">
+          <StepHead n="3">{tx.bkStepForm}</StepHead>
           <label className="bkw__field">
             <span className="bkw__label">{tx.bkFormName}</span>
             <input className="bkw__input" type="text" value={name} onChange={e => setName(e.target.value)} />
@@ -300,9 +360,12 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
   }, [dateCfg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // выбранная дата сменилась → слоты пересобрались; чиним невалидное время
+  // Смена даты: на другой вечер осмысленный дефолт — «к 19:00», а не время,
+  // унаследованное от сегодняшнего остатка вечера (на «завтра» после полуночи
+  // это давало 23:00 в качестве предложения по умолчанию).
   useEffect(() => {
     const s = buildTimeSlots(date);
-    setTime(prev => (s.includes(prev) ? prev : (s.includes('19:00') ? '19:00' : s[0] || null)));
+    setTime(s.includes('19:00') ? '19:00' : (s[0] || null));
   }, [date]);
 
   // тихий вход Mini App в standalone-обёртке / возврат с вкладки авторизации

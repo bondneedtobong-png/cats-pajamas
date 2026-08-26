@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useReveal } from '../useReveal.js';
-import DecoFrame from '../ui/DecoFrame.jsx';
+import QuoteFrame from '../ui/QuoteFrame.jsx';
 import TeamService from '../team/TeamService.js';
 import ApplicationsService from '../team/ApplicationsService.js';
 
@@ -34,6 +34,17 @@ const PHOTO_FOCUS = {
 };
 const DEFAULT_FOCUS = { size: 'cover', pos: '50% 22%' };
 const focusFor = (url) => PHOTO_FOCUS[(url || '').split('/').pop()] || DEFAULT_FOCUS;
+
+// Оформление рамки цитаты. Владелец сравнивает вживую: ?quote=fan|card|plate.
+// Когда выберет — значение станет дефолтом, лишние варианты уедут из
+// QuoteFrame.jsx и index.css.
+const QUOTE_VARIANTS = ['fan', 'card', 'plate'];
+const QUOTE_VARIANT = 'fan';
+function quoteVariant() {
+  if (typeof window === 'undefined') return QUOTE_VARIANT;
+  const q = new URLSearchParams(window.location.search).get('quote');
+  return QUOTE_VARIANTS.includes(q) ? q : QUOTE_VARIANT;
+}
 
 export default function Team({ tx }) {
   const [members,  setMembers]  = useState([]);
@@ -88,7 +99,7 @@ export default function Team({ tx }) {
                 {current.bio && <p className="tm2__bio">{current.bio}</p>}
                 {quote && (
                   <figure className="tm2__quote">
-                    <DecoFrame />
+                    <QuoteFrame variant={quoteVariant()} />
                     <blockquote className="tm2__quote-text">«{quote.text}»</blockquote>
                     {quote.source && <figcaption className="tm2__quote-src">— {quote.source}</figcaption>}
                   </figure>

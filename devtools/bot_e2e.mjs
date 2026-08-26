@@ -582,6 +582,54 @@ ok('L9 событие с 1 фото в БД', !!ev1 && ev1.image_urls.length ===
 const chPhoto = calls('sendPhoto').find(c => c.body.chat_id === '@catstest');
 ok('L10 в канал — фото с подписью и кнопкой «Я приду»', !!chPhoto && (chPhoto.body.caption || chPhoto.body.text || '').includes('Вечер одного фото') && JSON.stringify(chPhoto.body.reply_markup || {}).includes('rsvp:'), JSON.stringify(chPhoto?.body || {}).slice(0, 250));
 
+
+// ═══ M. Тестовый прогон афиши (кнопка «🧪 Тестовый прогон») ═══
+// Проверяем главное обещание прогона: пост в канал уходит, гостям НИЧЕГО не
+// рассылается, а уборка снимает и пост, и событие.
+console.log('\n── M. Тестовый прогон ──');
+
+await cbPriv('ev', 111);
+ok('M1 в меню событий есть «Тестовый прогон»',
+  calls('editMessageText').some(c => JSON.stringify(c.body.reply_markup || {}).includes('evtest')),
+  JSON.stringify(calls('editMessageText').map(c => c.body.reply_markup)).slice(0, 300));
+
+await cbPriv('evtest', 111);
+const evTest = db.t('events').find(e => String(e.title).startsWith('Технический прогон'));
+ok('M2 событие прогона заведено с фото', !!evTest && Array.isArray(evTest.image_urls) && evTest.image_urls.length === 1,
+  JSON.stringify(evTest || null).slice(0, 200));
+
+const testPost = calls('sendPhoto').find(c => c.body.chat_id === '@catstest');
+ok('M3 в канал ушёл тестовый пост с пометкой ТЕСТ',
+  !!testPost && (testPost.body.caption || testPost.body.text || '').includes('ТЕСТ'),
+  JSON.stringify(testPost?.body || {}).slice(0, 250));
+
+const fwd = calls('forwardMessage');
+ok('M4 гостям не переслано ничего — только администраторам',
+  fwd.length > 0 && fwd.every(c => String(c.body.chat_id) === '111'),
+  JSON.stringify(fwd.map(c => c.body.chat_id)));
+ok('M5 рассылка гостям не запускалась (никаких sendMessage гостям)',
+  !calls('sendMessage').some(c => ['424242', '515151'].includes(String(c.body.chat_id))),
+  JSON.stringify(calls('sendMessage').map(c => c.body.chat_id)));
+
+const testReport = calls('editMessageText').map(c => c.body.text || '').join('\n');
+ok('M6 в отчёте — подсчёт аудитории без отправки',
+  testReport.includes('никому не отправлено') && testReport.includes('аккаунтов всего'),
+  testReport.slice(0, 300));
+
+await cbPriv(`evtestdel:${evTest.id}`, 111);
+await new Promise(r => setTimeout(r, 120));
+ok('M7 «Удалить сейчас» убрал пост из канала',
+  calls('deleteMessage').some(c => String(c.body.chat_id) === '@catstest'),
+  JSON.stringify(calls('deleteMessage').map(c => c.body)));
+ok('M8 и снял событие с сайта',
+  !db.t('events').some(e => e.id === evTest.id),
+  JSON.stringify(db.t('events').map(e => e.title)));
+
+await cbPriv(`evtestdel:${evTest.id}`, 111);
+ok('M9 повторное удаление не падает и говорит «уже убран»',
+  calls('editMessageText').some(c => (c.body.text || '').includes('уже убран')),
+  JSON.stringify(calls('editMessageText').map(c => c.body.text)));
+
 await fsp.rm(EV_DIR, { recursive: true, force: true }).catch(() => {}); // уборка временных фото
 
 console.log(fails ? `\n${fails} FAILED` : '\nALL SCENARIOS PASS');

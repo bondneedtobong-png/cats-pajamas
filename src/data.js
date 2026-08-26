@@ -98,6 +98,17 @@ export const translations = {
     phoneLabel: 'Телефон',
 
     // ─── Бронирование v2 (план зала + заявка) ───
+    // Страница /booking v3 (рестайлинг 2026-08-26): шапка-обложка, шаги и
+    // «как это работает» вместо пустой панели.
+    bkPageKicker: 'Займите свой столик',
+    bkPageTitle: 'Бронирование',
+    bkPageLead: 'Выберите вечер, время прихода и стол на плане зала. Заявку подтверждает бармен.',
+    bkStepWhen: 'Когда', bkStepTable: 'Стол', bkStepForm: 'Заявка',
+    bkHowTitle: 'Как это работает',
+    bkHow1: 'Выберите вечер и время прихода',
+    bkHow2: 'Кликните свободный стол на плане',
+    bkHow3: 'Бармен подтвердит бронь в Telegram',
+    bkPlanHint: 'Кликните по столу на плане',
     bkDateLabel: 'Дата', bkTimeLabel: 'Приход к',
     bkToday: 'Сегодня', bkTomorrow: 'Завтра',
     bkClosedToday: 'На этот вечер заявки уже не принимаются — выберите другой день',
@@ -218,6 +229,15 @@ export const translations = {
     phoneLabel: 'Phone',
 
     // ─── Booking v2 (floor plan + request) ───
+    bkPageKicker: 'Take your seat',
+    bkPageTitle: 'Book a table',
+    bkPageLead: 'Pick an evening, an arrival time and a table on the floor plan. A bartender confirms every request.',
+    bkStepWhen: 'When', bkStepTable: 'Table', bkStepForm: 'Request',
+    bkHowTitle: 'How it works',
+    bkHow1: 'Pick an evening and an arrival time',
+    bkHow2: 'Click a free table on the plan',
+    bkHow3: 'A bartender confirms it in Telegram',
+    bkPlanHint: 'Click a table on the plan',
     bkDateLabel: 'Date', bkTimeLabel: 'Arriving at',
     bkToday: 'Today', bkTomorrow: 'Tomorrow',
     bkClosedToday: 'Requests for tonight are closed — pick another day',

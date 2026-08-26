@@ -19,10 +19,11 @@ import { editStaffMessage, notifyStaff } from './_lib/staffNotify.js';
 import { renderPlanPng } from './_lib/planImage.js';
 import { getGuestLevel } from './_lib/loyalty.js';
 import { getGuestContact } from './_lib/guests.js';
-import { getEvents, createEvent, updateEvent } from './_lib/events.js';
+import { getEvents, createEvent, updateEvent, deleteEvent } from './_lib/events.js';
 import { saveEventPhoto, deleteEventPhoto, MAX_PHOTOS } from './_lib/eventPhotos.js';
 import { rsvpToEvent } from './_lib/eventRsvps.js';
 import { sendBroadcast, forwardBroadcast } from './_lib/broadcast.js';
+import { broadcastAudit, registerTestRun, getTestRun, forgetTestRun, TEST_TTL_MS } from './_lib/eventTestRun.js';
 import { supabaseSessionStorage } from './_lib/botSession.js';
 import { createReview, checkReviewCooldown } from './_lib/reviews.js';
 
@@ -710,6 +711,7 @@ export function buildBot() {
   const eventsMenuKb = () => new InlineKeyboard()
     .text('➕ Создать событие', 'evadd').row()
     .text('📋 Ближайшие события', 'evlist').row()
+    .text('🧪 Тестовый прогон', 'evtest').row()
     .text('‹ Назад', 'adminmenu');
 
   bot.callbackQuery('ev', async (ctx) => {
@@ -720,6 +722,142 @@ export function buildBot() {
       '📢 *События*\n\nНовое событие появится на сайте (страница «Афиша») и постом в канале. Рассылку подписчикам можно включить или выключить перед публикацией.',
       { reply_markup: eventsMenuKb(), parse_mode: 'Markdown' },
     );
+  });
+
+  // ── Тестовый прогон афиши ────────────────────────────────────────────────
+  // Публикует настоящее событие настоящим кодом (тот же createEvent и тот же
+  // sendPhoto в канал), считает аудиторию рассылки БЕЗ отправки гостям,
+  // пересылает пост только администраторам — и через 30 секунд убирает за
+  // собой: пост из канала и событие с сайта.
+  const TEST_PHOTO = `${SITE_URL}/uploads/team/live-music.jpg`;
+
+  function testReportKb(eventId, url) {
+    const kb = new InlineKeyboard();
+    if (url) kb.url('Открыть пост', url).row();
+    return kb.text('🗑 Удалить сейчас', `evtestdel:${eventId}`).row().text('‹ К событиям', 'ev');
+  }
+
+  /** Убрать за прогоном: пост(ы) из канала и событие из БД. Идемпотентно. */
+  async function cleanupTestRun(api, eventId, reason) {
+    const run = getTestRun(eventId);
+    if (!run) return null;
+    forgetTestRun(eventId);
+    if (run.timer) clearTimeout(run.timer);
+    const errors = [];
+    for (const mid of run.channelMessageIds || []) {
+      await api.deleteMessage(CHANNEL, mid).catch((e) => errors.push(`пост ${mid}: ${e.message}`));
+    }
+    await deleteEvent(eventId).catch((e) => errors.push(`событие: ${e.message}`));
+
+    const done = errors.length
+      ? `🧪 Тестовый прогон убран частично (${reason}).\n⚠️ ${errors.join('; ')}`
+      : `🧪 Тестовый прогон завершён (${reason}).\nПост удалён из канала, событие снято с сайта.`;
+    if (run.reportChatId && run.reportMessageId) {
+      await api.editMessageText(run.reportChatId, run.reportMessageId, done, {
+        reply_markup: new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'adminmenu'),
+      }).catch(() => {});
+    }
+    return { errors };
+  }
+
+  bot.callbackQuery('evtest', async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    await ctx.answerCallbackQuery({ text: 'Запускаю прогон…' });
+    resetSession(ctx);
+    if (!CHANNEL) {
+      return ctx.editMessageText('Канал не настроен (TELEGRAM_CHANNEL) — прогонять нечего.',
+        { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') });
+    }
+
+    const stamp = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    let ev;
+    try {
+      ev = await createEvent({
+        title: `Технический прогон ${stamp}`,
+        date: barEveningDate(),
+        time: '',
+        description: 'Проверка публикации афиши. Событие и пост удалятся автоматически через 30 секунд.',
+        imageUrls: [TEST_PHOTO],
+      });
+    } catch (e) {
+      return ctx.editMessageText(`Не удалось создать тестовое событие: ${e.message}`,
+        { reply_markup: new InlineKeyboard().text('‹ Назад', 'ev') });
+    }
+
+    // Пост в канал — тем же способом, что настоящая публикация с одним фото.
+    const caption = `🧪 *ТЕСТ*\n\n${eventBroadcastText(ev, false)}\n\n_Служебный пост, удалится через 30 секунд._`;
+    const channelMsg = await ctx.api
+      .sendPhoto(CHANNEL, TEST_PHOTO, { caption, parse_mode: 'Markdown' })
+      .catch((e) => { console.error('[bot] test channel post failed:', e.message); return null; });
+
+    // Рассылка: НЕ отправляем гостям. Считаем аудиторию и проверяем механику
+    // пересылки на администраторах.
+    let audit = null;
+    try { audit = await broadcastAudit(); } catch (e) { console.error('[bot] audit failed:', e.message); }
+    let forwarded = 0;
+    if (channelMsg) {
+      // Пересылаем себе и остальным администраторам из env — гостей не трогаем.
+      const adminIds = (process.env.TELEGRAM_ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
+      const staffIds = new Set([String(ctx.from.id), ...adminIds]);
+      for (const id of staffIds) {
+        const ok = await ctx.api.forwardMessage(id, channelMsg.chat.id, channelMsg.message_id)
+          .then(() => true).catch(() => false);
+        if (ok) forwarded += 1;
+      }
+    }
+
+    const lines = [
+      '🧪 *Тестовый прогон*',
+      '',
+      channelMsg ? `📢 Пост в канале ${CHANNEL} — опубликован.` : `⚠️ Пост в канал ${CHANNEL} не ушёл: бот не админ канала?`,
+      `🌐 Событие на сайте: ${SITE_URL}/#events (обновите страницу).`,
+    ];
+    if (audit) {
+      lines.push(
+        '',
+        '📨 *Рассылка (только подсчёт, никому не отправлено):*',
+        `• аккаунтов всего: ${audit.accounts}`,
+        `• связаны с телеграмом: ${audit.withTelegram}`,
+        `• получили бы пост: ${audit.reachable}`,
+        `• заблокировали бота: ${audit.blocked}`,
+        `• регистрировались на сайте без телеграма: ${audit.siteOnly} (им бот написать не может)`,
+      );
+    } else {
+      lines.push('', '⚠️ Не удалось посчитать аудиторию рассылки — смотрите логи API.');
+    }
+    lines.push('', `↩️ Пересылка проверена на администраторах: доставлено ${forwarded}.`);
+    lines.push('', '⏳ Через 30 секунд пост и событие удалятся сами.');
+
+    const url = channelPostUrl(channelMsg?.message_id);
+    const report = await ctx.editMessageText(lines.join('\n'), {
+      parse_mode: 'Markdown',
+      reply_markup: testReportKb(ev.id, url),
+    }).catch(() => null);
+
+    const run = registerTestRun({
+      eventId: ev.id,
+      channelMessageIds: channelMsg ? [channelMsg.message_id] : [],
+      reportChatId: report?.chat?.id || ctx.chat?.id,
+      reportMessageId: report?.message_id || ctx.callbackQuery?.message?.message_id,
+      timer: null,
+    });
+    run.timer = setTimeout(() => {
+      cleanupTestRun(ctx.api, ev.id, 'по таймеру').catch((e) => console.error('[bot] test cleanup failed:', e.message));
+    }, TEST_TTL_MS);
+    if (typeof run.timer.unref === 'function') run.timer.unref(); // не держим процесс живым ради уборки
+    return report;
+  });
+
+  bot.callbackQuery(/^evtestdel:(.+)$/, async (ctx) => {
+    if (!isTelegramStaff(ctx.from.id)) return ctx.answerCallbackQuery({ text: 'Нет доступа', show_alert: true });
+    const eventId = ctx.match[1];
+    if (!getTestRun(eventId)) {
+      await ctx.answerCallbackQuery({ text: 'Уже удалено' });
+      return ctx.editMessageText('🧪 Тестовый прогон уже убран.',
+        { reply_markup: new InlineKeyboard().text('‹ К событиям', 'ev').text('🏠 Меню', 'adminmenu') }).catch(() => {});
+    }
+    await ctx.answerCallbackQuery({ text: 'Убираю…' });
+    return cleanupTestRun(ctx.api, eventId, 'вручную');
   });
 
   bot.callbackQuery('evcancel', async (ctx) => {
