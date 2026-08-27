@@ -16,10 +16,21 @@ import ApplicationsService from '../team/ApplicationsService.js';
 // новые тексты появятся, убрать QUOTE_STUB и вернуть current.quote.
 const QUOTE_STUB = 'Упс! Извините, текст временно украли, вернем его чуть позже!';
 
-// Кружки разного размера — как на эскизе владельца. Размер зависит от номера,
-// а не от случайности: раскладка не должна прыгать на каждом ре-рендере.
-const AVA_SIZES = [104, 128, 92, 116, 98, 122, 88, 110];
-const avaSize = (i) => AVA_SIZES[i % AVA_SIZES.length];
+/**
+ * Дуга ряда аватарок (утверждено владельцем по прототипу 2026-08-27).
+ * Кружки ОДИНАКОВОГО размера, но подняты по параболе: середина ряда выше краёв,
+ * как приподнятая бровь. Считается от позиции относительно центра, поэтому
+ * работает при любом числе барменов — список тянется из БД и будет расти.
+ *   curve = 1 в центре ряда и 0 по краям; в CSS он умножается на --tm3-peak.
+ * Прежние массив размеров и зигзаг ((i % 4) - 1.5) удалены: они не зависели ни
+ * от позиции в ряду, ни от их количества.
+ */
+function arcCurve(i, n) {
+  const mid = (n - 1) / 2;
+  if (mid === 0) return 1;
+  const t = (i - mid) / mid; // -1 … 0 … 1
+  return 1 - t * t;
+}
 
 // Кадрирование аватарок: портреты сняты с разного расстояния, поэтому у
 // каждого свой зум и точка фокуса — подобраны по реальным фото. Ключ — имя
@@ -93,7 +104,9 @@ export default function Team({ tx }) {
         {!loading && current && (
           <div className="tm3">
             {/* Ряд аватарок — он же переключатель бармена */}
-            <nav className="tm3__ring" aria-label="Наши бармены">
+            {/* --n нужен CSS, чтобы ужать ряд одним коэффициентом, когда
+                барменов станет столько, что дуга перестанет влезать по ширине. */}
+            <nav className="tm3__ring" aria-label="Наши бармены" style={{ '--n': members.length }}>
               {members.map((m, i) => {
                 const focus = focusFor(m.photoUrl);
                 return (
@@ -102,9 +115,9 @@ export default function Team({ tx }) {
                     type="button"
                     className={`tm3__ava${i === idx ? ' tm3__ava--on' : ''}`}
                     style={{
-                      '--ava': `${avaSize(i)}px`,
-                      // Кружки стоят не по линейке, а вразнобой — как на эскизе.
-                      '--ava-shift': `${((i % 4) - 1.5) * 10}px`,
+                      // Подъём по дуге: CSS умножает --tm3-peak на этот множитель.
+                      '--curve': arcCurve(i, members.length).toFixed(4),
+                      '--i': i, // задержка волны появления слева направо
                       backgroundImage: m.photoUrl ? `url(${m.photoUrl})` : undefined,
                       backgroundSize: focus.size,
                       backgroundPosition: focus.pos,

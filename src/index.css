@@ -1807,24 +1807,35 @@ html { scroll-behavior: smooth; }
   width: 100%;
 }
 
-/* Ряд аватарок: кружки разного размера, стоят вразнобой (см. --ava-shift). */
+/* Ряд аватарок — дуга: кружки ОДИНАКОВОГО размера, приподнятые к середине
+   (утверждено владельцем по прототипу 2026-08-27). Подъём каждого — это
+   --tm3-peak × --curve, где curve считает Team.jsx: 1 в центре ряда, 0 по краям.
+   ⚠️ Размер задан в пикселях с потолком, а НЕ в vh: прежний потолок 9.5vh
+   зажимал кружок в 85–103px на десктопе — это и была «мелкота».
+   Второй лимит — по ширине: когда барменов станет много, ряд ужимается сам
+   (делим доступную ширину на их число), и дуга при этом не ломается. */
 .tm3__ring {
+  --tm3-gap: clamp(10px, 1.4vw, 26px);
+  --tm3-peak: clamp(24px, 4vh, 52px);
+  --tm3-ava: min(
+    clamp(112px, 8.8vw, 168px),
+    calc((90vw - (var(--n, 6) - 1) * var(--tm3-gap)) / var(--n, 6))
+  );
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  align-items: center;
-  gap: clamp(8px, 1.2vw, 18px);
-  /* Кружки съезжают по вертикали (--ava-shift), поэтому сверху нужен запас —
-     иначе верхний ряд наезжает на подпись главы. */
-  padding: 18px 2px 10px;
+  /* Низ ряда — общая база, дуга уходит вверх. */
+  align-items: flex-end;
+  gap: var(--tm3-gap);
+  /* Сверху место под подъём центра, снизу — под подпись имени. */
+  padding: calc(var(--tm3-peak) + 4px) 2px 22px;
   width: 100%;
 }
 .tm3__ava {
   position: relative;
   flex: 0 0 auto;
-  /* Кружок не крупнее 11% высоты экрана — на ноутбуке ряд не съедает пол-экрана. */
-  width: min(var(--ava, 104px), 9.5vh);
-  height: min(var(--ava, 104px), 9.5vh);
+  width: var(--tm3-ava);
+  height: var(--tm3-ava);
   border-radius: 50%;
   border: 1px solid rgba(var(--gold-rgb), .3);
   background-color: var(--bg2);
@@ -1833,20 +1844,41 @@ html { scroll-behavior: smooth; }
   cursor: pointer;
   /* Неактивные приглушены — активный бармен читается мгновенно. */
   filter: grayscale(.45) brightness(.72);
-  transform: translateY(var(--ava-shift, 0));
-  transition: transform .25s ease, filter .25s ease, border-color .25s ease, box-shadow .25s ease;
+  transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1));
+  transition:
+    transform .35s cubic-bezier(.2, .8, .25, 1),
+    filter .35s ease,
+    border-color .3s ease,
+    box-shadow .3s ease;
 }
 .tm3__ava:hover,
 .tm3__ava:focus-visible {
   filter: grayscale(0) brightness(.95);
   border-color: rgba(var(--gold-rgb), .6);
-  transform: translateY(calc(var(--ava-shift, 0px) - 3px)) scale(1.04);
+  transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1 - 6px)) scale(1.06);
 }
+/* Активный отличается кольцом и свечением, а не размером: кружки в ряду
+   одинаковые (прямое требование владельца). */
 .tm3__ava--on {
   filter: none;
   border-color: var(--gold);
-  box-shadow: 0 0 0 1px rgba(var(--gold-rgb), .45), 0 10px 26px rgba(0, 0, 0, .45);
-  transform: translateY(var(--ava-shift, 0)) scale(1.06);
+  box-shadow: 0 0 0 1px rgba(var(--gold-rgb), .45), 0 0 22px rgba(var(--gold-rgb), .3), 0 14px 30px rgba(0, 0, 0, .5);
+}
+/* Появление ряда волной слева направо. fill-mode backwards, а не both: после
+   анимации элемент возвращается к своему стилю, и hover продолжает работать. */
+.tm3__ava {
+  animation: tm3AvaIn .5s cubic-bezier(.2, .8, .25, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+@keyframes tm3AvaIn {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1 + 18px)) scale(.92);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm3__ava { animation: none; transition: none; }
+  .tm3__ava:hover, .tm3__ava:focus-visible { transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1)); }
 }
 .tm3__ava-letter {
   position: absolute;
@@ -1854,7 +1886,7 @@ html { scroll-behavior: smooth; }
   display: grid;
   place-items: center;
   font-family: 'Baskerville', serif;
-  font-size: calc(min(var(--ava, 104px), 9.5vh) * .34);
+  font-size: calc(var(--tm3-ava) * .34);
   color: rgba(var(--gold-rgb), .55);
 }
 /* Имя появляется у активного и под курсором — постоянные подписи превратили бы
@@ -2062,9 +2094,13 @@ html { scroll-behavior: smooth; }
   .tm3__shots { display: grid; grid-template-columns: 1fr; height: auto; }
   .tm3__shot, .tm3__shot--work, .tm3__shot--fun { height: auto; width: 100%; }
   .tm3__ring {
+    /* На телефоне дуга не имеет смысла: ряд превращается в ленту с прокруткой,
+       кружки одного размера и без подъёма. */
+    --tm3-ava: 78px;
+    --tm3-peak: 0px;
     flex-wrap: nowrap;
     /* overflow-x режет и по вертикали — оставляем место подписи под кружком. */
-    padding-bottom: 24px;
+    padding: 4px 2px 24px;
     overflow-x: auto;
     justify-content: flex-start;
     scrollbar-width: none;
