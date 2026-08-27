@@ -48,9 +48,11 @@ function arcCurve(i, n) {
  * Потолок намеренно низкий: ряд — навигация, а не витрина. В v4 он был 420px,
  * и аватарки съели место у трёх кадров (главного блока секции).
  */
-const AVA_MIN = 68;   // мельче — уже не лица, а точки
-const AVA_MAX = 108;  // «необязательно такие громадные» — прямая правка владельца
-const AVA_VH  = 0.13; // потолок по высоте: на низком экране ряд обязан ужаться
+const AVA_MIN = 68;    // мельче — уже не лица, а точки
+const AVA_MAX = 150;   // золотая середина: заметно, но кадрам высоты хватает
+const AVA_VH  = 0.17;  // потолок по высоте: на низком экране ряд обязан ужаться
+const GAP_MIN = 10;
+const GAP_MAX_K = 0.9; // предел зазора — доля диаметра, чтобы ряд не рассыпался
 const RING_MOBILE_MAX = 900; // ниже — лента с прокруткой, диаметр из CSS
 
 function fitRing(el, count) {
@@ -61,15 +63,23 @@ function fitRing(el, count) {
     el.style.removeProperty('--tm3-gap');
     return;
   }
-  let gap = Math.max(6, Math.min(24, width * 0.014));
-  let d = Math.min(AVA_MAX, window.innerHeight * AVA_VH, (width - gap * (count - 1)) / count);
+  // Диаметр: сначала потолки, потом «сколько влезет в строку» при минимальном
+  // зазоре. Ряд обязан остаться в ОДНУ строку при любом составе команды.
+  let d = Math.min(
+    AVA_MAX,
+    window.innerHeight * AVA_VH,
+    (width - GAP_MIN * (count - 1)) / count,
+  );
   d = Math.max(AVA_MIN, d);
-  // Барменов стало столько, что даже минимальный кружок не влезает — жертвуем
-  // минимумом, но НЕ переносим ряд на вторую строку и не даём горизонтальный скролл.
-  if (d * count + gap * (count - 1) > width) {
-    gap = 6;
-    d = Math.min(d, (width - gap * (count - 1)) / count);
-  }
+  if (d * count + GAP_MIN * (count - 1) > width) d = (width - GAP_MIN * (count - 1)) / count;
+
+  // Остаток ширины уходит в зазоры: ряд распределяется по всей ширине секции,
+  // а не жмётся кучкой по центру (правка владельца 2026-08-27). Верхний предел
+  // держит кружки рядом друг с другом, когда барменов совсем мало.
+  const gap = count > 1
+    ? Math.max(GAP_MIN, Math.min(d * GAP_MAX_K, (width - d * count) / (count - 1)))
+    : 0;
+
   el.style.setProperty('--tm3-ava', Math.floor(d) + 'px');
   el.style.setProperty('--tm3-gap', Math.round(gap) + 'px');
 }
@@ -112,15 +122,45 @@ function CoupeSign() {
   );
 }
 
-/** Кадр ленты: фото или заглушка «снимок скоро». */
-function Shot({ url, kind, caption, alt, soon }) {
+/**
+ * Кадр ленты: фото или заглушка «снимок скоро».
+ * Подписей под кадрами нет — владелец убрал их 2026-08-27 («ЗА СТОЙКОЙ» и
+ * прочее): фотографии говорят сами за себя. Тексты tx.teamShot* остались в
+ * src/data.js на случай возврата.
+ */
+function Shot({ url, kind, alt, soon }) {
   return (
     <figure className={`tm3__shot tm3__shot--${kind}${url ? '' : ' tm3__shot--empty'}`}>
       {url
-        ? <img src={url} alt={alt} loading="lazy" />
+        ? <img src={url} alt={alt} decoding="async" />
         : <span className="tm3__shot-stub"><CoupeSign /><span className="tm3__shot-soon">{soon}</span></span>}
-      <figcaption className="tm3__shot-cap">{caption}</figcaption>
     </figure>
+  );
+}
+
+/**
+ * Тройка кадров одного бармена. В DOM висят тройки ВСЕХ барменов, неактивные —
+ * `display: none` (класс без --on).
+ *
+ * Так лечится задержка при переключении (жалоба владельца 2026-08-27: «нажал
+ * на Егора, а сбоку ещё секунду фотки Лели»). Причина была не в React, а в
+ * сети: nginx отдаёт /uploads с `no-cache, must-revalidate`, поэтому каждая
+ * смена src дёргала сервер за 304, и браузер держал на экране старую картинку,
+ * пока не приедет ответ. Предзагрузка через `new Image()` не спасала — она
+ * греет кэш, но не отменяет ревалидацию.
+ * Теперь все кадры загружаются один раз при монтировании секции, а
+ * переключение — смена CSS-класса: ноль запросов, ноль ожидания.
+ * `display: none` (а не visibility) выбран намеренно: скрытые кадры не держат
+ * декодированные битмапы в памяти — при семи барменах это была бы сотня
+ * мегабайт на слабой машине.
+ */
+function ShotsGroup({ member, active, soon }) {
+  return (
+    <div className={`tm3__shots${active ? ' tm3__shots--on' : ''}`} aria-hidden={!active}>
+      <Shot kind="work" url={member.photoWorkUrl} soon={soon} alt={`${member.name} за работой`} />
+      <Shot kind="hero" url={member.photoUrl} soon={soon} alt={member.name} />
+      <Shot kind="fun" url={member.photoFunUrl} soon={soon} alt={`${member.name}, кадр вне смены`} />
+    </div>
   );
 }
 
@@ -212,10 +252,10 @@ export default function Team({ tx }) {
                 У кого фото ещё нет — слот со знаком-креманкой и «Снимок скоро»
                 (сейчас так у Шамусара оба кадра, у Александра и Дениса — «вне
                 смены»; появятся в админке — подхватятся сами). */}
-            <div className="tm3__shots">
-              <Shot kind="work" url={current.photoWorkUrl} caption={tx.teamShotWork} soon={tx.teamShotSoon} alt={`${current.name} за работой`} />
-              <Shot kind="hero" url={current.photoUrl} caption={tx.teamShotHero} soon={tx.teamShotSoon} alt={current.name} />
-              <Shot kind="fun" url={current.photoFunUrl} caption={tx.teamShotFun} soon={tx.teamShotSoon} alt={`${current.name}, кадр вне смены`} />
+            <div className="tm3__stage">
+              {members.map((m, i) => (
+                <ShotsGroup key={m.id} member={m} active={i === idx} soon={tx.teamShotSoon} />
+              ))}
             </div>
 
             {/* Низ секции: цитата слева, описание справа — на одной высоте,
