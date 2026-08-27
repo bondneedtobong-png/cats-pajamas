@@ -1,15 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useReveal } from '../useReveal.js';
 import QuoteFrame from '../ui/QuoteFrame.jsx';
 import TeamService from '../team/TeamService.js';
 import ApplicationsService from '../team/ApplicationsService.js';
 
-// Секция «Бармены» v3 (макет владельца, 2026-08-27): сверху ряд круглых
-// аватарок-переключателей, под ними имя и биография, дальше цитата в латунной
-// табличке и лента из трёх кадров — «в работе» (слева, маленький), парадный
-// (по центру, крупный) и «в настроении» (справа).
+// Секция «Бармены» v4 (макет владельца от 2026-08-27, нарисован фигурами
+// поверх скриншота): сверху ряд КРУПНЫХ круглых аватарок-переключателей во всю
+// ширину, внизу две плашки на одной высоте — цитата слева, описание бармена
+// справа (имя + должность + стаж + биография одним блоком).
 //
-// Прежняя раскладка v2 (портрет слева, список-кнопки справа) удалена целиком.
+// Почему так мало элементов: v3 разваливалась не от размеров, а от количества
+// одновременно видимых блоков — метка главы, крупное имя, роль, стаж, био с
+// «читать дальше», цитата, лента из трёх кадров и кнопка «стать бартендером»
+// делили один экран, и акцента не оставалось. Всё лишнее ниже завёрнуто в
+// `{false && (…)}` с пометкой TODO: код и данные (photoWorkUrl/photoFunUrl,
+// админка «КОМАНДА») целы, эти поля просто временно нигде не рендерятся.
 //
 // Тексты цитат владелец переписывает заново — до этого во всех карточках стоит
 // одна заглушка (QUOTE_STUB), цитаты из БД временно не показываются. Когда
@@ -17,19 +22,37 @@ import ApplicationsService from '../team/ApplicationsService.js';
 const QUOTE_STUB = 'Упс! Извините, текст временно украли, вернем его чуть позже!';
 
 /**
- * Дуга ряда аватарок (утверждено владельцем по прототипу 2026-08-27).
- * Кружки ОДИНАКОВОГО размера, но подняты по параболе: середина ряда выше краёв,
- * как приподнятая бровь. Считается от позиции относительно центра, поэтому
- * работает при любом числе барменов — список тянется из БД и будет расти.
- *   curve = 1 в центре ряда и 0 по краям; в CSS он умножается на --tm3-peak.
- * Прежние массив размеров и зигзаг ((i % 4) - 1.5) удалены: они не зависели ни
- * от позиции в ряду, ни от их количества.
+ * Размер аватарки под ширину ряда (требование владельца 2026-08-27).
+ * Ряд обязан помещаться в ОДНУ строку при любом числе барменов: список тянется
+ * из админки и будет расти. Значит, диаметр и зазор считаются от реальной
+ * ширины контейнера, а чистым CSS это не выразить — отсюда замер в JS.
+ * Прежний потолок `min(var(--ava), 9.5vh)` зажимал кружок в ~85–103px на
+ * десктопе; теперь ограничение только по ширине ряда.
  */
-function arcCurve(i, n) {
-  const mid = (n - 1) / 2;
-  if (mid === 0) return 1;
-  const t = (i - mid) / mid; // -1 … 0 … 1
-  return 1 - t * t;
+const AVA_MIN = 76;   // мельче — уже не лица, а точки
+const AVA_MAX = 420;  // ~втрое больше прежнего; срабатывает при 2–4 барменах
+const AVA_VH  = 0.34; // потолок по высоте: иначе при малом составе ряд перерастает экран
+const RING_MOBILE_MAX = 900; // ниже — лента с прокруткой, диаметр из CSS
+
+function fitRing(el, count) {
+  const width = el.clientWidth;
+  if (!width || !count) return;
+  if (window.innerWidth <= RING_MOBILE_MAX) {
+    el.style.removeProperty('--tm3-ava');
+    el.style.removeProperty('--tm3-gap');
+    return;
+  }
+  let gap = Math.max(4, Math.min(20, width * 0.008));
+  let d = (width - gap * (count - 1)) / count;
+  d = Math.min(AVA_MAX, window.innerHeight * AVA_VH, Math.max(AVA_MIN, d));
+  // Барменов стало столько, что даже минимальный кружок не влезает — жертвуем
+  // минимумом, но НЕ переносим ряд на вторую строку и не даём горизонтальный скролл.
+  if (d * count + gap * (count - 1) > width) {
+    gap = 4;
+    d = (width - gap * (count - 1)) / count;
+  }
+  el.style.setProperty('--tm3-ava', Math.floor(d) + 'px');
+  el.style.setProperty('--tm3-gap', Math.round(gap) + 'px');
 }
 
 // Кадрирование аватарок: портреты сняты с разного расстояния, поэтому у
@@ -42,6 +65,7 @@ const PHOTO_FOCUS = {
   'denis.jpg':     { size: '115% auto', pos: '50% 26%' },
   'dmitriy.jpg':   { size: '210% auto', pos: '54% 20%' },
   'egor.jpg':      { size: '230% auto', pos: '32% 39%' },
+  'lelya.jpg':     { size: '235% auto', pos: '47% 20%' },
 };
 const DEFAULT_FOCUS = { size: 'cover', pos: '50% 22%' };
 const focusFor = (url) => PHOTO_FOCUS[(url || '').split('/').pop()] || DEFAULT_FOCUS;
@@ -76,6 +100,7 @@ export default function Team({ tx }) {
   const [showForm, setShowForm] = useState(false);
   const [bioOpen,  setBioOpen]  = useState(false);
   const r0 = useReveal(0);
+  const ringRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
@@ -86,6 +111,20 @@ export default function Team({ tx }) {
     return () => { alive = false; };
   }, []);
 
+  // Пересчёт диаметра: при монтировании, смене числа барменов и любом ресайзе
+  // контейнера. ResizeObserver ловит и то, чего не видит window.resize
+  // (например, появление вертикального скроллбара).
+  useLayoutEffect(() => {
+    const el = ringRef.current;
+    if (!el) return;
+    const fit = () => fitRing(el, members.length);
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    window.addEventListener('resize', fit);
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit); };
+  }, [members.length]);
+
   const current = members[idx];
   // Длинную биографию в один экран не уместить — показываем начало и даём
   // раскрыть по кнопке (порог подобран по самой длинной биографии команды).
@@ -94,19 +133,23 @@ export default function Team({ tx }) {
   return (
     <section id="team" className="team">
       <div className="team__inner team__inner--stage">
-        <div ref={r0} className="reveal" style={{ textAlign: 'center' }}>
-          <span className="sec-label">{tx.teamLabel}</span>
-        </div>
+        {/* TODO(2026-08-27): метка главы временно скрыта по ТЗ владельца —
+            вернуть после утверждения новой раскладки. Нумерация глав в
+            src/data.js не тронута. */}
+        {false && (
+          <div ref={r0} className="reveal" style={{ textAlign: 'center' }}>
+            <span className="sec-label">{tx.teamLabel}</span>
+          </div>
+        )}
 
         {loading && <p className="team__note">{tx.teamLoading}</p>}
         {!loading && !current && <p className="team__note">{tx.teamEmpty}</p>}
 
         {!loading && current && (
           <div className="tm3">
-            {/* Ряд аватарок — он же переключатель бармена */}
-            {/* --n нужен CSS, чтобы ужать ряд одним коэффициентом, когда
-                барменов станет столько, что дуга перестанет влезать по ширине. */}
-            <nav className="tm3__ring" aria-label="Наши бармены" style={{ '--n': members.length }}>
+            {/* Ряд аватарок — он же переключатель бармена. Диаметр и зазор
+                считает fitRing (см. выше) и кладёт инлайном в CSS-переменные. */}
+            <nav className="tm3__ring" aria-label="Наши бармены" ref={ringRef}>
               {members.map((m, i) => {
                 const focus = focusFor(m.photoUrl);
                 return (
@@ -115,8 +158,6 @@ export default function Team({ tx }) {
                     type="button"
                     className={`tm3__ava${i === idx ? ' tm3__ava--on' : ''}`}
                     style={{
-                      // Подъём по дуге: CSS умножает --tm3-peak на этот множитель.
-                      '--curve': arcCurve(i, members.length).toFixed(4),
                       '--i': i, // задержка волны появления слева направо
                       backgroundImage: m.photoUrl ? `url(${m.photoUrl})` : undefined,
                       backgroundSize: focus.size,
@@ -132,41 +173,61 @@ export default function Team({ tx }) {
               })}
             </nav>
 
-            {/* Имя · должность · стаж */}
-            <header className="tm3__head" key={current.id}>
-              <h2 className="tm3__name">{current.name}</h2>
-              {current.role && <div className="tm3__role">{current.role}</div>}
-              {current.spec && <div className="tm3__spec">{current.spec}</div>}
-            </header>
+            {/* Низ секции: цитата слева, описание справа — на одной высоте,
+                симметрично относительно центра (макет владельца). */}
+            <div className="tm3__panels">
+              <figure className="tm3__quote">
+                <QuoteFrame />
+                <blockquote className="tm3__quote-text">{QUOTE_STUB}</blockquote>
+              </figure>
 
-            {current.bio && (
+              <article className="tm3__about" key={current.id}>
+                <QuoteFrame />
+                <h2 className="tm3__name">{current.name}</h2>
+                {current.role && <div className="tm3__role">{current.role}</div>}
+                {current.spec && <div className="tm3__spec">{current.spec}</div>}
+                {current.bio && <div className="tm3__rule" />}
+                {current.bio && <p className="tm3__bio">{current.bio}</p>}
+              </article>
+            </div>
+
+            {/* TODO(2026-08-27): временно скрыто по ТЗ владельца — вернуть
+                после утверждения новой раскладки. Имя переехало внутрь блока
+                описания, биография показывается целиком (без «читать дальше»),
+                лента из трёх кадров и блок «стать бартендером» сняты с экрана,
+                чтобы у секции остался один акцент. Данные в БД целы. */}
+            {false && (
               <>
-                <p className={`tm3__bio${bioOpen ? ' tm3__bio--open' : ''}`}>{current.bio}</p>
-                {bioLong && (
-                  <button type="button" className="tm3__bio-more" onClick={() => setBioOpen((v) => !v)}>
-                    {bioOpen ? 'Свернуть' : 'Читать дальше'}
-                  </button>
+                <header className="tm3__head">
+                  <h2 className="tm3__name">{current.name}</h2>
+                  {current.role && <div className="tm3__role">{current.role}</div>}
+                  {current.spec && <div className="tm3__spec">{current.spec}</div>}
+                </header>
+
+                {current.bio && (
+                  <>
+                    <p className={`tm3__bio${bioOpen ? ' tm3__bio--open' : ''}`}>{current.bio}</p>
+                    {bioLong && (
+                      <button type="button" className="tm3__bio-more" onClick={() => setBioOpen((v) => !v)}>
+                        {bioOpen ? 'Свернуть' : 'Читать дальше'}
+                      </button>
+                    )}
+                  </>
                 )}
+
+                {/* Три кадра: в работе · парадный · в настроении */}
+                <div className="tm3__shots">
+                  <Shot kind="work" url={current.photoWorkUrl} caption={tx.teamShotWork} soon={tx.teamShotSoon} alt={`${current.name} за работой`} />
+                  <Shot kind="hero" url={current.photoUrl} caption={tx.teamShotHero} soon={tx.teamShotSoon} alt={current.name} />
+                  <Shot kind="fun" url={current.photoFunUrl} caption={tx.teamShotFun} soon={tx.teamShotSoon} alt={`${current.name}, кадр вне смены`} />
+                </div>
+
+                <div className="tm3__join">
+                  <p className="tm3__join-text">{tx.teamJoinAsk}</p>
+                  <button className="tm3__join-btn u-glare" onClick={() => setShowForm(true)}>{tx.teamJoinShare}</button>
+                </div>
               </>
             )}
-
-            {/* Цитата — латунная табличка (вариант владельца) */}
-            <figure className="tm3__quote">
-              <QuoteFrame />
-              <blockquote className="tm3__quote-text">{QUOTE_STUB}</blockquote>
-            </figure>
-
-            {/* Три кадра: в работе · парадный · в настроении */}
-            <div className="tm3__shots">
-              <Shot kind="work" url={current.photoWorkUrl} caption={tx.teamShotWork} soon={tx.teamShotSoon} alt={`${current.name} за работой`} />
-              <Shot kind="hero" url={current.photoUrl} caption={tx.teamShotHero} soon={tx.teamShotSoon} alt={current.name} />
-              <Shot kind="fun" url={current.photoFunUrl} caption={tx.teamShotFun} soon={tx.teamShotSoon} alt={`${current.name}, кадр вне смены`} />
-            </div>
-
-            <div className="tm3__join">
-              <p className="tm3__join-text">{tx.teamJoinAsk}</p>
-              <button className="tm3__join-btn u-glare" onClick={() => setShowForm(true)}>{tx.teamJoinShare}</button>
-            </div>
           </div>
         )}
       </div>

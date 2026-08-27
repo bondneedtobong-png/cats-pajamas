@@ -1648,7 +1648,9 @@ html { scroll-behavior: smooth; }
    «фотка останавливается, как и остальные фото в этой же колонке»). */
 .wall {
   position: relative;
-  padding: clamp(60px, 10vh, 110px) 0 clamp(70px, 11vh, 130px);
+  /* Снизу поле намеренно маленькое: секция «Бармены» начинается сразу за
+     витриной — большой зазор владелец отдельно просил убрать (2026-08-27). */
+  padding: clamp(60px, 10vh, 110px) 0 clamp(26px, 3.4vh, 46px);
   background: var(--bg);
   overflow: hidden;
 }
@@ -1747,15 +1749,17 @@ html { scroll-behavior: smooth; }
 /* ── TEAM ──────────────────────────────────────────────── */
 .team {
   /* Секция барменов держится в один экран (просьба владельца 2026-08-27):
-     ряд аватарок, цитата и три кадра должны быть видны разом, без прокрутки.
+     ряд аватарок и обе плашки должны быть видны разом, без прокрутки.
      Поэтому вертикальные поля скромнее, а внутренние размеры считаются от
      высоты вьюпорта (vh), а не от ширины. */
   min-height: 100svh;
   display: flex;
-  align-items: center;
-  /* Контент центрируется по высоте секции, поэтому большие поля не нужны:
-     запаса сверху хватает, чтобы фикс-шапка (76px) не накрыла подпись главы. */
-  padding: clamp(84px, 10vh, 104px) 5% clamp(24px, 3.4vh, 40px);
+  align-items: stretch;
+  /* Не center: контент сам распределяется внутри (.tm3 space-between), иначе
+     ряд аватарок уезжал бы к середине экрана. Отступ сверху — ровно клиренс
+     под фикс-шапку (76px), «искусственного зазора» после витрины быть не должно.
+     Поля по бокам маленькие: ряд аватарок идёт почти во всю ширину. */
+  padding: clamp(84px, 8.5vh, 100px) 2vw clamp(24px, 3.4vh, 40px);
   position: relative;
   overflow: hidden;
 }
@@ -1787,55 +1791,59 @@ html { scroll-behavior: smooth; }
   margin: 0 0 32px;
 }
 
-/* ── Бармены v3 (.tm3) — макет владельца 2026-08-27 ───────────────────────────
-   Сверху ряд круглых аватарок (он же переключатель), под ними имя и биография,
-   дальше цитата в латунной табличке и лента из трёх кадров: «за стойкой»
-   (слева, маленький), парадный (центр, крупный) и «вне смены» (справа).
-   Раскладка v2 (портрет слева + список-кнопки справа) удалена целиком.
-   Движение только transform/opacity, ничего бесконечного. ── */
+/* ── Бармены v4 (.tm3) — макет владельца 2026-08-27 ───────────────────────────
+   Владелец нарисовал раскладку фигурами поверх скриншота (CorelDraw): сверху,
+   почти вплотную к верху секции — ряд КРУПНЫХ круглых аватарок во всю ширину
+   (он же переключатель бармена), внизу две плашки на одной высоте: цитата
+   слева, описание справа (имя + должность + стаж + биография одним блоком).
+
+   Почему так мало элементов: прежние версии разваливались не от размеров, а от
+   количества одновременно видимых блоков — метка главы, крупное имя, роль,
+   стаж, био с «читать дальше», цитата, лента из трёх кадров и кнопка «стать
+   бартендером» делили один экран, и акцента не оставалось. В v4 на экране
+   РОВНО три вещи; остальное временно скрыто в Team.jsx (там пометки TODO с
+   датой — вернуть после утверждения раскладки), данные в БД не тронуты.
+
+   Диаметр кружка и зазор считает JS (Team.jsx) и кладёт инлайном в --tm3-ava /
+   --tm3-gap: ряд обязан помещаться в ОДНУ строку при любом числе барменов,
+   поэтому чистым CSS это не выразить. Значения здесь — фолбэк до первого
+   замера и режим мобильной ленты. ── */
 .team__inner--stage {
-  max-width: 1460px;
-  margin: 0 auto;
+  /* Ряду аватарок нужна вся ширина секции (панели ниже сами держат 1460px). */
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 .tm3 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Все вертикальные размеры внутри — от высоты экрана: секция обязана
-     умещаться целиком (аватарки + цитата + три кадра). */
-  gap: clamp(6px, 1.2vh, 15px);
+  /* Ряд прижат к верху, плашки — к низу: между ними воздух, как на макете. */
+  justify-content: space-between;
+  gap: clamp(18px, 3.4vh, 46px);
   width: 100%;
+  flex: 1;
 }
 
-/* Ряд аватарок — дуга: кружки ОДИНАКОВОГО размера, приподнятые к середине
-   (утверждено владельцем по прототипу 2026-08-27). Подъём каждого — это
-   --tm3-peak × --curve, где curve считает Team.jsx: 1 в центре ряда, 0 по краям.
-   ⚠️ Размер задан в пикселях с потолком, а НЕ в vh: прежний потолок 9.5vh
-   зажимал кружок в 85–103px на десктопе — это и была «мелкота».
-   Второй лимит — по ширине: когда барменов станет много, ряд ужимается сам
-   (делим доступную ширину на их число), и дуга при этом не ломается. */
+/* ── Ряд аватарок ──────────────────────────────────────────────────────────
+   Ровная линия, без вертикальных сдвигов (прежние дуга и зигзаг убраны по ТЗ
+   владельца: «крупно, ровно, у верха»). */
 .tm3__ring {
-  --tm3-gap: clamp(10px, 1.4vw, 26px);
-  --tm3-peak: clamp(24px, 4vh, 52px);
-  --tm3-ava: min(
-    clamp(112px, 8.8vw, 168px),
-    calc((90vw - (var(--n, 6) - 1) * var(--tm3-gap)) / var(--n, 6))
-  );
   display: flex;
   flex-wrap: nowrap;
   justify-content: center;
-  /* Низ ряда — общая база, дуга уходит вверх. */
-  align-items: flex-end;
-  gap: var(--tm3-gap);
-  /* Сверху место под подъём центра, снизу — под подпись имени. */
-  padding: calc(var(--tm3-peak) + 4px) 2px 22px;
+  align-items: center;
+  gap: var(--tm3-gap, 12px);
+  /* Снизу место под подпись имени активного бармена. */
+  padding: 0 0 20px;
   width: 100%;
 }
 .tm3__ava {
   position: relative;
   flex: 0 0 auto;
-  width: var(--tm3-ava);
-  height: var(--tm3-ava);
+  width: var(--tm3-ava, 160px);
+  height: var(--tm3-ava, 160px);
   border-radius: 50%;
   border: 1px solid rgba(var(--gold-rgb), .3);
   background-color: var(--bg2);
@@ -1844,7 +1852,6 @@ html { scroll-behavior: smooth; }
   cursor: pointer;
   /* Неактивные приглушены — активный бармен читается мгновенно. */
   filter: grayscale(.45) brightness(.72);
-  transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1));
   transition:
     transform .35s cubic-bezier(.2, .8, .25, 1),
     filter .35s ease,
@@ -1855,7 +1862,7 @@ html { scroll-behavior: smooth; }
 .tm3__ava:focus-visible {
   filter: grayscale(0) brightness(.95);
   border-color: rgba(var(--gold-rgb), .6);
-  transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1 - 6px)) scale(1.06);
+  transform: scale(1.04);
 }
 /* Активный отличается кольцом и свечением, а не размером: кружки в ряду
    одинаковые (прямое требование владельца). */
@@ -1871,14 +1878,11 @@ html { scroll-behavior: smooth; }
   animation-delay: calc(var(--i, 0) * 60ms);
 }
 @keyframes tm3AvaIn {
-  from {
-    opacity: 0;
-    transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1 + 18px)) scale(.92);
-  }
+  from { opacity: 0; transform: scale(.92); }
 }
 @media (prefers-reduced-motion: reduce) {
   .tm3__ava { animation: none; transition: none; }
-  .tm3__ava:hover, .tm3__ava:focus-visible { transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1)); }
+  .tm3__ava:hover, .tm3__ava:focus-visible { transform: none; }
 }
 .tm3__ava-letter {
   position: absolute;
@@ -1886,7 +1890,7 @@ html { scroll-behavior: smooth; }
   display: grid;
   place-items: center;
   font-family: 'Baskerville', serif;
-  font-size: calc(var(--tm3-ava) * .34);
+  font-size: calc(var(--tm3-ava, 160px) * .34);
   color: rgba(var(--gold-rgb), .55);
 }
 /* Имя появляется у активного и под курсором — постоянные подписи превратили бы
@@ -1894,7 +1898,7 @@ html { scroll-behavior: smooth; }
 .tm3__ava-name {
   position: absolute;
   left: 50%;
-  bottom: -17px;
+  bottom: -18px;
   transform: translateX(-50%);
   font-size: 10px;
   letter-spacing: 1.6px;
@@ -1909,13 +1913,52 @@ html { scroll-behavior: smooth; }
 .tm3__ava:focus-visible .tm3__ava-name { opacity: 1; }
 .tm3__ava--on .tm3__ava-name { opacity: 1; color: var(--gold); }
 
-/* Имя · должность · стаж */
-.tm3__head { text-align: center; }
+/* ── Две плашки: цитата слева, описание справа ─────────────────────────────
+   Обе — латунная табличка из QuoteFrame (вариант «plate», выбор владельца):
+   один и тот же материал у цитаты и у описания держит их как пару. */
+.tm3__panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  /* Минимум высоты, чтобы плашки не схлопывались у бармена с коротким текстом
+     (например, пока не заполнена биография новичка). */
+  grid-auto-rows: minmax(clamp(230px, 38vh, 400px), auto);
+  gap: clamp(20px, 3vw, 56px);
+  width: 100%;
+  max-width: 1460px;
+  margin: 0 auto;
+}
+.tm3__quote,
+.tm3__about {
+  position: relative;
+  margin: 0;
+  padding: clamp(22px, 4vh, 44px) clamp(24px, 3vw, 54px);
+  text-align: center;
+}
+.tm3__quote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tm3__quote-text {
+  font-family: 'Jar Binks', cursive;
+  /* Логобук: Jar Binks только на прямых цитатах и кеглем не мельче 28px. */
+  font-size: clamp(28px, 5vh, 56px);
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--gold) 72%, #fff);
+  margin: 0;
+  max-width: 15ch;
+}
+.tm3__about {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 .tm3__name {
   font-family: 'Baskerville', serif;
   font-weight: 400;
-  font-size: clamp(24px, 3.6vh, 42px);
-  line-height: 1.1;
+  font-size: clamp(28px, 4.4vh, 50px);
+  line-height: 1.05;
   letter-spacing: .5px;
   color: var(--text);
   margin: 0;
@@ -1925,29 +1968,64 @@ html { scroll-behavior: smooth; }
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--gold);
-  margin-top: 5px;
+  margin-top: 8px;
 }
 .tm3__spec {
   font-family: 'Involve', serif;
   font-style: italic;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-dim);
-  margin-top: 3px;
+  margin-top: 4px;
 }
+.tm3__rule {
+  width: 64px;
+  height: 1px;
+  margin: clamp(12px, 1.8vh, 20px) auto;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), .55), transparent);
+}
+/* Биография целиком, без «читать дальше»: блок теперь отдельный и не делит
+   экран с лентой кадров, поэтому длинный текст помещается более мелким кеглем. */
 .tm3__bio {
-  max-width: 96ch;
-  margin: 0;
-  text-align: center;
-  font-size: clamp(12px, 1.55vh, 14.5px);
-  line-height: 1.62;
+  margin: 0 auto;
+  max-width: 52ch;
+  font-size: clamp(12.5px, 1.6vh, 15px);
+  line-height: 1.66;
   color: var(--text-mid);
-  /* В один экран влезают четыре строки; полный текст открывается кнопкой —
-     прятать биографию насовсем нечестно, а растягивать секцию нельзя. */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
 }
+
+@media (max-width: 900px) {
+  /* На телефоне один экран физически не собрать — обычная прокрутка. */
+  .team { min-height: 0; display: block; padding-top: clamp(56px, 8vh, 90px); }
+  .tm3 { display: block; }
+  .tm3__ring {
+    /* Ряд превращается в ленту с горизонтальной прокруткой: диаметр здесь
+       фиксированный, JS-подгонку по ширине Team.jsx на мобильном не делает. */
+    --tm3-ava: 96px;
+    --tm3-gap: 12px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    /* overflow-x режет и по вертикали — оставляем место подписи под кружком. */
+    padding: 4px 2px 24px;
+    margin-bottom: clamp(20px, 4vh, 34px);
+    scrollbar-width: none;
+    mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 94%, transparent 100%);
+  }
+  .tm3__ring::-webkit-scrollbar { height: 0; }
+  .tm3__ava, .tm3__ava:hover { transform: none; }
+  .tm3__ava--on { transform: scale(1.04); }
+  .tm3__panels { grid-template-columns: 1fr; grid-auto-rows: auto; }
+  /* Описание первым: имя бармена важнее цитаты, когда всё в столбик. */
+  .tm3__about { order: -1; }
+  .tm3__quote-text { font-size: clamp(26px, 8vw, 38px); max-width: none; }
+}
+
+/* ── Временно не используется (2026-08-27) ────────────────────────────────
+   Стили блоков, которые сняты с экрана по ТЗ владельца и завёрнуты в
+   `{false && (…)}` в Team.jsx: крупный заголовок с именем над секцией,
+   «Читать дальше» у биографии, лента из трёх кадров и блок «стать
+   бартендером». Правила оставлены как есть, чтобы возврат раскладки был
+   одним снятием флага, а не повторной вёрсткой. ── */
+.tm3__head { text-align: center; }
 .tm3__bio--open { -webkit-line-clamp: unset; overflow: visible; }
 .tm3__bio-more {
   border: 0;
@@ -1961,27 +2039,8 @@ html { scroll-behavior: smooth; }
   color: var(--gold);
   cursor: pointer;
 }
-
-/* Цитата в латунной табличке */
-.tm3__quote {
-  position: relative;
-  margin: 0;
-  padding: clamp(12px, 1.9vh, 22px) clamp(26px, 3.2vw, 48px);
-  max-width: 720px;
-  width: 100%;
-  text-align: center;
-}
-.tm3__quote-text {
-  font-family: 'Jar Binks', cursive;
-  font-size: clamp(19px, 2.8vh, 29px);
-  line-height: 1.4;
-  color: color-mix(in srgb, var(--gold) 72%, #fff);
-  margin: 0;
-}
-
-/* Лента из трёх кадров: маленький — крупный — средний (эскиз владельца). */
-/* Ряд кадров задаётся ВЫСОТОЙ (доля экрана), ширина каждого следует за ней
-   через aspect-ratio: фото остаются небольшими и не растягивают секцию. */
+/* Лента из трёх кадров: маленький — крупный — средний (эскиз владельца).
+   Ряд задаётся ВЫСОТОЙ (доля экрана), ширина следует за ней через aspect-ratio. */
 .tm3__shots {
   display: flex;
   justify-content: center;
@@ -2002,7 +2061,6 @@ html { scroll-behavior: smooth; }
   height: 100%;
   flex: 0 0 auto;
 }
-/* Маленький слева, крупный по центру, средний справа — как на эскизе. */
 .tm3__shot--work { height: 76%; }
 .tm3__shot--fun  { height: 88%; }
 .tm3__shot img {
@@ -2033,8 +2091,6 @@ html { scroll-behavior: smooth; }
 .tm3__shot-stub {
   position: absolute;
   inset: 0;
-  /* Место снизу под подпись слота — иначе на низком экране «Снимок скоро»
-     наезжает на «ЗА СТОЙКОЙ». */
   padding-bottom: 22px;
   display: flex;
   flex-direction: column;
@@ -2051,7 +2107,6 @@ html { scroll-behavior: smooth; }
   color: var(--text-dim);
 }
 .tm3__shot--empty .tm3__shot-cap { background: none; color: var(--text-dim); }
-
 .tm3__join {
   display: flex;
   align-items: center;
@@ -2077,44 +2132,6 @@ html { scroll-behavior: smooth; }
   text-transform: uppercase;
   padding: 9px 18px;
   cursor: pointer;
-}
-
-/* Низкий экран (ноутбук 1366×700): биография ужимается до трёх строк, кадры
-   становятся ниже — секция всё равно обязана уместиться целиком. */
-@media (max-height: 800px) {
-  .tm3__bio { -webkit-line-clamp: 2; }
-  .tm3__shots { height: clamp(130px, 23vh, 220px); }
-}
-
-@media (max-width: 900px) {
-  /* На телефоне один экран физически не собрать — возвращаем обычную прокрутку. */
-  .team { min-height: 0; display: block; padding-top: clamp(56px, 8vh, 90px); }
-  .tm3__bio { -webkit-line-clamp: unset; overflow: visible; }
-  .tm3__bio-more { display: none; }
-  .tm3__shots { display: grid; grid-template-columns: 1fr; height: auto; }
-  .tm3__shot, .tm3__shot--work, .tm3__shot--fun { height: auto; width: 100%; }
-  .tm3__ring {
-    /* На телефоне дуга не имеет смысла: ряд превращается в ленту с прокруткой,
-       кружки одного размера и без подъёма. */
-    --tm3-ava: 78px;
-    --tm3-peak: 0px;
-    flex-wrap: nowrap;
-    /* overflow-x режет и по вертикали — оставляем место подписи под кружком. */
-    padding: 4px 2px 24px;
-    overflow-x: auto;
-    justify-content: flex-start;
-    scrollbar-width: none;
-    mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 94%, transparent 100%);
-  }
-  .tm3__ring::-webkit-scrollbar { height: 0; }
-  .tm3__ava,
-  .tm3__ava:hover { transform: none; }
-  .tm3__ava--on { transform: scale(1.04); }
-  /* Кадры в столбик: парадный первым — он главный. */
-  .tm3__shot--hero { order: -1; }
-  .tm3__quote-text { font-size: clamp(26px, 8vw, 38px); }
-  /* Пустые кадры на телефоне не должны занимать по экрану каждый. */
-  .tm3__shot--empty { aspect-ratio: 16 / 10; }
 }
 
 /* ── Латунная табличка цитаты (ui/QuoteFrame.jsx) ──────────────────────────
