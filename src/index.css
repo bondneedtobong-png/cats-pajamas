@@ -1859,7 +1859,10 @@ html { scroll-behavior: smooth; }
   cursor: pointer;
   /* Неактивные приглушены — активный бармен читается мгновенно. */
   filter: grayscale(.45) brightness(.72);
-  transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1));
+  /* Подъём по дуге вынесен в переменную: тот же самый calc нужен и в keyframes
+     парения, и в hover, и в статичном фолбэке для prefers-reduced-motion. */
+  --lift: calc(var(--tm3-peak) * var(--curve, 0) * -1);
+  transform: translateY(var(--lift));
   transition:
     transform .35s cubic-bezier(.2, .8, .25, 1),
     filter .35s ease,
@@ -1870,7 +1873,12 @@ html { scroll-behavior: smooth; }
 .tm3__ava:focus-visible {
   filter: grayscale(0) brightness(.95);
   border-color: rgba(var(--gold-rgb), .6);
-  transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1 - 5px)) scale(1.06);
+  /* Hover не задаёт transform напрямую: им управляет анимация парения, и она
+     всегда выигрывает у обычного объявления. Вместо этого меняем переменные,
+     которые keyframes читают на каждом кадре. */
+  --hover-lift: -5px;
+  --hover-scale: 1.06;
+  transform: translateY(calc(var(--lift) + var(--hover-lift))) scale(var(--hover-scale));
 }
 /* Активный отличается кольцом и свечением, а не размером: кружки в ряду
    одинаковые (прямое требование владельца). */
@@ -1879,22 +1887,37 @@ html { scroll-behavior: smooth; }
   border-color: var(--gold);
   box-shadow: 0 0 0 1px rgba(var(--gold-rgb), .45), 0 0 18px rgba(var(--gold-rgb), .3), 0 10px 24px rgba(0, 0, 0, .5);
 }
-/* Появление ряда волной слева направо. fill-mode backwards, а не both: после
-   анимации элемент возвращается к своему стилю, и hover продолжает работать. */
+/* Появление ряда волной слева направо, следом — бесконечное парение.
+   fill-mode backwards, а не both: после появления элемент возвращается к своему
+   стилю, и его подхватывает парение.
+
+   Две анимации на одном свойстве: за transform отвечает та, что позже в списке,
+   поэтому у парения ЗАДЕРЖКА больше, чем длительность появления (см. floatVars
+   в Team.jsx) — до её начала кадры рисует появление, дальше парение. Фаза,
+   период (3–4 с) и амплитуда (6–10 px) у каждой аватарки свои: синхронный ряд
+   выглядел бы как одна пружина. */
 .tm3__ava {
-  animation: tm3AvaIn .5s cubic-bezier(.2, .8, .25, 1) backwards;
-  animation-delay: calc(var(--i, 0) * 60ms);
+  animation:
+    tm3AvaIn .5s cubic-bezier(.2, .8, .25, 1) calc(var(--i, 0) * 60ms) 1 normal backwards,
+    tm3Float var(--float-dur, 3.4s) ease-in-out var(--float-delay, .5s) infinite alternate;
 }
 @keyframes tm3AvaIn {
   from {
     opacity: 0;
-    transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1 + 16px)) scale(.92);
+    transform: translateY(calc(var(--lift) + 16px)) scale(.92);
   }
 }
+@keyframes tm3Float {
+  from { transform: translateY(calc(var(--lift) + var(--hover-lift, 0px))) scale(var(--hover-scale, 1)); }
+  to   { transform: translateY(calc(var(--lift) + var(--hover-lift, 0px) - var(--float-amp, 8px))) scale(var(--hover-scale, 1)); }
+}
+/* Бесконечная анимация обязана замирать вне экрана (правило проекта):
+   ref на секции ставит useOffscreenPause. */
+.team.is-offscreen .tm3__ava { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
   .tm3__ava { animation: none; transition: none; }
   .tm3__ava:hover,
-  .tm3__ava:focus-visible { transform: translateY(calc(var(--tm3-peak) * var(--curve, 0) * -1)); }
+  .tm3__ava:focus-visible { transform: translateY(var(--lift)); }
 }
 .tm3__ava-letter {
   position: absolute;
@@ -2102,8 +2125,10 @@ html { scroll-behavior: smooth; }
     mask-image: linear-gradient(90deg, transparent 0, #000 4%, #000 94%, transparent 100%);
   }
   .tm3__ring::-webkit-scrollbar { height: 0; }
-  .tm3__ava, .tm3__ava:hover { transform: none; }
-  .tm3__ava--on { transform: scale(1.04); }
+  /* Дуги на ленте нет (--tm3-peak: 0), поэтому подъём обнуляется сам; масштаб
+     активного задаём переменной — transform занят анимацией парения. */
+  .tm3__ava:hover { --hover-lift: 0px; --hover-scale: 1; }
+  .tm3__ava--on { --hover-scale: 1.04; transform: scale(1.04); }
   .tm3__stage { position: static; min-height: 0; }
   .tm3__shots--on { display: grid; grid-template-columns: 1fr; position: static; gap: 12px; }
   /* В столбик кадры не должны разрастаться на планшете: при ширине 768 каждый

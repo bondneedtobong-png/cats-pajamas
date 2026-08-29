@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { useReveal } from '../useReveal.js';
+import { useReveal, useOffscreenPause } from '../useReveal.js';
 import QuoteFrame from '../ui/QuoteFrame.jsx';
 import TeamService from '../team/TeamService.js';
 import ApplicationsService from '../team/ApplicationsService.js';
@@ -63,6 +63,26 @@ const GAP_MIN = 10;
  */
 const GAP_K = 0.22;
 const RING_MOBILE_MAX = 900; // ниже — лента с прокруткой, диаметр из CSS
+
+/**
+ * Параметры парения кружка (правка 2026-08-29). Ряд, качающийся синхронно,
+ * читается как одна пружина, поэтому у каждой аватарки своя фаза, своя
+ * длительность и своя амплитуда — движение выходит «вразнобой».
+ *
+ * Генератор детерминированный (только от индекса): значения не должны меняться
+ * между рендерами, иначе анимация перезапускалась бы на каждый клик по ряду.
+ * Задержка стартует после появления ряда волной (0.5s анимации + i*60ms её
+ * задержки) — иначе парение перебило бы появление: обе анимации на transform,
+ * и вторая в списке всегда выигрывает.
+ */
+const hash01 = (n) => { const x = Math.sin(n) * 43758.5453; return x - Math.floor(x); };
+function floatVars(i) {
+  return {
+    '--float-dur':   (3 + hash01(i * 12.9898 + 1) * 1).toFixed(2) + 's',   // 3–4 c
+    '--float-amp':   (6 + hash01(i * 78.233 + 2) * 4).toFixed(1) + 'px',   // 6–10 px
+    '--float-delay': (0.5 + i * 0.06 + hash01(i * 39.425 + 3) * 2.4).toFixed(2) + 's',
+  };
+}
 
 function fitRing(el, count) {
   const width = el.clientWidth;
@@ -181,6 +201,9 @@ export default function Team({ tx }) {
   const [bioOpen,  setBioOpen]  = useState(false);
   const r0 = useReveal(0);
   const ringRef = useRef(null);
+  // Парение аватарок бесконечное, поэтому секция обязана вставать на паузу вне
+  // экрана (правило проекта: `is-offscreen`, см. useReveal.js).
+  const sectionRef = useOffscreenPause();
 
   useEffect(() => {
     let alive = true;
@@ -211,7 +234,7 @@ export default function Team({ tx }) {
   const bioLong = (current?.bio || '').length > 240;
 
   return (
-    <section id="team" className="team">
+    <section id="team" className="team" ref={sectionRef}>
       <div className="team__inner team__inner--stage">
         {/* TODO(2026-08-27): метка главы временно скрыта по ТЗ владельца —
             вернуть после утверждения новой раскладки. Нумерация глав в
@@ -241,6 +264,7 @@ export default function Team({ tx }) {
                       // Подъём по дуге: CSS умножает --tm3-peak на этот множитель.
                       '--curve': arcCurve(i, members.length).toFixed(4),
                       '--i': i, // задержка волны появления слева направо
+                      ...floatVars(i), // фаза/длительность/амплитуда парения
                       backgroundImage: m.photoUrl ? `url(${m.photoUrl})` : undefined,
                       backgroundSize: focus.size,
                       backgroundPosition: focus.pos,
