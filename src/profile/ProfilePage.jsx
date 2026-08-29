@@ -7,13 +7,16 @@ import { useFeedback } from '../ui/FeedbackProvider.jsx';
 import { usePageMeta } from '../usePageMeta.js';
 import './profile.css';
 
+// Только подписи: цвет статуса задаёт класс .prof-status--<ключ> в profile.css.
+// Раньше цвет приезжал сюда голым hex'ом и инлайном садился на элемент — это
+// прямо против правила проекта «цвета только токенами».
 const STATUS_LABELS = {
-  pending:   { text: 'Ждёт бармена', color: '#D4A843' },
-  confirmed: { text: 'Подтверждена', color: '#22c55e' },
-  seated:    { text: 'Вы за столом', color: '#9B5DE5' },
-  cancelled: { text: 'Отменена',     color: '#6b7280' },
-  completed: { text: 'Завершена',    color: '#9B5DE5' },
-  no_show:   { text: 'Неявка',       color: '#f87171' },
+  pending:   'Ждёт бармена',
+  confirmed: 'Подтверждена',
+  seated:    'Вы за столом',
+  cancelled: 'Отменена',
+  completed: 'Завершена',
+  no_show:   'Неявка',
 };
 
 const TABS = [
@@ -29,7 +32,9 @@ const DEPOSIT_LABELS = {
   partially_retained: 'частично удержан',
 };
 
-const AVATAR_COLORS = ['#9B5DE5', '#D4A843', '#22c55e', '#f87171', '#3b82f6', '#ec4899'];
+// Тёплые цвета логобука (золото, светлое золото, пастель) — холодных синих и
+// розовых прежней схемы в палитре бара нет.
+const AVATAR_COLORS = ['#B08900', '#CBA53A', '#857861'];
 
 function hashStr(s) {
   let h = 0;
@@ -231,7 +236,6 @@ function ReservationsTab() {
         ) : (
           <div className="prof-res-list">
             {activeRes.map(r => {
-              const st = STATUS_LABELS[r.status] || STATUS_LABELS.confirmed;
               const canCancel = isFuture(r.date, r.timeFrom) && (r.status === 'confirmed' || r.status === 'pending');
               return (
                 <div key={r.id} className="prof-res-card">
@@ -242,11 +246,8 @@ function ReservationsTab() {
                       <span className="prof-res-card__time">{r.timeFrom} – {r.timeTo}</span>
                       <span className="prof-res-card__guests">{r.guestsCount} гост.</span>
                     </div>
-                    <span
-                      className="prof-res-card__status"
-                      style={{ color: st.color, borderColor: st.color + '44', background: st.color + '12' }}
-                    >
-                      {st.text}
+                    <span className={`prof-res-card__status prof-status prof-status--${r.status}`}>
+                      {STATUS_LABELS[r.status] || STATUS_LABELS.confirmed}
                     </span>
                   </div>
                   {r.note && <div className="prof-res-card__note">💬 {r.note}</div>}
@@ -288,7 +289,6 @@ function ReservationsTab() {
           </div>
           <div className="prof-res-list prof-res-list--past">
             {pastRes.map(r => {
-              const st = STATUS_LABELS[r.status] || STATUS_LABELS.completed;
               return (
                 <div key={r.id} className="prof-res-card prof-res-card--past">
                   <div className="prof-res-card__top">
@@ -297,11 +297,8 @@ function ReservationsTab() {
                       <span className="prof-res-card__date">{formatDate(r.date)}</span>
                       <span className="prof-res-card__time">{r.timeFrom} – {r.timeTo}</span>
                     </div>
-                    <span
-                      className="prof-res-card__status"
-                      style={{ color: st.color, borderColor: st.color + '44', background: st.color + '12' }}
-                    >
-                      {st.text}
+                    <span className={`prof-res-card__status prof-status prof-status--${r.status}`}>
+                      {STATUS_LABELS[r.status] || STATUS_LABELS.completed}
                     </span>
                   </div>
                   {r.cancellationReason && (
@@ -467,7 +464,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <div className="prof-root">
+    <div className="prof-root" data-theme="A">
       <header className="prof-header">
         <Link to="/booking" className="prof-header__logo">
           <img src="/uploads/logo-icon.svg" alt="The Cat's Pajamas Club" style={{ height: 24, width: 'auto', display: 'block' }} />

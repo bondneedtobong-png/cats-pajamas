@@ -3,16 +3,16 @@
 
 .prof-root {
   min-height: 100vh;
-  background: #0C0A18;
-  color: #F2EDE4;
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Avenir Next', sans-serif;
 }
 
 /* ─── Header ─── */
 .prof-header {
   height: 52px;
-  background: #0E0B1E;
-  border-bottom: 1px solid rgba(212,168,67,0.1);
+  background: var(--bg2);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.1);
   display: flex;
   align-items: center;
   padding: 0 24px;
@@ -40,13 +40,13 @@
 .prof-header__divider {
   width: 1px;
   height: 20px;
-  background: rgba(212,168,67,0.12);
+  background: rgba(var(--gold-rgb), 0.12);
 }
 .prof-header__title {
   font-size: 9px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: #9B5DE5;
+  color: var(--gold);
 }
 .prof-avatar {
   width: 28px;
@@ -63,16 +63,16 @@
 }
 .prof-header__link {
   font-size: 11px;
-  color: rgba(242,237,228,0.38);
+  color: rgba(198,191,181,0.38);
   text-decoration: none;
   transition: color 0.15s;
   white-space: nowrap;
 }
-.prof-header__link:hover { color: rgba(242,237,228,0.7); }
+.prof-header__link:hover { color: rgba(198,191,181,0.7); }
 .prof-header__logout {
   background: transparent;
-  border: 1px solid rgba(212,168,67,0.2);
-  color: rgba(242,237,228,0.38);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+  color: rgba(198,191,181,0.38);
   font-family: 'Avenir Next', sans-serif;
   font-size: 10px;
   letter-spacing: 1px;
@@ -82,8 +82,8 @@
   transition: border-color 0.15s, color 0.15s;
 }
 .prof-header__logout:hover {
-  border-color: rgba(212,168,67,0.45);
-  color: rgba(242,237,228,0.7);
+  border-color: rgba(var(--gold-rgb), 0.45);
+  color: rgba(198,191,181,0.7);
 }
 
 /* ─── Main content ─── */
@@ -101,14 +101,14 @@
 /* ─── Section ─── */
 @keyframes profFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .prof-section {
-  background: #0E0B1E;
-  border: 1px solid rgba(212,168,67,0.09);
+  background: var(--bg2);
+  border: 1px solid rgba(var(--gold-rgb), 0.09);
   animation: profFadeIn 0.3s ease;
 }
 @media (prefers-reduced-motion: reduce) { .prof-section { animation: none; } }
 .prof-section__head {
   padding: 12px 20px;
-  border-bottom: 1px solid rgba(212,168,67,0.07);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.07);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -117,11 +117,11 @@
   font-size: 9px;
   letter-spacing: 2px;
   font-weight: 600;
-  color: rgba(212,168,67,0.6);
+  color: rgba(var(--gold-rgb), 0.6);
 }
 .prof-section__count {
   font-size: 11px;
-  color: rgba(242,237,228,0.25);
+  color: rgba(198,191,181,0.25);
 }
 
 /* ─── Profile form ─── */
@@ -135,13 +135,13 @@
 .prof-field__lbl {
   font-size: 8px;
   letter-spacing: 2px;
-  color: rgba(212,168,67,0.55);
+  color: rgba(var(--gold-rgb), 0.55);
   margin-bottom: 5px;
   display: block;
 }
 .prof-field__val {
   font-size: 14px;
-  color: rgba(242,237,228,0.7);
+  color: rgba(198,191,181,0.7);
 }
 .prof-name-row {
   display: flex;
@@ -150,21 +150,21 @@
 .prof-input {
   flex: 1;
   background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(212,168,67,0.2);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
   border-radius: 2px;
-  color: #F2EDE4;
+  color: var(--text);
   font-family: 'Avenir Next', sans-serif;
   font-size: 14px;
   padding: 8px 12px;
   outline: none;
   transition: border-color 0.15s;
 }
-.prof-input:focus { border-color: rgba(155,93,229,0.55); }
-.prof-input::placeholder { color: rgba(242,237,228,0.22); font-style: italic; }
+.prof-input:focus { border-color: rgba(var(--gold-rgb), 0.55); }
+.prof-input::placeholder { color: rgba(198,191,181,0.22); font-style: italic; }
 .prof-save-btn {
   background: transparent;
-  border: 1px solid rgba(155,93,229,0.35);
-  color: #9B5DE5;
+  border: 1px solid rgba(var(--gold-rgb), 0.35);
+  color: var(--gold);
   font-family: 'Avenir Next', sans-serif;
   font-size: 10px;
   letter-spacing: 1.5px;
@@ -174,7 +174,7 @@
   white-space: nowrap;
   transition: background 0.15s;
 }
-.prof-save-btn:hover { background: rgba(155,93,229,0.1); }
+.prof-save-btn:hover { background: rgba(var(--gold-rgb), 0.1); }
 
 /* ─── Reservation cards ─── */
 .prof-res-list {
@@ -187,15 +187,15 @@
 
 .prof-res-card {
   background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(212,168,67,0.08);
+  border: 1px solid rgba(var(--gold-rgb), 0.08);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   transition: border-color 0.15s;
 }
-.prof-res-card:hover { border-color: rgba(212,168,67,0.2); }
-.prof-res-card--past { border-color: rgba(212,168,67,0.04); }
+.prof-res-card:hover { border-color: rgba(var(--gold-rgb), 0.2); }
+.prof-res-card--past { border-color: rgba(var(--gold-rgb), 0.04); }
 .prof-res-card__top {
   display: flex;
   align-items: center;
@@ -208,18 +208,18 @@
   gap: 10px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: rgba(242,237,228,0.7);
+  color: rgba(198,191,181,0.7);
 }
 .prof-res-card__table {
   font-family: 'Baskerville', serif;
   font-size: 16px;
   font-weight: 700;
-  color: #F2EDE4;
+  color: var(--text);
   min-width: 28px;
 }
-.prof-res-card__date { color: rgba(242,237,228,0.55); }
-.prof-res-card__time { color: rgba(242,237,228,0.55); }
-.prof-res-card__guests { color: rgba(242,237,228,0.4); font-size: 12px; }
+.prof-res-card__date { color: rgba(198,191,181,0.55); }
+.prof-res-card__time { color: rgba(198,191,181,0.55); }
+.prof-res-card__guests { color: rgba(198,191,181,0.4); font-size: 12px; }
 .prof-res-card__status {
   font-size: 8px;
   letter-spacing: 1.5px;
@@ -231,7 +231,7 @@
 }
 .prof-res-card__note {
   font-size: 12px;
-  color: rgba(242,237,228,0.38);
+  color: rgba(198,191,181,0.38);
   font-style: italic;
 }
 
@@ -260,13 +260,13 @@
   align-items: center;
   gap: 10px;
 }
-.prof-empty__icon { font-size: 28px; color: rgba(242,237,228,0.1); }
-.prof-empty p { font-size: 13px; color: rgba(242,237,228,0.3); margin: 0; }
+.prof-empty__icon { font-size: 28px; color: rgba(198,191,181,0.1); }
+.prof-empty p { font-size: 13px; color: rgba(198,191,181,0.3); margin: 0; }
 .prof-cta {
   display: inline-block;
   margin-top: 4px;
-  background: #9B5DE5;
-  color: #fff;
+  background: var(--gold);
+  color: var(--bg);
   font-family: 'Avenir Next', sans-serif;
   font-size: 10px;
   letter-spacing: 2px;
@@ -277,19 +277,19 @@
   cursor: pointer;
   transition: background 0.15s;
 }
-.prof-cta:hover { background: #8a4fd4; }
+.prof-cta:hover { background: var(--gold-hover); }
 
 /* ─── Tabs ─── */
 .prof-tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid rgba(212,168,67,0.1);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.1);
 }
 .prof-tab {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: rgba(242,237,228,0.4);
+  color: rgba(198,191,181,0.4);
   font-family: 'Avenir Next', sans-serif;
   font-size: 11px;
   letter-spacing: 1.5px;
@@ -299,10 +299,10 @@
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
-.prof-tab:hover { color: rgba(242,237,228,0.7); }
+.prof-tab:hover { color: rgba(198,191,181,0.7); }
 .prof-tab--active {
-  color: #D4A843;
-  border-bottom-color: #D4A843;
+  color: var(--gold);
+  border-bottom-color: var(--gold);
 }
 
 /* ─── Skeleton loading ─── */
@@ -314,7 +314,7 @@
 }
 .prof-skeleton-card {
   background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(212,168,67,0.06);
+  border: 1px solid rgba(var(--gold-rgb), 0.06);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -353,7 +353,7 @@
 }
 .prof-loyalty__points {
   font-size: 13px;
-  color: #D4A843;
+  color: var(--gold);
 }
 .prof-loyalty__bar {
   height: 8px;
@@ -363,13 +363,13 @@
 }
 .prof-loyalty__bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #9B5DE5, #D4A843);
+  background: linear-gradient(90deg, rgba(var(--gold-rgb), .45), var(--gold));
   border-radius: 4px;
   transition: width 0.6s ease;
 }
 .prof-loyalty__next {
   font-size: 12px;
-  color: rgba(242,237,228,0.45);
+  color: rgba(198,191,181,0.45);
   margin: 0;
 }
 
@@ -382,11 +382,11 @@
   flex-wrap: wrap;
   margin-top: 8px;
   font-size: 12px;
-  color: #D4A843;
+  color: var(--gold);
 }
 .prof-pay-btn {
-  background: #D4A843;
-  color: #0C0A18;
+  background: var(--gold);
+  color: var(--bg);
   border: none;
   font-family: 'Avenir Next', sans-serif;
   font-size: 11px;
@@ -397,7 +397,7 @@
   cursor: pointer;
   transition: background 0.15s, transform 0.15s;
 }
-.prof-pay-btn:hover:not(:disabled) { background: #e0b855; transform: translateY(-1px); }
+.prof-pay-btn:hover:not(:disabled) { background: var(--gold-hover); transform: translateY(-1px); }
 .prof-pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   .prof-pay-btn { transition: background 0.15s; }
@@ -423,7 +423,7 @@
   font-size: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(212,168,67,0.6);
+  color: rgba(var(--gold-rgb), 0.6);
 }
 
 .prof-ladder {
@@ -441,19 +441,32 @@
 }
 .prof-ladder__row--reached { opacity: 1; }
 .prof-ladder__row--current {
-  background: rgba(212,168,67,0.07);
-  border: 1px solid rgba(212,168,67,0.25);
+  background: rgba(var(--gold-rgb), 0.07);
+  border: 1px solid rgba(var(--gold-rgb), 0.25);
   border-radius: 6px;
 }
 .prof-ladder__emoji { font-size: 20px; line-height: 1; }
 .prof-ladder__label {
   font-family: 'Baskerville', serif;
   font-size: 15px;
-  color: #F2EDE4;
+  color: var(--text);
 }
 .prof-ladder__req {
   margin-left: auto;
   font-size: 11px;
-  color: rgba(242,237,228,0.45);
+  color: rgba(198,191,181,0.45);
   white-space: nowrap;
 }
+
+/* ─── Статусы брони ──────────────────────────────────────────────────────────
+   Раньше цвет статуса приезжал инлайном из JSX (STATUS_LABELS) — голый hex в
+   разметке против правила проекта «только токены». Теперь класс на элементе, а
+   цвета живут здесь. Зелёный и красный — общие для сайта (те же в admin.css и
+   booking.css), остальные — из палитры AMBER NIGHT. */
+.prof-status { --st: var(--gold); color: var(--st); border-color: color-mix(in srgb, var(--st) 30%, transparent); background: color-mix(in srgb, var(--st) 8%, transparent); }
+.prof-status--pending   { --st: var(--gold-hover); }
+.prof-status--confirmed { --st: #22c55e; }
+.prof-status--seated    { --st: var(--gold); }
+.prof-status--completed { --st: #857861; }
+.prof-status--cancelled { --st: rgba(198,191,181,0.4); }
+.prof-status--no_show   { --st: #f87171; }
