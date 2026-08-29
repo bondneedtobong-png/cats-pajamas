@@ -1759,7 +1759,9 @@ html { scroll-behavior: smooth; }
      иначе ряд аватарок уезжал бы к середине экрана. Отступ сверху — ровно
      клиренс под фикс-шапку (76px), «искусственного зазора» после витрины быть
      не должно; снизу поле минимальное, высота нужна кадрам. */
-  padding: clamp(80px, 8vh, 96px) 4% clamp(18px, 2.4vh, 30px);
+  /* Боковые поля ужаты (2026-08-29): ширина — самый дефицитный ресурс
+     трёхколонной раскладки, каждый пиксель отсюда уходит в фотографии. */
+  padding: clamp(80px, 8vh, 96px) clamp(18px, 2.4%, 44px) clamp(18px, 2.4vh, 30px);
   position: relative;
   overflow: hidden;
 }
@@ -1964,9 +1966,13 @@ html { scroll-behavior: smooth; }
    `height: 100%` у кадров не от чего считать. */
 .tm3__body {
   display: grid;
-  grid-template-columns: minmax(170px, 1fr) minmax(0, 3.1fr) minmax(190px, 1.2fr);
+  /* Боковые колонки — по содержимому текста, остаток ширины забирают кадры
+     (приоритет N1 секции). Проценты, а не fr: доля кадров должна расти с
+     экраном, а плашкам сверх ~230/280px ширина не нужна — текст в них
+     короткий, и растянутая строка читалась бы хуже. */
+  grid-template-columns: clamp(160px, 14%, 230px) minmax(0, 1fr) clamp(190px, 17%, 280px);
   align-items: stretch;
-  gap: clamp(14px, 2vw, 36px);
+  gap: clamp(12px, 1.6vw, 28px);
   width: 100%;
   max-width: 1600px;
   margin: 0 auto;
