@@ -285,19 +285,23 @@ export default function Team({ tx }) {
                 У кого фото ещё нет — слот со знаком-креманкой и «Снимок скоро»
                 (сейчас так у Шамусара оба кадра, у Александра и Дениса — «вне
                 смены»; появятся в админке — подхватятся сами). */}
-            <div className="tm3__stage">
-              {members.map((m, i) => (
-                <ShotsGroup key={m.id} member={m} active={i === idx} soon={tx.teamShotSoon} />
-              ))}
-            </div>
-
-            {/* Низ секции: цитата слева, описание справа — на одной высоте,
-                симметрично относительно центра (макет владельца). */}
-            <div className="tm3__panels">
+            {/* Тело секции — три колонки вокруг фотографий (макет владельца
+                2026-08-29): цитата слева, кадры по центру, описание справа.
+                Раньше обе плашки лежали ПОД кадрами во всю ширину — текста в
+                них мало, и рамки стояли полупустыми, а кадрам не хватало
+                высоты. Сбоку текст занимает ту же высоту, что и фото, и пустота
+                уходит сама. На телефоне колонок нет — см. медиазапрос. */}
+            <div className="tm3__body">
               <figure className="tm3__quote">
                 <QuoteFrame />
                 <blockquote className="tm3__quote-text">{QUOTE_STUB}</blockquote>
               </figure>
+
+              <div className="tm3__stage">
+                {members.map((m, i) => (
+                  <ShotsGroup key={m.id} member={m} active={i === idx} soon={tx.teamShotSoon} />
+                ))}
+              </div>
 
               <article className="tm3__about" key={current.id}>
                 <QuoteFrame />

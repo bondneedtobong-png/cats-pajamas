@@ -1955,17 +1955,33 @@ html { scroll-behavior: smooth; }
 /* Сцена кадров: тройки ВСЕХ барменов лежат в разметке, видна одна (см.
    ShotsGroup в Team.jsx — так убрана задержка при переключении). Высоту меряем
    на сцене, а не на тройке: скрытые тройки в потоке не участвуют. */
+/* Тело секции: цитата | кадры | описание. Кадры — центральная колонка, текст
+   стоит по бокам на той же высоте (макет владельца 2026-08-29). До этого обе
+   плашки лежали ПОД кадрами во всю ширину: текста в них мало, рамки стояли
+   полупустыми, а кадрам не хватало высоты.
+   Строка ОДНА и тянется на всю свободную высоту секции (flex: 1 1 0 у самого
+   тела), поэтому у .tm3__stage появляется определённая высота — без неё
+   `height: 100%` у кадров не от чего считать. */
+.tm3__body {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) minmax(0, 3.1fr) minmax(190px, 1.2fr);
+  align-items: stretch;
+  gap: clamp(14px, 2vw, 36px);
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  flex: 1 1 0;
+  min-height: 0;
+}
 .tm3__stage {
   position: relative;
   width: 100%;
-  max-width: 1460px;
-  margin: 0 auto;
-  /* Приоритет №1 по площади: забирает всю высоту, не занятую остальным.
-     Именно `flex-basis: 0`, а не `auto`: у кадров `aspect-ratio` + `height:100%`,
-     и при basis:auto высота считалась бы от содержимого — лента раздувалась на
-     тысячу пикселей и секция переставала помещаться в экран (проверено). */
-  flex: 1 1 0;
   min-height: 150px;
+  min-width: 0;
+  /* Контейнер для cqw/cqh ниже: до трёх колонок ширина была в избытке и высоту
+     кадров определяла только высота секции. В колонке дефицитна уже ширина —
+     считать надо от обеих сторон сразу. */
+  container-type: size;
 }
 .tm3__shots {
   display: none;
@@ -1973,7 +1989,15 @@ html { scroll-behavior: smooth; }
   inset: 0;
   justify-content: center;
   align-items: flex-end;
-  gap: clamp(10px, 1.4vw, 22px);
+  --shot-gap: clamp(10px, 1.4vw, 22px);
+  gap: var(--shot-gap);
+  /* Высота крупного кадра. Фолбэк — вся высота колонки (так было, пока кадры
+     занимали всю ширину секции). */
+  --shot-h: 100%;
+  /* Тройка при aspect-ratio 4/5 и высотах 78 / 100 / 89 % занимает по ширине
+     ровно 2.136 своей высоты плюс два зазора — отсюда второй предел. Без него
+     кадры вылезали из колонки и наезжали на боковые плашки. */
+  --shot-h: min(100cqh, (100cqw - 2 * var(--shot-gap)) / 2.136);
 }
 .tm3__shots--on { display: flex; }
 .tm3__shot {
@@ -1985,12 +2009,12 @@ html { scroll-behavior: smooth; }
   background: var(--bg2);
   box-shadow: 0 16px 34px rgba(0, 0, 0, .35);
   aspect-ratio: 4 / 5;
-  height: 100%;
+  height: var(--shot-h);
   flex: 0 0 auto;
 }
 /* Маленький слева, крупный по центру, средний справа — как на эскизе. */
-.tm3__shot--work { height: 78%; }
-.tm3__shot--fun  { height: 89%; }
+.tm3__shot--work { height: calc(var(--shot-h) * .78); }
+.tm3__shot--fun  { height: calc(var(--shot-h) * .89); }
 .tm3__shot img {
   width: 100%;
   height: 100%;
@@ -2020,19 +2044,9 @@ html { scroll-behavior: smooth; }
   letter-spacing: .4px;
   color: var(--text-dim);
 }
-/* ── 3. Цитата и описание — компактные латунные плашки ─────────────────────
+/* ── 3. Цитата и описание — боковые латунные плашки ────────────────────────
    Обе на одном материале (QuoteFrame, вариант «plate»), чтобы читались парой.
-   Всё здесь намеренно скромное: блок берёт то, что осталось после кадров. */
-.tm3__panels {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: stretch;
-  gap: clamp(16px, 2.2vw, 40px);
-  width: 100%;
-  max-width: 1460px;
-  margin: 0 auto;
-  flex: 0 0 auto;
-}
+   Стоят слева и справа от кадров, по высоте — вровень с ними. */
 .tm3__quote,
 .tm3__about {
   position: relative;
@@ -2129,7 +2143,9 @@ html { scroll-behavior: smooth; }
      активного задаём переменной — transform занят анимацией парения. */
   .tm3__ava:hover { --hover-lift: 0px; --hover-scale: 1; }
   .tm3__ava--on { --hover-scale: 1.04; transform: scale(1.04); }
-  .tm3__stage { position: static; min-height: 0; }
+  /* container-type: size схлопнул бы высоту в ноль: в столбик у колонки нет
+     заданной высоты, а размерное сдерживание её и не спросит у содержимого. */
+  .tm3__stage { position: static; min-height: 0; container-type: normal; }
   .tm3__shots--on { display: grid; grid-template-columns: 1fr; position: static; gap: 12px; }
   /* В столбик кадры не должны разрастаться на планшете: при ширине 768 каждый
      иначе получался под 900px высотой и секция уезжала на три экрана. */
@@ -2143,9 +2159,12 @@ html { scroll-behavior: smooth; }
   .tm3__shot--hero { order: -1; }
   /* Пустые кадры на телефоне не должны занимать по экрану каждый. */
   .tm3__shot--empty { aspect-ratio: 16 / 10; }
-  .tm3__panels { grid-template-columns: 1fr; margin-top: clamp(16px, 3vh, 28px); }
-  /* Описание первым: имя бармена важнее цитаты, когда всё в столбик. */
-  .tm3__about { order: -1; }
+  /* Колонок нет — всё в столбик: кадры, описание, цитата. Три колонки на
+     телефон не влезают, а имя бармена важнее цитаты. */
+  .tm3__body { display: flex; flex-direction: column; }
+  .tm3__stage { order: 1; }
+  .tm3__about { order: 2; margin-top: clamp(16px, 3vh, 28px); }
+  .tm3__quote { order: 3; }
   .tm3__bio { -webkit-line-clamp: unset; overflow: visible; }
   .tm3__quote-text { font-size: clamp(26px, 8vw, 38px); max-width: none; }
 }
