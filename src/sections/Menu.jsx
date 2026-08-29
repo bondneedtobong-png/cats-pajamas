@@ -14,8 +14,10 @@ const MenuInlineEditor = lazy(() => import('../menu/MenuInlineEditor.jsx'));
 // по логобуку, стр. 43–44): закрытая обложка → разворот на два листа →
 // непрерывное листание по всей карте. Сама книга и её навигация-пузыри живут
 // в MenuBook.jsx, раскладка по страницам — в menu/bookSpreads.js.
-// Полная карта одной простынёй по-прежнему на /menu (пререндер для SEO) —
-// туда ведёт мелкая ссылка под книгой.
+// Ссылка «Открыть карту отдельной страницей» убрана 2026-08-29 по ТЗ владельца.
+// Сам маршрут /menu жив, но с сайта на него больше не ведёт ничего: это
+// SEO-пререндер (dist/menu/index.html со всем текстом карты и JSON-LD), он
+// в sitemap.xml и проиндексирован. Сносить его — отдельное решение владельца.
 
 export default function Menu({ tx }) {
   const r0 = useReveal(0);
@@ -66,7 +68,7 @@ export default function Menu({ tx }) {
               </div>
             )}
 
-            <MenuBook menu={menu} stories={stories} printLink={tx.menuPrintLink} />
+            <MenuBook menu={menu} stories={stories} />
           </>
         )}
       </div>

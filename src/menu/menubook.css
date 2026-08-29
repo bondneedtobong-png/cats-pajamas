@@ -628,6 +628,9 @@
   text-transform: uppercase;
   color: var(--text-dim);
 }
+/* Не используется с 2026-08-29 — ссылка «Открыть карту отдельной
+   страницей» убрана по ТЗ владельца. Маршрут /menu жив, он остался
+   SEO-перерендером без ссылок с сайта. */
 .mbook__print {
   font-family: 'Avenir Next', sans-serif;
   font-size: 10.5px;

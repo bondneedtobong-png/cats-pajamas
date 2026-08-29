@@ -166,7 +166,7 @@ function BookPage({ page, side }) {
 
 /* ── Книга целиком ───────────────────────────────────────────────────────── */
 
-export default function MenuBook({ menu, stories, printLink }) {
+export default function MenuBook({ menu, stories }) {
   const [size, setSize] = useState(() => (typeof window === 'undefined'
     ? { w: 1440, h: 900 }
     : { w: window.innerWidth, h: window.innerHeight }));
@@ -456,7 +456,6 @@ export default function MenuBook({ menu, stories, printLink }) {
           {mode === 'back' && 'Конец карты — нажмите, чтобы открыть с конца'}
           {mode === 'open' && `Разворот ${spread + 1} из ${spreads.length}`}
         </span>
-        {printLink && <a className="mbook__print u-glare" href="/menu">{printLink} ›</a>}
       </div>
     </div>
   );

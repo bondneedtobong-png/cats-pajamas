@@ -56,6 +56,7 @@ export const translations = {
     menuLoading: 'Загружаем меню…',
     menuEmpty: 'Меню скоро пополнится.',
     menuStoryLabel: 'О разделе',
+    // не используется с 2026-08-29: ссылка под книгой убрана по ТЗ владельца
     menuPrintLink: 'Открыть карту отдельной страницей',
 
     eventsLabel: 'Глава V · Вечерняя афиша', eventsTitle: 'Джазовая программа',
@@ -190,6 +191,7 @@ export const translations = {
     menuLoading: 'Loading the menu…',
     menuEmpty: 'The menu is coming soon.',
     menuStoryLabel: 'About this section',
+    // unused since 2026-08-29 (link under the book removed at the owner's request)
     menuPrintLink: 'Open the menu as a separate page',
 
     eventsLabel: 'Chapter V · Evening Bill', eventsTitle: 'The Jazz Program',
