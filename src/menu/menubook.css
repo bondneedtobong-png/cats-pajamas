@@ -35,7 +35,7 @@
      Один множитель на все размеры листа: меняется в одном месте, вёрстка
      остаётся пропорциональной. Пагинация знает про него (perPageFor в
      MenuBook.jsx) — иначе позиции полезли бы за край листа. */
-  --mbook-fs: 1.56;
+  --mbook-fs: 1.10;
 
   /* Слева пузыри, справа витрина коктейлей, книга — ровно по центру страницы:
      колонки по краям одинаковой ширины, книга в auto-колонке между ними. */
@@ -336,6 +336,11 @@
 .mbook__corner--tr { top: 4px; right: 4px; transform: scaleX(-1); }
 .mbook__corner--bl { bottom: 4px; left: 4px; transform: scaleY(-1); }
 .mbook__corner--br { bottom: 4px; right: 4px; transform: scale(-1, -1); }
+/* Медальоны-веера сверху и снизу листа сняты 2026-08-30 (уплотнение меню):
+   они стояли ровно в вертикальном потоке и требовали крупных полей листа —
+   вдвоём съедали около 70px высоты, то есть позицию с каждой страницы.
+   Правила оставлены: рамка листа и уголки-веера на месте, вернуть медальоны =
+   снова отрисовать их в PageFrame (MenuBook.jsx). */
 .mbook__medallion {
   position: absolute;
   left: 50%;
@@ -354,7 +359,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: clamp(20px, 3.6vh, 34px) clamp(16px, 2.6vw, 32px) clamp(16px, 2.8vh, 26px);
+  padding: clamp(11px, 1.9vh, 18px) clamp(14px, 2.2vw, 26px) clamp(7px, 1.2vh, 11px);
   text-align: center;
   overflow: hidden;
 }
@@ -381,7 +386,7 @@
   font-style: italic;
   font-size: calc(11px * var(--mbook-fs));
   color: var(--mbook-ink-dim);
-  margin: 4px 0 0;
+  margin: 2px 0 0;
 }
 .mbook__cont {
   font-family: 'Involve', serif;
@@ -399,13 +404,13 @@
   font-size: calc(clamp(10px, 1.35vh, 12.5px) * var(--mbook-fs) * 1.0);
   line-height: 1.5;
   color: var(--mbook-ink-mid);
-  margin: 8px 0 0;
+  margin: 5px 0 0;
   flex-shrink: 0;
 }
 
 .mbook__items {
   list-style: none;
-  margin: clamp(6px, 1.3vh, 13px) 0 0;
+  margin: clamp(4px, 0.7vh, 8px) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -414,7 +419,7 @@
      кегле это съедало по позиции с каждой страницы (правка владельца
      2026-08-27: «ставить напитки компактнее друг к другу»). */
   justify-content: flex-start;
-  gap: clamp(4px, 0.85vh, 10px);
+  gap: clamp(2px, 0.4vh, 5px);
   flex: 1;
   min-height: 0;
 }
@@ -422,7 +427,7 @@
 .mbook__item-name {
   font-family: 'Avenir Next', sans-serif;
   font-size: calc(clamp(10px, 1.5vh, 14px) * var(--mbook-fs));
-  line-height: 1.22;
+  line-height: 1.18;
   color: var(--mbook-ink);
 }
 .mbook__item-origin {
@@ -431,8 +436,8 @@
   /* Состав — вспомогательная строка: держим её на 15% мельче общего кегля,
      иначе длинные рецепты уезжают на три строки и лист вмещает на позицию
      меньше (компромисс уплотнения 2026-08-27). */
-  font-size: calc(clamp(8.5px, 1.15vh, 11px) * var(--mbook-fs) * 0.86);
-  line-height: 1.28;
+  font-size: calc(clamp(8.5px, 1.15vh, 11px) * var(--mbook-fs) * 0.82);
+  line-height: 1.2;
   color: var(--mbook-ink-dim);
 }
 .mbook__item-line {
@@ -462,7 +467,7 @@
   white-space: nowrap;
 }
 
-.mbook__quote { margin: clamp(10px, 2vh, 18px) 0 0; flex-shrink: 0; }
+.mbook__quote { margin: clamp(6px, 1.1vh, 10px) 0 0; flex-shrink: 0; }
 .mbook__quote-text {
   font-family: 'Involve', serif;
   font-style: italic;

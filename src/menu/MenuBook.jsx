@@ -28,23 +28,49 @@ import './menubook.css';
 // (правило проекта), анимации разовые и выключаются при prefers-reduced-motion.
 
 // Позиций на страницу — по РЕАЛЬНОЙ высоте листа (та же формула, что в CSS:
-// --mbook-page-h = clamp(420px, 78vh, 780px)). Считаем здесь то же число, что
+// --mbook-page-h = clamp(440px, 84vh, 820px)). Считаем здесь то же число, что
 // потом верстается, поэтому пагинация и вёрстка не расходятся: на высоком
 // экране лист длинный и позиций влезает больше, на коротком ноуте — меньше.
 const PAGE_H = (height) => Math.min(820, Math.max(440, height * 0.84));
 // Множитель кегля страницы. ⚠️ Должен совпадать с --mbook-fs в menubook.css:
 // текст крупнее — позиций на лист влезает меньше, иначе они лезут за рамку.
-const FS = 1.56;
-// Высота одной позиции при FS = 1 и плотном наборе (название + состав + строка
-// цены + отступ). Замерено по вёрстке после уплотнения 2026-08-27; на глаз не
-// подбирать — разъедется пагинация.
-const ROW_WIDE = 57;
-const ROW_NARROW = 52;
+const FS = 1.10;
+
+/** CSS-clamp(minpx, Nvh, maxpx) в пикселях — чтобы считать ровно то же, что верстается. */
+const cvh = (min, vh, max, height) => Math.min(max, Math.max(min, (height * vh) / 100));
+
+/**
+ * Высота САМОЙ высокой позиции и всех полей листа.
+ *
+ * Раньше высота строки была одной константой (57px при FS = 1), и на коротком
+ * экране это врало в запас: кегли внутри листа заданы через clamp(px, vh, px)
+ * и на 700px высоты усыхают, а константа — нет. Из-за этого ноутбук получал
+ * лишние развороты на пустом месте (16 против 13 на 900px). Теперь обе части
+ * считаются теми же формулами, что стоят в menubook.css, — если правишь там
+ * кегль или межстрочный, поправь и здесь.
+ */
+function rowHeight(height) {
+  const name   = cvh(10,  1.5,  14,   height) * FS * 1.18;        // .mbook__item-name
+  const origin = cvh(8.5, 1.15, 11,   height) * FS * 0.82 * 1.2 * 2; // состав в ДВЕ строки — худший случай
+  const price  = cvh(9,   1.2,  11.5, height) * FS * 1.25;        // .mbook__item-line
+  return name + origin + price + 3;                               // + gap:1px внутри позиции и margin-top строки цены
+}
+
+/** Всё, что съедает лист помимо позиций: поля, шапка раздела, отбивка списка. */
+function chromeHeight(height) {
+  const padding = cvh(11, 1.9, 18, height) + cvh(7, 1.2, 11, height);
+  // Считаем по САМОЙ высокой шапке — название плюс подпись объёма: иначе на
+  // такой странице последняя позиция уезжала бы под нижнюю рамку.
+  const head = cvh(17, 2.2, 25, height) * FS * 1.25 + 11 * FS * 1.35 + 2;
+  return padding + head + cvh(4, 0.7, 8, height);
+}
+
 function perPageFor(width, height) {
   const pageH = width <= 1000 ? Math.min(560, Math.max(360, height * 0.6)) : PAGE_H(height);
-  const free = pageH - (100 * FS + 44); // шапка раздела (растёт с кеглем) + поля листа
-  const row = (width >= 1280 ? ROW_WIDE : ROW_NARROW) * FS;
-  return Math.max(2, Math.min(9, Math.floor(free / row)));
+  const gap = cvh(2, 0.4, 5, height); // .mbook__items { gap }
+  const free = pageH - chromeHeight(height);
+  // n строк и (n-1) зазоров должны уместиться в free.
+  return Math.max(2, Math.min(16, Math.floor((free + gap) / (rowHeight(height) + gap))));
 }
 
 /** Диаметр пузыря под длину названия: короткие — мелкие, длинные — крупнее.
@@ -94,7 +120,13 @@ function PageCorner() {
   );
 }
 
-/** Рамка листа: двойная линия, уголки-веера и веер-медальон сверху/снизу. */
+/**
+ * Рамка листа: двойная линия и уголки-веера.
+ * Медальоны-веера сверху и снизу сняты при уплотнении 2026-08-30: они стояли
+ * ровно в вертикальном потоке и требовали крупных полей листа — вдвоём
+ * съедали позицию с каждой страницы. Компонент PageFan остался: он рисует и
+ * уголки, и медальоны, если их вернут.
+ */
 function PageFrame() {
   return (
     <span className="mbook__frame" aria-hidden="true">
@@ -102,8 +134,6 @@ function PageFrame() {
       <span className="mbook__corner mbook__corner--tr"><PageCorner /></span>
       <span className="mbook__corner mbook__corner--bl"><PageCorner /></span>
       <span className="mbook__corner mbook__corner--br"><PageCorner /></span>
-      <span className="mbook__medallion mbook__medallion--top"><PageFan flip /></span>
-      <span className="mbook__medallion mbook__medallion--bottom"><PageFan /></span>
     </span>
   );
 }
