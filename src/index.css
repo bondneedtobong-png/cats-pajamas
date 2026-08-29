@@ -3037,3 +3037,23 @@ html { scroll-behavior: smooth; }
    на текст. */
 .chapter-glow > * { position: relative; z-index: 1; }
 
+/* ── Дымка Главы I «Легенда бара» ─────────────────────────────────────────
+   Не один blur-квадрат на секцию (дорого и тянется криво), а россыпь мягких
+   радиальных пятен в процентах по высоте. Секция «Легенды» высокая —
+   текст легенды плюс колонка отзывов и упоминаний, — поэтому пятен семь, а
+   не четыре: нижняя треть иначе оставалась бы плоской.
+   Слой без z-index идёт сразу за .about__dots и заведомо ниже .about__layout
+   (у того z-index: 1). */
+.bg-smoke {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 480px 280px at 18% 12%, rgba(var(--gold-rgb), .09), transparent 70%),
+    radial-gradient(ellipse 560px 320px at 78% 27%, rgba(var(--gold-rgb), .07), transparent 70%),
+    radial-gradient(ellipse 420px 260px at 35% 41%, rgba(var(--gold-rgb), .06), transparent 70%),
+    radial-gradient(ellipse 500px 300px at 82% 55%, rgba(var(--gold-rgb), .05), transparent 70%),
+    radial-gradient(ellipse 460px 280px at 22% 68%, rgba(var(--gold-rgb), .05), transparent 70%),
+    radial-gradient(ellipse 520px 300px at 70% 81%, rgba(var(--gold-rgb), .04), transparent 70%),
+    radial-gradient(ellipse 440px 260px at 40% 93%, rgba(var(--gold-rgb), .04), transparent 70%);
+}
