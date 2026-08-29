@@ -27,50 +27,79 @@ import './menubook.css';
 // Движение: только transform/opacity; всё бесконечное здесь запрещено
 // (правило проекта), анимации разовые и выключаются при prefers-reduced-motion.
 
-// Позиций на страницу — по РЕАЛЬНОЙ высоте листа (та же формула, что в CSS:
-// --mbook-page-h = clamp(440px, 84vh, 820px)). Считаем здесь то же число, что
-// потом верстается, поэтому пагинация и вёрстка не расходятся: на высоком
-// экране лист длинный и позиций влезает больше, на коротком ноуте — меньше.
-const PAGE_H = (height) => Math.min(820, Math.max(440, height * 0.84));
-// Множитель кегля страницы. ⚠️ Должен совпадать с --mbook-fs в menubook.css:
-// текст крупнее — позиций на лист влезает меньше, иначе они лезут за рамку.
-const FS = 1.10;
+// Ёмкость листа — по РЕАЛЬНЫМ его размерам. Все формулы ниже дословно
+// повторяют menubook.css, поэтому пагинация и вёрстка не расходятся: на
+// высоком экране лист длинный и позиций влезает больше, на коротком — меньше.
+// ⚠️ Правишь в CSS кегль, поля или межстрочный — поправь и здесь.
 
-/** CSS-clamp(minpx, Nvh, maxpx) в пикселях — чтобы считать ровно то же, что верстается. */
+/** CSS-clamp(minpx, Nvh, maxpx) в пикселях. */
 const cvh = (min, vh, max, height) => Math.min(max, Math.max(min, (height * vh) / 100));
+/** То же для vw. */
+const cvw = (min, vw, max, width) => Math.min(max, Math.max(min, (width * vw) / 100));
 
 /**
- * Высота САМОЙ высокой позиции и всех полей листа.
- *
- * Раньше высота строки была одной константой (57px при FS = 1), и на коротком
- * экране это врало в запас: кегли внутри листа заданы через clamp(px, vh, px)
- * и на 700px высоты усыхают, а константа — нет. Из-за этого ноутбук получал
- * лишние развороты на пустом месте (16 против 13 на 900px). Теперь обе части
- * считаются теми же формулами, что стоят в menubook.css, — если правишь там
- * кегль или межстрочный, поправь и здесь.
+ * Размеры листа на трёх брейкпоинтах книги — зеркало --mbook-page-h /
+ * --mbook-fit / --mbook-fs из menubook.css (десктоп, ≤1000px, ≤640px).
  */
-function rowHeight(height) {
-  const name   = cvh(10,  1.5,  14,   height) * FS * 1.18;        // .mbook__item-name
-  const origin = cvh(8.5, 1.15, 11,   height) * FS * 0.82 * 1.2 * 2; // состав в ДВЕ строки — худший случай
-  const price  = cvh(9,   1.2,  11.5, height) * FS * 1.25;        // .mbook__item-line
-  return name + origin + price + 3;                               // + gap:1px внутри позиции и margin-top строки цены
+function pageBox(width, height) {
+  if (width <= 640) {
+    return { h: Math.min(380, Math.max(300, height * 0.46)), fit: (width - 26) / 2, fs: 1.12 };
+  }
+  if (width <= 1000) {
+    return { h: Math.min(560, Math.max(360, height * 0.6)), fit: (width - 150) / 2, fs: 1.56 };
+  }
+  return { h: Math.min(820, Math.max(440, height * 0.84)), fit: (width - 620) / 2, fs: 1.56 };
+}
+const PAGE_RATIO = 0.6; // --mbook-ratio: лист вытянут по вертикали
+
+/**
+ * Высота БАЗОВОЙ позиции: название + состав в ОДНУ строку + строка
+ * «объём ⋯ цена». Она же — единица измерения для bookSpreads.js: всё
+ * остальное на листе (заголовок, «О разделе», цитата) выражено в её долях.
+ */
+function baseRow(height, fs) {
+  const name   = cvh(10,  1.5,  14,   height) * fs * 1.22;
+  const origin = cvh(8.5, 1.15, 11,   height) * fs * 0.86 * 1.28;
+  const price  = cvh(9,   1.2,  11.5, height) * fs * 1.25;
+  return name + origin + price + 3; // + gap:1px внутри позиции и margin-top строки цены
 }
 
-/** Всё, что съедает лист помимо позиций: поля, шапка раздела, отбивка списка. */
-function chromeHeight(height) {
-  const padding = cvh(11, 1.9, 18, height) + cvh(7, 1.2, 11, height);
-  // Считаем по САМОЙ высокой шапке — название плюс подпись объёма: иначе на
-  // такой странице последняя позиция уезжала бы под нижнюю рамку.
-  const head = cvh(17, 2.2, 25, height) * FS * 1.25 + 11 * FS * 1.35 + 2;
-  return padding + head + cvh(4, 0.7, 8, height);
-}
+/** Поля листа и отбивка списка — всё, что съедает лист до содержимого.
+ *  На телефоне лист втрое короче, поэтому и поля там скромнее (см. медиазапрос
+ *  ≤640px в menubook.css). */
+const chromeHeight = (width, height) => (width <= 640
+  ? cvh(6, 0.9, 10, height) + cvh(7, 1.1, 12, height) + cvh(4, 0.7, 8, height)
+  : cvh(11, 1.9, 18, height) + cvh(12, 1.9, 18, height) + cvh(4, 0.7, 8, height));
 
-function perPageFor(width, height) {
-  const pageH = width <= 1000 ? Math.min(560, Math.max(360, height * 0.6)) : PAGE_H(height);
+/**
+ * Ёмкость листа в «позициях» и оценка длины строки.
+ *
+ * Строк в составе и в блоке «О разделе» может быть больше одной — от этого
+ * прямо зависит, сколько позиций влезет. Раньше раскладка считала все позиции
+ * одинаковыми и по худшему случаю, поэтому низ каждого листа стоял пустым.
+ * Теперь длина текста переводится в строки по ширине листа: 0.46em — средняя
+ * ширина знака у курсивного Involve, 0.42em — у рукописного Jar Binks
+ * (замерено по реальной вёрстке).
+ */
+function bookMetrics(width, height) {
+  const { h: pageH, fit, fs } = pageBox(width, height);
+  const pageW = Math.min(pageH * PAGE_RATIO, Math.max(160, fit));
+  const inner = Math.max(140, pageW - 2 * cvw(14, 2.2, 26, width));
   const gap = cvh(2, 0.4, 5, height); // .mbook__items { gap }
-  const free = pageH - chromeHeight(height);
-  // n строк и (n-1) зазоров должны уместиться в free.
-  return Math.max(2, Math.min(16, Math.floor((free + gap) / (rowHeight(height) + gap))));
+  const row = baseRow(height, fs) + gap;
+  // n строк и (n-1) зазоров должны уместиться в свободную высоту.
+  const perPage = Math.max(2, (pageH - chromeHeight(width, height) + gap) / row);
+  const originFs = cvh(8.5, 1.15, 11, height) * fs * 0.86;
+  const storyFs  = cvh(10, 1.35, 12.5, height) * fs;
+  const quoteFs  = cvh(9, 1.2, 11.5, height) * fs;
+  return {
+    perPage,
+    cpl: {
+      origin: Math.max(16, inner / (0.46 * originFs)),
+      story:  Math.max(14, inner / (0.42 * storyFs)),
+      quote:  Math.max(14, inner / (0.46 * quoteFs)),
+    },
+  };
 }
 
 /** Диаметр пузыря под длину названия: короткие — мелкие, длинные — крупнее.
@@ -145,6 +174,47 @@ function PageFrame() {
 // а тексты приходят из админки — меняем тире на запятую при выводе.
 const handwritten = (s) => String(s || '').replace(/\s*[—–]\s*/g, ', ').replace(/,\s*,/g, ',');
 
+/** Один раздел на листе. Их на странице может быть несколько — лист набивается
+ *  до конца, а не отдаётся одному разделу (см. bookSpreads.js). */
+function PageSection({ block }) {
+  return (
+    <section className="mbook__sec">
+      {block.head ? (
+        <header className="mbook__head">
+          {block.parent && <p className="mbook__parent">{block.parent}</p>}
+          <h3 className="mbook__title">{block.title}</h3>
+          {block.unit && <p className="mbook__unit">{block.unit}</p>}
+        </header>
+      ) : (
+        <p className="mbook__cont">{block.title} · продолжение</p>
+      )}
+
+      {block.story && <p className="mbook__story">{handwritten(block.story)}</p>}
+
+      <ul className="mbook__items">
+        {block.items.map((item) => (
+          <li className="mbook__item" key={item.name + item.price}>
+            <span className="mbook__item-name">{item.name}</span>
+            {item.origin && <span className="mbook__item-origin">{item.origin}</span>}
+            <span className="mbook__item-line">
+              <span className="mbook__item-vol">{item.volume ?? block.unit ?? ''}</span>
+              <span className="mbook__item-leader" aria-hidden="true" />
+              <span className="mbook__item-price">{item.price}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {block.quote && (
+        <figure className="mbook__quote">
+          <blockquote className="mbook__quote-text">«{block.quote.text}»</blockquote>
+          <figcaption className="mbook__quote-sign">{block.quote.author}</figcaption>
+        </figure>
+      )}
+    </section>
+  );
+}
+
 function BookPage({ page, side }) {
   if (!page) {
     return (
@@ -157,38 +227,9 @@ function BookPage({ page, side }) {
     <div className={`mbook__paper mbook__paper--${side}`}>
       <PageFrame />
       <div className="mbook__content">
-        {page.head ? (
-          <header className="mbook__head">
-            {page.parent && <p className="mbook__parent">{page.parent}</p>}
-            <h3 className="mbook__title">{page.title}</h3>
-            {page.unit && <p className="mbook__unit">{page.unit}</p>}
-          </header>
-        ) : (
-          <p className="mbook__cont">{page.title} · продолжение</p>
-        )}
-
-        {page.story && <p className="mbook__story">{handwritten(page.story)}</p>}
-
-        <ul className="mbook__items">
-          {page.items.map((item) => (
-            <li className="mbook__item" key={item.name + item.price}>
-              <span className="mbook__item-name">{item.name}</span>
-              {item.origin && <span className="mbook__item-origin">{item.origin}</span>}
-              <span className="mbook__item-line">
-                <span className="mbook__item-vol">{item.volume ?? page.unit ?? ''}</span>
-                <span className="mbook__item-leader" aria-hidden="true" />
-                <span className="mbook__item-price">{item.price}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        {page.quote && (
-          <figure className="mbook__quote">
-            <blockquote className="mbook__quote-text">«{page.quote.text}»</blockquote>
-            <figcaption className="mbook__quote-sign">{page.quote.author}</figcaption>
-          </figure>
-        )}
+        {page.blocks.map((block, i) => (
+          <PageSection key={`${block.title}#${i}`} block={block} />
+        ))}
       </div>
     </div>
   );
@@ -227,8 +268,11 @@ export default function MenuBook({ menu, stories }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const perPage = perPageFor(size.w, size.h);
-  const { spreads, jumps } = useMemo(() => buildBook(menu, stories, perPage), [menu, stories, perPage]);
+  const { perPage, cpl } = bookMetrics(size.w, size.h);
+  const { spreads, jumps } = useMemo(
+    () => buildBook(menu, stories, perPage, cpl),
+    [menu, stories, perPage, cpl.origin, cpl.story, cpl.quote],
+  );
   const nav = useMemo(() => buildNav(menu), [menu]);
   const last = Math.max(0, spreads.length - 1);
 

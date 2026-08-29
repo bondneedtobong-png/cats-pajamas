@@ -35,7 +35,7 @@
      Один множитель на все размеры листа: меняется в одном месте, вёрстка
      остаётся пропорциональной. Пагинация знает про него (perPageFor в
      MenuBook.jsx) — иначе позиции полезли бы за край листа. */
-  --mbook-fs: 1.10;
+  --mbook-fs: 1.56;
 
   /* Слева пузыри, справа витрина коктейлей, книга — ровно по центру страницы:
      колонки по краям одинаковой ширины, книга в auto-колонке между ними. */
@@ -359,7 +359,9 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: clamp(11px, 1.9vh, 18px) clamp(14px, 2.2vw, 26px) clamp(7px, 1.2vh, 11px);
+  /* Нижнее поле щедрее верхнего: лист набивается до последней помещающейся
+     позиции, и без этого запаса строка цены упиралась бы прямо в рамку. */
+  padding: clamp(11px, 1.9vh, 18px) clamp(14px, 2.2vw, 26px) clamp(12px, 1.9vh, 18px);
   text-align: center;
   overflow: hidden;
 }
@@ -386,7 +388,7 @@
   font-style: italic;
   font-size: calc(11px * var(--mbook-fs));
   color: var(--mbook-ink-dim);
-  margin: 2px 0 0;
+  margin: 4px 0 0;
 }
 .mbook__cont {
   font-family: 'Involve', serif;
@@ -408,6 +410,14 @@
   flex-shrink: 0;
 }
 
+/* Разделов на листе может быть несколько: лист набивается до конца, и когда
+   позиции раздела кончились, тут же начинается следующий (см. bookSpreads.js).
+   Поэтому ни один блок листа больше НЕ растягивается по высоте — иначе
+   единственный раздел раздувался бы на всю страницу и пустота, ради которой
+   всё и затевалось, возвращалась бы. */
+.mbook__sec { flex: 0 0 auto; }
+.mbook__sec + .mbook__sec { margin-top: clamp(9px, 1.6vh, 18px); }
+
 .mbook__items {
   list-style: none;
   margin: clamp(4px, 0.7vh, 8px) 0 0;
@@ -420,14 +430,14 @@
      2026-08-27: «ставить напитки компактнее друг к другу»). */
   justify-content: flex-start;
   gap: clamp(2px, 0.4vh, 5px);
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
 }
 .mbook__item { display: flex; flex-direction: column; gap: 1px; }
 .mbook__item-name {
   font-family: 'Avenir Next', sans-serif;
   font-size: calc(clamp(10px, 1.5vh, 14px) * var(--mbook-fs));
-  line-height: 1.18;
+  line-height: 1.22;
   color: var(--mbook-ink);
 }
 .mbook__item-origin {
@@ -436,8 +446,8 @@
   /* Состав — вспомогательная строка: держим её на 15% мельче общего кегля,
      иначе длинные рецепты уезжают на три строки и лист вмещает на позицию
      меньше (компромисс уплотнения 2026-08-27). */
-  font-size: calc(clamp(8.5px, 1.15vh, 11px) * var(--mbook-fs) * 0.82);
-  line-height: 1.2;
+  font-size: calc(clamp(8.5px, 1.15vh, 11px) * var(--mbook-fs) * 0.86);
+  line-height: 1.28;
   color: var(--mbook-ink-dim);
 }
 .mbook__item-line {
@@ -677,6 +687,10 @@
        умереннее: иначе заголовок раздела не влезает в рамку. */
     --mbook-fs: 1.12;
   }
+  /* Лист телефона втрое короче десктопного (46vh против 84vh), и десктопные
+     поля съедали бы у него почти десятую часть высоты — здесь они скромнее.
+     ⚠️ Зеркалится в chromeHeight (MenuBook.jsx). */
+  .mbook__content { padding: clamp(6px, 0.9vh, 10px) clamp(8px, 2.4vw, 14px) clamp(7px, 1.1vh, 12px); }
   /* Заголовок раздела меряем шириной листа, а не высотой экрана: длинные
      названия («Коктейльная карта») обязаны уместиться в рамку. */
   .mbook__title { font-size: clamp(14px, 5vw, 20px); letter-spacing: 1px; }
