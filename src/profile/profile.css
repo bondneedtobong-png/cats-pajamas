@@ -90,91 +90,7 @@
 .prof-main {
   padding: 32px 24px;
 }
-.prof-container {
-  max-width: 680px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
 
-/* ─── Section ─── */
-@keyframes profFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-.prof-section {
-  background: var(--bg2);
-  border: 1px solid rgba(var(--gold-rgb), 0.09);
-  animation: profFadeIn 0.3s ease;
-}
-@media (prefers-reduced-motion: reduce) { .prof-section { animation: none; } }
-.prof-section__head {
-  padding: 12px 20px;
-  border-bottom: 1px solid rgba(var(--gold-rgb), 0.07);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.prof-section__title {
-  font-size: 9px;
-  letter-spacing: 2px;
-  font-weight: 600;
-  color: rgba(var(--gold-rgb), 0.6);
-}
-.prof-section__count {
-  font-size: 11px;
-  color: rgba(198,191,181,0.25);
-}
-
-/* ─── Profile form ─── */
-.prof-profile-form {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.prof-field {}
-.prof-field__lbl {
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: rgba(var(--gold-rgb), 0.55);
-  margin-bottom: 5px;
-  display: block;
-}
-.prof-field__val {
-  font-size: 14px;
-  color: rgba(198,191,181,0.7);
-}
-.prof-name-row {
-  display: flex;
-  gap: 8px;
-}
-.prof-input {
-  flex: 1;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(var(--gold-rgb), 0.2);
-  border-radius: 2px;
-  color: var(--text);
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 14px;
-  padding: 8px 12px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.prof-input:focus { border-color: rgba(var(--gold-rgb), 0.55); }
-.prof-input::placeholder { color: rgba(198,191,181,0.22); font-style: italic; }
-.prof-save-btn {
-  background: transparent;
-  border: 1px solid rgba(var(--gold-rgb), 0.35);
-  color: var(--gold);
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 8px 14px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-.prof-save-btn:hover { background: rgba(var(--gold-rgb), 0.1); }
 
 /* ─── Reservation cards ─── */
 .prof-res-list {
@@ -279,32 +195,6 @@
 }
 .prof-cta:hover { background: var(--gold-hover); }
 
-/* ─── Tabs ─── */
-.prof-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid rgba(var(--gold-rgb), 0.1);
-}
-.prof-tab {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: rgba(198,191,181,0.4);
-  font-family: 'Avenir Next', sans-serif;
-  font-size: 11px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 10px 4px;
-  margin-right: 20px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-.prof-tab:hover { color: rgba(198,191,181,0.7); }
-.prof-tab--active {
-  color: var(--gold);
-  border-bottom-color: var(--gold);
-}
-
 /* ─── Skeleton loading ─── */
 .prof-skeleton-list {
   padding: 12px;
@@ -335,26 +225,6 @@
   .prof-skeleton-line { animation: none; }
 }
 
-/* ─── Loyalty tier + progress ─── */
-.prof-loyalty {
-  padding: 24px 20px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.prof-loyalty__tier-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-.prof-loyalty__tier-label {
-  font-family: 'Baskerville', serif;
-  font-size: 20px;
-}
-.prof-loyalty__points {
-  font-size: 13px;
-  color: var(--gold);
-}
 .prof-loyalty__bar {
   height: 8px;
   background: rgba(255,255,255,0.05);
@@ -366,11 +236,6 @@
   background: linear-gradient(90deg, rgba(var(--gold-rgb), .45), var(--gold));
   border-radius: 4px;
   transition: width 0.6s ease;
-}
-.prof-loyalty__next {
-  font-size: 12px;
-  color: rgba(198,191,181,0.45);
-  margin: 0;
 }
 
 /* ─── Депозит в карточке брони ─── */
@@ -402,28 +267,6 @@
 @media (prefers-reduced-motion: reduce) {
   .prof-pay-btn { transition: background 0.15s; }
   .prof-pay-btn:hover:not(:disabled) { transform: none; }
-}
-
-/* ─── Уровень: карточка + лестница 9 уровней ─── */
-.prof-level-hero {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.prof-level-hero__emoji {
-  font-size: 44px;
-  line-height: 1;
-}
-.prof-level-hero__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.prof-level-hero__num {
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(var(--gold-rgb), 0.6);
 }
 
 .prof-ladder {
@@ -470,3 +313,232 @@
 .prof-status--completed { --st: #857861; }
 .prof-status--cancelled { --st: rgba(198,191,181,0.4); }
 .prof-status--no_show   { --st: #f87171; }
+
+/* ═══ «Карта гостя»: раскладка-плитка (2026-08-30) ═══════════════════════════
+   Вкладок больше нет — всё, что гость приходит посмотреть, лежит на одной
+   странице. Плитки собраны в две колонки-стопки, а не свободно раскладываются
+   по грид-сетке: лестница уровней вдвое выше карточки брони, и при обычной
+   автораскладке под бронью зияла бы дыра высотой в целый ряд. */
+.prof-bento {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.32fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.prof-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.prof-tile--full { grid-column: 1 / -1; }
+
+@keyframes profFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.prof-tile {
+  background: var(--bg2);
+  border: 1px solid rgba(var(--gold-rgb), 0.12);
+  border-radius: 10px;
+  animation: profFadeIn 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) { .prof-tile { animation: none; } }
+.prof-tile__head {
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.09);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.prof-tile__title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  color: rgba(var(--gold-rgb), 0.75);
+}
+.prof-tile__count {
+  font-size: 11px;
+  color: rgba(198,191,181,0.3);
+}
+
+/* ─── Карта гостя ─── */
+.prof-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 320px);
+  align-items: center;
+  gap: 20px 24px;
+  padding: 22px 24px;
+}
+.prof-card__main { min-width: 0; }
+.prof-card__name {
+  font-family: 'Baskerville', serif;
+  font-weight: 400;
+  font-size: clamp(24px, 2.4vw, 34px);
+  line-height: 1.1;
+  color: var(--text);
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.prof-card__contacts {
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+  color: rgba(198,191,181,0.42);
+}
+.prof-card__nameform {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.prof-card__level { min-width: 0; }
+.prof-card__tier {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.prof-card__tier-emoji { font-size: 24px; line-height: 1; }
+.prof-card__tier-name {
+  font-family: 'Baskerville', serif;
+  font-size: 20px;
+  color: var(--text);
+}
+.prof-card__tier-num {
+  margin-left: auto;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(var(--gold-rgb), 0.7);
+  white-space: nowrap;
+}
+.prof-card__tier-next {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(198,191,181,0.5);
+}
+
+/* Аватар: в шапке мелкий, в карте гостя — крупный. */
+.prof-avatar--sm { width: 28px; height: 28px; font-size: 11px; }
+.prof-avatar--lg {
+  width: 72px;
+  height: 72px;
+  font-size: 26px;
+  align-self: start;
+}
+
+/* ─── Ввод имени ─── */
+.prof-input {
+  flex: 1;
+  min-width: 160px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 15px;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.prof-input:focus { border-color: rgba(var(--gold-rgb), 0.6); }
+.prof-input::placeholder { color: rgba(198,191,181,0.22); font-style: italic; }
+.prof-save-btn {
+  background: transparent;
+  border: 1px solid rgba(var(--gold-rgb), 0.4);
+  border-radius: 4px;
+  color: var(--gold);
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.prof-save-btn:hover:not(:disabled) { background: rgba(var(--gold-rgb), 0.12); }
+.prof-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Второстепенное действие рядом с именем — только текст, без рамки: рамка
+   спорила бы за внимание с самим именем. */
+.prof-ghost-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: 'Avenir Next', sans-serif;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(198,191,181,0.35);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.prof-ghost-btn:hover { color: var(--gold); }
+
+/* ─── Ближайшая бронь ─── */
+.prof-res-card--featured {
+  border-color: rgba(var(--gold-rgb), 0.22);
+  background: rgba(var(--gold-rgb), 0.04);
+  padding: 18px 20px;
+}
+.prof-res-card--featured .prof-res-card__table { font-size: 20px; }
+.prof-res-card__when {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--gold);
+}
+
+/* ─── История: свёрнута, чтобы не забирать экран у актуального ─── */
+.prof-history { padding: 0; }
+.prof-history__summary {
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.prof-history__summary::-webkit-details-marker { display: none; }
+.prof-history__summary::after {
+  content: '⌄';
+  margin-left: auto;
+  color: rgba(var(--gold-rgb), 0.6);
+  font-size: 14px;
+  line-height: 1;
+}
+.prof-history[open] .prof-history__summary {
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.09);
+}
+.prof-history[open] .prof-history__summary::after { content: '⌃'; }
+
+.prof-res-card { border-radius: 8px; }
+.prof-skeleton-card { border-radius: 8px; margin: 12px; }
+
+/* ─── Узкий экран: одна колонка ─── */
+@media (max-width: 900px) {
+  .prof-main { padding: 20px 14px; }
+  /* Шапка не помещалась на телефоне и давала горизонтальную прокрутку:
+     подпись «ЛИЧНЫЙ КАБИНЕТ» дублирует заголовок карты гостя — на узком
+     экране она уходит первой. */
+  .prof-header { padding: 0 12px; gap: 8px; }
+  .prof-header__title, .prof-header__divider { display: none; }
+  .prof-header__link { font-size: 10px; }
+  .prof-bento { grid-template-columns: minmax(0, 1fr); }
+  .prof-tile--full { grid-column: 1; }
+  .prof-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px 16px;
+    padding: 18px;
+  }
+  /* Уровень уходит под имя во всю ширину — в 320px рядом с аватаром прогресс
+     и подпись не читаются. */
+  .prof-card__level { grid-column: 1 / -1; }
+  .prof-card__tier-num { margin-left: 0; }
+}
