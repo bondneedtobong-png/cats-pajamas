@@ -3003,3 +3003,37 @@ html { scroll-behavior: smooth; }
   .contacts__social-label { display: none; }
   .contacts__social { padding: 10px 12px; }
 }
+
+/* ═══ Фоновые декорации по главам (2026-08-30) ═══════════════════════════════
+   Только фоновые слои: псевдоэлементы и абсолютные обёртки ПОД контентом.
+   Разметка контента не тронута — классы вешаются на уже существующие узлы.
+   Все слои: position:absolute, pointer-events:none, без анимаций.
+   Цвет — только токены темы (--gold-rgb = 176,137,0 из логобука, стр. 29);
+   собственных hex здесь нет.
+   Секции лендинга уже position:relative + overflow:hidden, а их .*__inner
+   держат z-index:1 — поэтому слой с z-index 0 гарантированно уходит под текст. */
+
+/* ── Свечение прожектора над заголовком главы ─────────────────────────────
+   Вешается на существующую обёртку метки «ГЛАВА N» (.reveal вокруг
+   .sec-label). Пятно уходит вниз на 420px и накрывает заголовок секции,
+   который лежит соседним узлом. */
+.chapter-glow { position: relative; }
+.chapter-glow::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(900px, 90vw);
+  height: 420px;
+  background: radial-gradient(circle at 50% 20%,
+    rgba(var(--gold-rgb), .22) 0%,
+    rgba(var(--gold-rgb), 0) 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+/* Позиционированный ::before рисуется поверх строчного содержимого обёртки,
+   поэтому саму метку поднимаем на слой выше — иначе золотой налив ложится
+   на текст. */
+.chapter-glow > * { position: relative; z-index: 1; }
+

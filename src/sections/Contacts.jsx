@@ -38,7 +38,7 @@ export default function Contacts({ tx }) {
           <a href="/booking" className="hero__btn u-glare">{tx.heroCta}</a>
         </div>
 
-        <div ref={r0} className="reveal mb-10">
+        <div ref={r0} className="reveal mb-10 chapter-glow">
           <span className="sec-label">{tx.contactsLabel}</span>
         </div>
         <h2 ref={r1} className="reveal contacts__title">{tx.contactsTitle}</h2>

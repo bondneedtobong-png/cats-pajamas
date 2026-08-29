@@ -92,7 +92,7 @@ export default function Events({ tx, lang }) {
           ))}
         </div>
 
-        <div ref={r0} className="reveal mb-10">
+        <div ref={r0} className="reveal mb-10 chapter-glow">
           <span className="sec-label">{tx.eventsLabel}</span>
         </div>
         <h2 ref={r1} className="reveal events__title">{tx.eventsTitle}</h2>

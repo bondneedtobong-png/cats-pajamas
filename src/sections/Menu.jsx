@@ -41,7 +41,7 @@ export default function Menu({ tx }) {
     <section id="menu" className="menu">
       <div className="brand-bottles" />
       <div className="menu__inner menu__inner--book">
-        <div ref={r0} className="reveal" style={{ textAlign: 'center' }}>
+        <div ref={r0} className="reveal chapter-glow" style={{ textAlign: 'center' }}>
           <span className="sec-label">{tx.menuLabel}</span>
         </div>
         <h2 ref={r1} className="reveal menu__title" style={{ textAlign: 'center' }}>{tx.menuTitle}</h2>

@@ -240,7 +240,7 @@ export default function Team({ tx }) {
             вернуть после утверждения новой раскладки. Нумерация глав в
             src/data.js не тронута. */}
         {false && (
-          <div ref={r0} className="reveal" style={{ textAlign: 'center' }}>
+          <div ref={r0} className="reveal chapter-glow" style={{ textAlign: 'center' }}>
             <span className="sec-label">{tx.teamLabel}</span>
           </div>
         )}

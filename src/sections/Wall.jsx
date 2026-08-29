@@ -188,7 +188,7 @@ export default function Wall({ tx }) {
   return (
     <section id="wall" className="wall" ref={sectionRef}>
       <div className="wall__inner">
-        <div ref={r0} className="reveal mb-10" style={{ textAlign: 'center' }}>
+        <div ref={r0} className="reveal mb-10 chapter-glow" style={{ textAlign: 'center' }}>
           <span className="sec-label">{tx.wallLabel}</span>
         </div>
         <h2 ref={r1} className="reveal wall__title">{tx.wallTitle}</h2>
