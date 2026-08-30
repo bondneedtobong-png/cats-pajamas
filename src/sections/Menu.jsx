@@ -40,6 +40,24 @@ export default function Menu({ tx }) {
   return (
     <section id="menu" className="menu">
       <div className="brand-bottles" />
+
+      {/* Зерно главы. Турбулентность считается ОДИН раз на тайле 240×240 и
+          дальше размножается паттерном — на всю секцию фильтр не гоняем,
+          иначе на телефоне это заметно тормозит. */}
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <filter id="grain-tile">
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2"
+            stitchTiles="stitch" result="n" />
+          <feColorMatrix in="n" type="matrix"
+            values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.05 0" />
+        </filter>
+        <pattern id="grain-pattern" width="240" height="240" patternUnits="userSpaceOnUse">
+          <rect width="240" height="240" filter="url(#grain-tile)" />
+        </pattern>
+      </svg>
+      <svg className="bg-grain" aria-hidden="true">
+        <rect width="100%" height="100%" fill="url(#grain-pattern)" />
+      </svg>
       <div className="menu__inner menu__inner--book">
         <div ref={r0} className="reveal chapter-glow" style={{ textAlign: 'center' }}>
           <span className="sec-label">{tx.menuLabel}</span>
