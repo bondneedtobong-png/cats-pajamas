@@ -187,6 +187,8 @@ export default function Wall({ tx }) {
 
   return (
     <section id="wall" className="wall" ref={sectionRef}>
+      {/* Шов с Главой I: дымка гаснет к началу сетки фотографий. */}
+      <div className="bg-smoke bg-smoke--seam" />
       <div className="wall__inner">
         <div ref={r0} className="reveal mb-10 chapter-glow" style={{ textAlign: 'center' }}>
           <span className="sec-label">{tx.wallLabel}</span>
