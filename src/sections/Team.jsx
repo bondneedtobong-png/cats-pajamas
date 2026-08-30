@@ -235,6 +235,8 @@ export default function Team({ tx }) {
 
   return (
     <section id="team" className="team" ref={sectionRef}>
+      {/* Фон главы: вертикальные флейты стойки + дуги света над ней. */}
+      <div className="bg-flute-arcs" />
       <div className="team__inner team__inner--stage">
         {/* TODO(2026-08-27): метка главы временно скрыта по ТЗ владельца —
             вернуть после утверждения новой раскладки. Нумерация глав в
