@@ -58,9 +58,17 @@ function MainSite() {
         <Wall tx={tx} />
         <Team tx={tx} />
         <Menu tx={tx} />
-        <Events tx={tx} lang={lang} />
-        {/* <Shelf tx={tx} lang={lang} onRequestAuth={() => setAuthOpen(true)} /> — полка в разработке */}
-        <Contacts tx={tx} />
+        {/* Главы V и VI лежат в одной обёртке ради общего фонового слоя
+            «дорожка винила» — он идёт сквозным от афиши до контактов.
+            Обёртка ЧИСТО фоновая (position: relative + слой), разметку секций
+            не меняет. Футер в неё намеренно НЕ входит: финальная плашка со
+            ссылкой на правила бронирования остаётся без декора. */}
+        <div className="chapters-vinyl">
+          <div className="bg-vinyl" />
+          <Events tx={tx} lang={lang} />
+          {/* <Shelf tx={tx} lang={lang} onRequestAuth={() => setAuthOpen(true)} /> — полка в разработке */}
+          <Contacts tx={tx} />
+        </div>
         <Footer tx={tx} />
       </main>
 
