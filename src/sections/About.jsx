@@ -28,12 +28,7 @@ export default function About({ tx }) {
 
   return (
     <section id="about" className="about">
-      {/* Фирменный паттерн из силуэтов бутылок (логобук стр. 31,
-          HANDOFF_RESTYLE §C.1) — статичный фоновый слой под текстом. */}
-      <div className="brand-bottles brand-bottles--faint" />
       <div className="about__dots" />
-      {/* Дымка главы — россыпь мягких пятен вместо плоского фона. */}
-      <div className="bg-smoke" />
       <div className="about__layout">
         <div className="about__inner">
           <div ref={r0} className="reveal mb-18 chapter-glow">

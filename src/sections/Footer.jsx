@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 export default function Footer({ tx }) {
   return (
     <footer className="footer">
-      <div className="brand-bottles" />
       <img src="/uploads/logo-icon.svg" className="footer__sign brand-sign" alt="" aria-hidden="true" />
       <div className="footer__inner">
         <div className="footer__brand">
