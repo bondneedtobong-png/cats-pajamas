@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { buildBook, buildNav, spreadOfPage } from './bookSpreads.js';
+import { paginateByMeasure, pageSizeOf } from './paginate.js';
+import { pageHTML } from './pageMarkup.js';
 import MenuShowcase from './MenuShowcase.jsx';
 import MenuSticker from './MenuSticker.jsx';
 import './menubook.css';
@@ -27,80 +29,12 @@ import './menubook.css';
 // Движение: только transform/opacity; всё бесконечное здесь запрещено
 // (правило проекта), анимации разовые и выключаются при prefers-reduced-motion.
 
-// Ёмкость листа — по РЕАЛЬНЫМ его размерам. Все формулы ниже дословно
-// повторяют menubook.css, поэтому пагинация и вёрстка не расходятся: на
-// высоком экране лист длинный и позиций влезает больше, на коротком — меньше.
-// ⚠️ Правишь в CSS кегль, поля или межстрочный — поправь и здесь.
-
-/** CSS-clamp(minpx, Nvh, maxpx) в пикселях. */
-const cvh = (min, vh, max, height) => Math.min(max, Math.max(min, (height * vh) / 100));
-/** То же для vw. */
-const cvw = (min, vw, max, width) => Math.min(max, Math.max(min, (width * vw) / 100));
-
-/**
- * Размеры листа на трёх брейкпоинтах книги — зеркало --mbook-page-h /
- * --mbook-fit / --mbook-fs из menubook.css (десктоп, ≤1000px, ≤640px).
- */
-function pageBox(width, height) {
-  if (width <= 640) {
-    return { h: Math.min(380, Math.max(300, height * 0.46)), fit: (width - 26) / 2, fs: 1.12 };
-  }
-  if (width <= 1000) {
-    return { h: Math.min(560, Math.max(360, height * 0.6)), fit: (width - 150) / 2, fs: 1.56 };
-  }
-  return { h: Math.min(820, Math.max(440, height * 0.84)), fit: (width - 620) / 2, fs: 1.56 };
-}
-const PAGE_RATIO = 0.6; // --mbook-ratio: лист вытянут по вертикали
-
-/**
- * Высота БАЗОВОЙ позиции: название + состав в ОДНУ строку + строка
- * «объём ⋯ цена». Она же — единица измерения для bookSpreads.js: всё
- * остальное на листе (заголовок, «О разделе», цитата) выражено в её долях.
- */
-function baseRow(height, fs) {
-  const name   = cvh(10,  1.5,  14,   height) * fs * 1.22;
-  const origin = cvh(8.5, 1.15, 11,   height) * fs * 0.86 * 1.28;
-  const price  = cvh(9,   1.2,  11.5, height) * fs * 1.25;
-  return name + origin + price + 3; // + gap:1px внутри позиции и margin-top строки цены
-}
-
-/** Поля листа и отбивка списка — всё, что съедает лист до содержимого.
- *  На телефоне лист втрое короче, поэтому и поля там скромнее (см. медиазапрос
- *  ≤640px в menubook.css). */
-const chromeHeight = (width, height) => (width <= 640
-  ? cvh(6, 0.9, 10, height) + cvh(7, 1.1, 12, height) + cvh(4, 0.7, 8, height)
-  : cvh(11, 1.9, 18, height) + cvh(12, 1.9, 18, height) + cvh(4, 0.7, 8, height));
-
-/**
- * Ёмкость листа в «позициях» и оценка длины строки.
- *
- * Строк в составе и в блоке «О разделе» может быть больше одной — от этого
- * прямо зависит, сколько позиций влезет. Раньше раскладка считала все позиции
- * одинаковыми и по худшему случаю, поэтому низ каждого листа стоял пустым.
- * Теперь длина текста переводится в строки по ширине листа: 0.46em — средняя
- * ширина знака у курсивного Involve, 0.42em — у рукописного Jar Binks
- * (замерено по реальной вёрстке).
- */
-function bookMetrics(width, height) {
-  const { h: pageH, fit, fs } = pageBox(width, height);
-  const pageW = Math.min(pageH * PAGE_RATIO, Math.max(160, fit));
-  const inner = Math.max(140, pageW - 2 * cvw(14, 2.2, 26, width));
-  const gap = cvh(2, 0.4, 5, height); // .mbook__items { gap }
-  const row = baseRow(height, fs) + gap;
-  // n строк и (n-1) зазоров должны уместиться в свободную высоту.
-  const perPage = Math.max(2, (pageH - chromeHeight(width, height) + gap) / row);
-  const originFs = cvh(8.5, 1.15, 11, height) * fs * 0.86;
-  const storyFs  = cvh(10, 1.35, 12.5, height) * fs;
-  const quoteFs  = cvh(9, 1.2, 11.5, height) * fs;
-  return {
-    perPage,
-    cpl: {
-      origin: Math.max(16, inner / (0.46 * originFs)),
-      story:  Math.max(14, inner / (0.42 * storyFs)),
-      quote:  Math.max(14, inner / (0.46 * quoteFs)),
-    },
-  };
-}
+// Раскладка по страницам НЕ считается формулами по CSS. Книга меряет саму
+// себя: paginate.js кладёт разметку раздела на оффскрин-лист реального размера
+// и снимает высоту каждой позиции (см. его шапку). Здесь остаётся только
+// запустить замер и перезапускать его при смене размера листа, шрифтов или
+// самой карты. Формульная оценка (buildBook) живёт ровно до первого замера —
+// чтобы первый кадр не был пустым.
 
 /** Диаметр пузыря под длину названия: короткие — мелкие, длинные — крупнее.
  *  Со стикером кот занимает верхнюю половину кружка, поэтому пузыри крупнее,
@@ -169,51 +103,11 @@ function PageFrame() {
 
 /* ── Лист книги ──────────────────────────────────────────────────────────── */
 
-// Длинное тире в рукописном Jar Binks рендерится жирной чертой и рвёт строку
-// (известная беда шрифта, см. CLAUDE.md). «О разделе» теперь набрано именно им,
-// а тексты приходят из админки — меняем тире на запятую при выводе.
-const handwritten = (s) => String(s || '').replace(/\s*[—–]\s*/g, ', ').replace(/,\s*,/g, ',');
-
-/** Один раздел на листе. Их на странице может быть несколько — лист набивается
- *  до конца, а не отдаётся одному разделу (см. bookSpreads.js). */
-function PageSection({ block }) {
-  return (
-    <section className="mbook__sec">
-      {block.head ? (
-        <header className="mbook__head">
-          {block.parent && <p className="mbook__parent">{block.parent}</p>}
-          <h3 className="mbook__title">{block.title}</h3>
-          {block.unit && <p className="mbook__unit">{block.unit}</p>}
-        </header>
-      ) : (
-        <p className="mbook__cont">{block.title} · продолжение</p>
-      )}
-
-      {block.story && <p className="mbook__story">{handwritten(block.story)}</p>}
-
-      <ul className="mbook__items">
-        {block.items.map((item) => (
-          <li className="mbook__item" key={item.name + item.price}>
-            <span className="mbook__item-name">{item.name}</span>
-            {item.origin && <span className="mbook__item-origin">{item.origin}</span>}
-            <span className="mbook__item-line">
-              <span className="mbook__item-vol">{item.volume ?? block.unit ?? ''}</span>
-              <span className="mbook__item-leader" aria-hidden="true" />
-              <span className="mbook__item-price">{item.price}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      {block.quote && (
-        <figure className="mbook__quote">
-          <blockquote className="mbook__quote-text">«{block.quote.text}»</blockquote>
-          <figcaption className="mbook__quote-sign">{block.quote.author}</figcaption>
-        </figure>
-      )}
-    </section>
-  );
-}
+// Страница рисуется ТОЙ ЖЕ функцией, которой её меряет автопагинация
+// (pageMarkup.js → blockHTML). Отсюда dangerouslySetInnerHTML: два разных
+// рендера — рисующий и меряющий — неизбежно разъезжаются, а это ровно тот баг,
+// ради которого всё переписывалось. Контент листа — чистый текст без
+// интерактива, весь он экранируется в pageMarkup.esc.
 
 function BookPage({ page, side }) {
   if (!page) {
@@ -226,11 +120,8 @@ function BookPage({ page, side }) {
   return (
     <div className={`mbook__paper mbook__paper--${side}`}>
       <PageFrame />
-      <div className="mbook__content">
-        {page.blocks.map((block, i) => (
-          <PageSection key={`${block.title}#${i}`} block={block} />
-        ))}
-      </div>
+      {/* eslint-disable-next-line react/no-danger */}
+      <div className="mbook__content" dangerouslySetInnerHTML={{ __html: pageHTML(page) }} />
     </div>
   );
 }
@@ -268,13 +159,35 @@ export default function MenuBook({ menu, stories }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const { perPage, cpl } = bookMetrics(size.w, size.h);
-  const { spreads, jumps } = useMemo(
-    () => buildBook(menu, stories, perPage, cpl),
-    [menu, stories, perPage, cpl.origin, cpl.story, cpl.quote],
-  );
+  // Первый кадр: грубая оценка без DOM (мерить ещё нечего — книги на экране
+  // нет). Живёт до первого замера, дальше не используется.
+  const estimate = useMemo(() => buildBook(menu, stories), [menu, stories]);
+  const [measured, setMeasured] = useState(null);
+  const book = measured || estimate;
+  const { spreads, jumps } = book;
   const nav = useMemo(() => buildNav(menu), [menu]);
   const last = Math.max(0, spreads.length - 1);
+
+  // ЗАМЕР. Считаем раскладку по реальной вёрстке: размер листа берём с живой
+  // книги, высоты — с оффскрин-листа того же размера (paginate.js).
+  // Перезапускаем при смене карты, размера окна и — обязательно — когда
+  // догрузятся шрифты: до этого метрики строк чужие и лист вмещает не то.
+  const remeasure = useCallback(() => {
+    const host = rootRef.current;
+    const pageSize = pageSizeOf(host);
+    if (!pageSize) return;
+    const next = paginateByMeasure(menu, stories, host, pageSize);
+    if (next) setMeasured(next);
+  }, [menu, stories]);
+
+  useLayoutEffect(() => { remeasure(); }, [remeasure, size.w, size.h]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || !document.fonts) return undefined;
+    let alive2 = true;
+    document.fonts.ready.then(() => { if (alive2) remeasure(); });
+    return () => { alive2 = false; };
+  }, [remeasure]);
 
   // Пересчёт раскладки при смене вьюпорта не должен выкидывать читателя в
   // начало книги: держимся в границах.
@@ -306,21 +219,22 @@ export default function MenuBook({ menu, stories }) {
     });
     setSpread(to);
     at.current = to;
-    await wait(ms);
-    if (alive.current) setFlip(null);
+    try {
+      await wait(ms);
+    } finally {
+      // Снимать лист ОБЯЗАТЕЛЬНО, даже если компонент успел размонтироваться
+      // (StrictMode в dev монтирует дважды, HMR — сколько угодно раз). Раньше
+      // здесь стояло `if (alive.current)`, и книга, пойманная в этот зазор,
+      // залипала с листом посреди переворота и больше не листалась вовсе.
+      // setState на размонтированном компоненте в React 18 — тихий no-op.
+      setFlip(null);
+    }
   }, [spreads]);
 
-  /** Переход к развороту: соседний — один переворот, дальний — быстрая пролистка. */
-  const goTo = useCallback(async (target) => {
+  /** Довести книгу до цели, подхватывая клики, сделанные во время переворота. */
+  const run = useCallback(async (target) => {
     const clamp = (n) => Math.max(0, Math.min(last, n));
     let to = clamp(target);
-    if (to === at.current) return;
-    if (reduced()) { at.current = to; setSpread(to); return; }
-    // Кликнули, пока лист ещё летит: не глотаем клик, а запоминаем цель и
-    // доводим книгу до неё сразу после текущего переворота.
-    if (busy.current) { pending.current = to; return; }
-
-    busy.current = true;
     while (to !== null) {
       const from = at.current;
       const dist = Math.abs(to - from);
@@ -339,8 +253,26 @@ export default function MenuBook({ menu, stories }) {
       pending.current = null;
       to = next !== null && next !== undefined && next !== at.current ? clamp(next) : null;
     }
-    busy.current = false;
   }, [last, turn]);
+
+  /** Переход к развороту: соседний — один переворот, дальний — быстрая пролистка. */
+  const goTo = useCallback(async (target) => {
+    const to = Math.max(0, Math.min(last, target));
+    if (to === at.current) return;
+    if (reduced()) { at.current = to; setSpread(to); return; }
+    // Кликнули, пока лист ещё летит: не глотаем клик, а запоминаем цель и
+    // доводим книгу до неё сразу после текущего переворота.
+    if (busy.current) { pending.current = to; return; }
+
+    busy.current = true;
+    try {
+      await run(to);
+    } finally {
+      // Замок снимаем при любом исходе: иначе один сбой посреди переворота
+      // навсегда глушит и клики по листу, и прыжки по пузырям.
+      busy.current = false;
+    }
+  }, [last, run]);
 
   const closed = mode !== 'open';
 

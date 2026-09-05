@@ -1,0 +1,290 @@
+{
+  "_meta": {
+    "источник": "Пижама_кота_основное_меню_2.0.pdf, 36 страниц, все страницы просмотрены визуально постранично — 100% точность цена/объём/страна",
+    "важно": "В этом меню НЕТ разделов вин — это подтверждено владельцем как окончательное актуальное меню. Разделы вин и страница «Авторские коктейли» на сайте — устаревший контент, подлежат удалению.",
+    "первая_страница": {
+      "тип": "легенда/приветствие",
+      "текст": "Мы назвались «The Cat's Pajamas», потому что устали от серьезности и пафоса. Здесь каждый напиток — не повод напиться, а шанс прожить маленькую пьесу со вкусом. Коктейли — как коты: непредсказуемы, характерные, и если ты понравишься — останутся у тебя в сердце.\n\nНаш интерьер — это киношный кадр из жизни, которую мы бы хотели прожить. Без блесток, но с харизмой. Мы верим в культурное потребление алкоголя — не потому что модно, а потому что красиво. А красота, как известно, спасет вечер.\n\nТак что снимай броню, надевай внутреннюю пижаму и будь своим. Здесь можно смеяться громко, пить медленно, и уходить только тогда, когда ты действительно насытился — не напитками, а атмосферой.",
+      "подпись": "Рад познакомиться с Вами, мой дорогой гость"
+    },
+    "последняя_страница": {
+      "тип": "закрывающая/соцсети",
+      "текст": "Приглашаем Вас подписаться на наши социальные сети, чтобы ничего не пропустить! Оставайтесь с нами на связи и наслаждайтесь контентом",
+      "ссылки": ["telegram", "instagram"]
+    }
+  },
+  "закуски": {
+    "items": [
+      { "name": "Хамон", "weight_g": 100, "price": 800 },
+      { "name": "Салями фуэт", "weight_g": 100, "price": 450 },
+      { "name": "Сыр Бри", "weight_g": 100, "price": 500 },
+      { "name": "Паштет с вареньем из инжира", "weight_g": 200, "price": 600 },
+      { "name": "Ростбиф с медово-горчичным соусом", "weight_g": 150, "price": 650 },
+      { "name": "Качотта с пажитником", "weight_g": 100, "price": 550 },
+      { "name": "Оливки", "weight_g": 150, "price": 500 },
+      { "name": "Фаршированные перчики", "weight_g": 100, "price": 550 },
+      { "name": "Жареные артишоки", "weight_g": 100, "price": 500 },
+      { "name": "Гуакамоле с начос", "weight_g": 160, "price": 550 }
+    ],
+    "quote": "Без закуски пить нельзя, иначе праздник быстро закончится... (Владимир Высоцкий)"
+  },
+  "коктейли": {
+    "price_all": 880,
+    "items": [
+      { "name": "Ost-Indian Negroni", "desc": "пряный ром, херес Педро Хименес, цитрусово-травяной биттер" },
+      { "name": "Extravaganza Gimlet", "desc": "сухой джин, базилик, огурец, травяной аперитив, тимьян, лайм" },
+      { "name": "Meadow Old Fashioned", "desc": "бурбон, донник, апельсиновый биттер" },
+      { "name": "Lemon Pie", "desc": "водка, ваниль, ликёр из яичных желтков, лимон, корица" },
+      { "name": "Mandarin Velvet", "desc": "джин с мандаринами, манго, ваниль, лайм" },
+      { "name": "Sunset Beach", "desc": "джин с мандаринами, цитрусовый аперитив, клубника, манго, лайм" },
+      { "name": "Sorrel Gimlet", "desc": "джин, щавель, сахар, лайм" },
+      { "name": "Hanky Panky", "desc": "сухой джин, красный вермут, травяной ликер" },
+      { "name": "Mint Candy", "desc": "текила, ликёр из мяты, ликёр из персиков, лайм" },
+      { "name": "Pink Aurora", "desc": "джин с брусникой, клюква, личи, клубника, лайм" },
+      { "name": "Blue Moon", "desc": "водка, ликёр из апельсинов, юдзу, ананас, лайм" },
+      { "name": "Pink Lady", "desc": "джин с брусникой, ликёр из апельсинов, ягодный аперитив, лайм" }
+    ]
+  },
+  "бестселлеры": {
+    "price_all": 980,
+    "note": "заменяет устаревшую страницу «Авторские коктейли» на сайте (та удаляется целиком вместе со старыми ценами 750/700/850₽ на эти же три позиции)",
+    "items": [
+      { "name": "El Vampiro", "desc": "текила, томаты, острый соус Табаско, соус Ворчестер, соль, черный-душистый перец, лайм" },
+      { "name": "Pornstar Passion", "desc": "текила, маракуйя, ликёр из горечавки, ваниль, ананас, лайм" },
+      { "name": "Clover Club Special", "desc": "ботаникал джин с одуванчиком и лопухом, малина, ягодно-фруктовый аперитив, белок, лайм" },
+      { "name": "Inspiration", "desc": "джин, киви, лемонграсс, лайм, белок" },
+      { "name": "La Gloria", "desc": "ботаникал джин, розовый перец, кардамон, арбуз, лайм" }
+    ]
+  },
+  "безалкогольные_коктейли": {
+    "note": "заголовок подтверждён визуально: «БЕЗАЛКОГОЛЬНЫЕ КОКТЕЙЛИ» — безалкогольные версии классики",
+    "items": [
+      { "name": "Negroni", "price": 610 },
+      { "name": "Aperol Spritz", "price": 650 },
+      { "name": "Gimlet", "price": 600 },
+      { "name": "Inspiration", "price": 630 },
+      { "name": "Clover Club", "price": 570 },
+      { "name": "The Godfather", "price": 600 },
+      { "name": "Whisky Sour", "price": 640 }
+    ],
+    "quote": "Ты слишком прекрасен для воды и скучных вечеров. Пижама кота"
+  },
+  "крепленые_вина_и_вермуты": {
+    "items": [
+      { "name": "Cinzano Bianco", "country": "Италия", "volume_ml": 80, "price": 470 },
+      { "name": "Cinzano 1757 Rosso", "country": "Италия", "volume_ml": 80, "price": 470 },
+      { "name": "Cinzano Extra Dry", "country": "Италия", "volume_ml": 80, "price": 470 },
+      { "name": "Otto's Athens Vermouth", "country": "Греция", "volume_ml": 40, "price": 490 },
+      { "name": "Byrrh Grand Quinquina", "country": "Франция", "volume_ml": 40, "price": 600 },
+      { "name": "Infantado Porto Ruby", "country": "Португалия", "volume_ml": 75, "price": 1100 },
+      { "name": "Quinta do Infantado Porto LBV", "country": "Португалия", "volume_ml": 75, "price": 1690 },
+      { "name": "KWV Classic Cape Red Muscadel", "country": "ЮАР", "volume_ml": 75, "price": 620 },
+      { "name": "Duquesa Pedro Ximenez Jerez", "country": "Испания", "volume_ml": 75, "price": 1350 },
+      { "name": "Marismeno Fino Jerez", "country": "Испания", "volume_ml": 75, "price": 1350 }
+    ]
+  },
+  "ром_и_кашаса": {
+    "items": [
+      { "name": "Chairman's Reserve Spiced", "country": "Сент-Люсия", "volume_ml": 40, "price": 580 },
+      { "name": "Red Bonnie Dark Rum", "country": "Гайана", "volume_ml": 40, "price": 700 },
+      { "name": "Velho Barrero Cachasa 3 Anos", "country": "Бразилия", "volume_ml": 40, "price": 550 },
+      { "name": "Angostura 7 Y.O.", "country": "Тринидад и Тобаго", "volume_ml": 40, "price": 800 },
+      { "name": "Beach House White Spiced", "country": "Франция", "volume_ml": 40, "price": 650 },
+      { "name": "Saint James VSOP Rhum Agricole AOC", "country": "Мартиника", "volume_ml": 40, "price": 620 },
+      { "name": "Contrabando 5 Y.O.", "country": "Доминиканская Республика", "volume_ml": 40, "price": 550 },
+      { "name": "Ron Cartavio XO", "country": "Перу", "volume_ml": 40, "price": 1800 },
+      { "name": "Authentico Nativo Overproof 8 Y.O.", "country": "Панама", "volume_ml": 40, "price": 1150 },
+      { "name": "Bumbu Original Rum 15 Y.O.", "country": "Барбадос", "volume_ml": 40, "price": 790 },
+      { "name": "Legendario Elexir de Cuba 7 Y.O.", "country": "Куба", "volume_ml": 40, "price": 690 },
+      { "name": "Matusalem Insolito Wine Cask Finish", "country": "Доминиканская Республика", "volume_ml": 40, "price": 850 },
+      { "name": "Tahitian Queen Pineapple Rum", "country": "Таити", "volume_ml": 40, "price": 770 }
+    ],
+    "quote": "Было бы лучше, если бы Колумб открыл бутылку рома (Виктор Пелевин)"
+  },
+  "текила_и_мескаль": {
+    "items": [
+      { "name": "Espolon Blanco Tequila", "volume_ml": 40, "price": 660 },
+      { "name": "Espolon Anejo Tequila", "volume_ml": 40, "price": 950 },
+      { "name": "Patron Silver", "volume_ml": 40, "price": 1000 },
+      { "name": "Calenda Artesanal Joven Mezcal", "volume_ml": 40, "price": 750 },
+      { "name": "Libelula Blanco Tequila", "volume_ml": 40, "price": 780 },
+      { "name": "Pelaton De La Muerte Mezcal", "volume_ml": 40, "price": 840 },
+      { "name": "Senor Sotol Ensamble", "volume_ml": 40, "price": 1150 },
+      { "name": "Estancia Raicilla", "volume_ml": 40, "price": 880 }
+    ],
+    "quote": "«Что есть Текила?» — «Это город» (Игорь Иртеньев)"
+  },
+  "виски": {
+    "subsections": [
+      {
+        "country": "Шотландия",
+        "items": [
+          { "name": "The Gild Blended Whisky", "volume_ml": 40, "price": 650 },
+          { "name": "Catty Sark 12 Y.O. Blended Whisky", "volume_ml": 40, "price": 770 },
+          { "name": "Ardbeg 10 Y.O. Single Malt Islay Whisky", "volume_ml": 40, "price": 1300 },
+          { "name": "Bankholl Single Rye Whisky", "volume_ml": 40, "price": 610 },
+          { "name": "Balvenie Doublewood 12 Y.O Single Malt Whisky", "volume_ml": 40, "price": 1450 },
+          { "name": "Glen Scotia 10 Y.O. Single Malt Whisky", "volume_ml": 40, "price": 1250 },
+          { "name": "The Dalmore 12 Y.O. Single Malt Whisky", "volume_ml": 40, "price": 1500 },
+          { "name": "Laphroaig 10 Y.O. Single Malt Islay Whisky", "volume_ml": 40, "price": 1250 },
+          { "name": "Talisker 10 Y.O. Single Malt Whisky", "volume_ml": 40, "price": 950 },
+          { "name": "Monkey Shoulder Blended Malt Whisky", "volume_ml": 40, "price": 720 }
+        ],
+        "quote": "Виски — это жидкое солнышко (Джоан Флетчер)"
+      },
+      {
+        "country": "Ирландия",
+        "items": [
+          { "name": "Bushmill's Original Whiskey", "volume_ml": 40, "price": 550 },
+          { "name": "Bushmill's Black Bush Blended Whiskey", "volume_ml": 40, "price": 650 },
+          { "name": "Bushmills 10 Y.O. Single Malt Whiskey", "volume_ml": 40, "price": 950 },
+          { "name": "Born Irish Stout Whiskey", "volume_ml": 40, "price": 750 }
+        ],
+        "quote": "Ирландцы вовсе не такие уж весельчаки... (Джеймс Джойс)"
+      },
+      {
+        "country": "Америка",
+        "items": [
+          { "name": "Jack Daniel's Single Barrel", "volume_ml": 40, "price": 1200 },
+          { "name": "Maker's Mark Bourbon", "volume_ml": 40, "price": 800 },
+          { "name": "Buffalo Trace Bourbon", "volume_ml": 40, "price": 700 },
+          { "name": "Woodford Reserve Bourbon", "volume_ml": 40, "price": 850 }
+        ],
+        "quote": "Я ждал её целые две бутылки бурбона и одну пачку сигарет, а она так и не пришла."
+      },
+      {
+        "country": "Со всего мира",
+        "items": [
+          { "name": "Abasolo Alma de Terra Mexican Whiskey", "country": "Мексика", "volume_ml": 40, "price": 980 },
+          { "name": "Richard Chancellor Double Blended", "country": "Россия", "volume_ml": 40, "price": 490 },
+          { "name": "Shinobu Blended Whisk", "country": "Япония", "volume_ml": 40, "price": 1150 },
+          { "name": "Spicebox Spiced Whisky", "country": "Канада", "volume_ml": 40, "price": 560 },
+          { "name": "Kapriol Whisky", "country": "Италия", "volume_ml": 40, "price": 680 },
+          { "name": "Heriose Le Petit Tourbe", "country": "Франция", "volume_ml": 40, "price": 1250 },
+          { "name": "Royal Ranthambore Blended", "country": "Индия", "volume_ml": 40, "price": 570 }
+        ],
+        "quote": "Плохого виски не бывает. Просто некоторые сорта виски лучше других. (Джорджу Бернарду Шоу)"
+      }
+    ]
+  },
+  "джин": {
+    "items": [
+      { "name": "Porter's Tropical Old Tom Gin", "country": "Шотландия", "volume_ml": 40, "price": 880 },
+      { "name": "Bulldog Gin", "country": "Великобритания", "volume_ml": 40, "price": 500 },
+      { "name": "Ginster London Dry/Foxberry/Mandarin", "country": "Австралия", "volume_ml": 40, "price": 490 },
+      { "name": "Scapegrace Black", "country": "Новая Зеландия", "volume_ml": 40, "price": 890 },
+      { "name": "Citadelle Gin", "country": "Франция", "volume_ml": 40, "price": 640 },
+      { "name": "Wessex Saxonian Garden", "country": "Великобритания", "volume_ml": 40, "price": 670 },
+      { "name": "Saigon Baigur", "country": "Вьетнам", "volume_ml": 40, "price": 870 },
+      { "name": "Berkshire Dundelock & Burdock", "country": "Россия", "volume_ml": 40, "price": 500 }
+    ],
+    "quote": "— А в Калифорнии вместо чаю пьют джин. (Чехов А.П. Мальчики, 1887)"
+  },
+  "коньяк": {
+    "items": [
+      { "name": "Francois de Martignac VS", "volume_ml": 40, "price": 900 },
+      { "name": "Francois de Martignac VSOP", "volume_ml": 40, "price": 1150 },
+      { "name": "Roullet VS", "volume_ml": 40, "price": 660 },
+      { "name": "Courvoisier VSOP", "volume_ml": 40, "price": 1150 },
+      { "name": "Chateau de Montifaud 10 Y.O. Grande Champagne AOC", "volume_ml": 40, "price": 1500 }
+    ],
+    "quote": "Изготовить прекрасный коньяк легко. Всё что Вам для этого требуется — прадед, дед и отец, которые посвятили этому всю свою жизнь. (Жан-Поль Камю)"
+  },
+  "дистилляты": {
+    "items": [
+      { "name": "Vinias De Oro Quebranta Pisco", "country": "Перу", "volume_ml": 40, "price": 680 },
+      { "name": "Calvados Coquerel VSOP", "country": "Франция", "volume_ml": 40, "price": 790 },
+      { "name": "Самовар Грушевый", "country": "Россия", "volume_ml": 40, "price": 350 },
+      { "name": "Chemer Barrel", "country": "Бельгия", "volume_ml": 40, "price": 480 },
+      { "name": "Brandy Torres 20 Y.O.", "country": "Испания", "volume_ml": 40, "price": 1150 }
+    ],
+    "quote": "Жоан быстро поднялась... «Дай мне ещё кальвадоса», — сказала она. (Э.М. Ремарк, Триумфальная арка)"
+  },
+  "водка": {
+    "items": [
+      { "name": "Онегин", "country": "Россия", "volume_ml": 50, "price": 420 },
+      { "name": "Царская Золотая", "country": "Россия", "volume_ml": 50, "price": 300 },
+      { "name": "Schmidt Supreme/Grapefruit/Blackcurrant", "country": "Беларусь", "volume_ml": 50, "price": 390 },
+      { "name": "Балчуг XXI век / без метанола", "country": "Россия", "volume_ml": 50, "price": 350 },
+      { "name": "Mont Blanc", "country": "Франция", "volume_ml": 50, "price": 650 }
+    ],
+    "quote": "Истина в вине, а в водке горькая правда."
+  },
+  "биттеры_и_аперитивы": {
+    "items": [
+      { "name": "Campari", "country": "Италия", "volume_ml": 40, "price": 400 },
+      { "name": "Aperol", "country": "Италия", "volume_ml": 40, "price": 350 },
+      { "name": "Cynar", "country": "Италия", "volume_ml": 40, "price": 400 },
+      { "name": "Sarti Rosa", "country": "Италия", "volume_ml": 40, "price": 390 },
+      { "name": "Chemer Red", "country": "Беларусь", "volume_ml": 40, "price": 330 },
+      { "name": "Chemer Green", "country": "Беларусь", "volume_ml": 40, "price": 330 },
+      { "name": "Suze", "country": "Франция", "volume_ml": 40, "price": 600 },
+      { "name": "RinQuinQuin a la Peche", "country": "Франция", "volume_ml": 40, "price": 470 },
+      { "name": "Noix de la Saint Jean", "country": "Франция", "volume_ml": 40, "price": 470 },
+      { "name": "Absente 55", "country": "Франция", "volume_ml": 40, "price": 620 }
+    ],
+    "quote": "После первого стакана абсента видишь мир таким, каким хотел бы его видеть. После второго — таким, каков он есть. И, наконец, после третьего стакана ты видишь то, что не должен видеть…"
+  },
+  "ликеры_и_настойки": {
+    "items": [
+      { "name": "Fernet Branca", "desc": "травяной ликёр для пищеварения и апетита, Италия", "volume_ml": 40, "price": 410 },
+      { "name": "Marolo Milla", "desc": "ромашки настоянные на граппе, Италия", "volume_ml": 40, "price": 720 },
+      { "name": "Frangelico", "desc": "восхитительный ликёр из лесных орехов, Италия", "volume_ml": 40, "price": 770 },
+      { "name": "Abasolo Nixta", "desc": "необычайный ликёр из молодой кукурузы, Мексика", "volume_ml": 40, "price": 800 },
+      { "name": "Becherovka Original", "desc": "легендарный травяной ликёр из Карловых Вар, Чехия", "volume_ml": 40, "price": 450 },
+      { "name": "Jagermeister", "desc": "тот самый травяной ликёр для охотников, Германия", "volume_ml": 40, "price": 450 },
+      { "name": "Amaro Montenegro", "desc": "традиционный ликёр из более сорока компонентов, Италия", "volume_ml": 40, "price": 570 },
+      { "name": "Grand Marnier Сordon Rouge", "desc": "оригинальный апельсиновый ликёр на основе коньяка, Франция", "volume_ml": 40, "price": 620 },
+      { "name": "Малина алтайские травы", "volume_ml": 50, "price": 350 },
+      { "name": "Вишня-попкорн", "volume_ml": 50, "price": 350 },
+      { "name": "Фисташковый пломбир", "volume_ml": 50, "price": 350 },
+      { "name": "Смородина-Маракуйя", "volume_ml": 50, "price": 350 }
+    ],
+    "quote": "«...накрыли стол, поставили поднос с шестью графинами разноцветных настоек» (Н.В. Гоголь, Мёртвые души, 1835)"
+  },
+  "пиво_и_сидр": {
+    "items": [
+      { "name": "Corona Extra", "desc": "светлое, лёгкое Мексиканское", "volume_ml": 330, "price": 550 },
+      { "name": "Corona Zero", "desc": "да-да, безалкогольная Корона", "volume_ml": 330, "price": 500 },
+      { "name": "Kurpfalz Brau Ur-Weizen", "desc": "пшеничное, нефильтрованное пиво из Германии", "volume_ml": 500, "price": 750 },
+      { "name": "Kurpfalz Brau Helles", "desc": "светлое настоящее пиво, сваренное в Германии", "volume_ml": 500, "price": 750 },
+      { "name": "Жигулёвские Ворота/Быков Сидр", "desc": "восхитительный полусухой сидр из Самарской области", "volume_ml": 750, "price": 1350 },
+      { "name": "Guiness Irish Stout", "desc": "чёрный ирландский стаут", "volume_ml": 440, "price": 720 },
+      { "name": "Belgian Kriek", "desc": "суперсочное, лёгкое Бельгийское вишневое", "volume_ml": 330, "price": 710 }
+    ]
+  },
+  "лимонады": {
+    "volume_ml": 500,
+    "items": [
+      { "name": "Малина-Личи", "price": 420 },
+      { "name": "Киви-Фейхоа", "price": 420 },
+      { "name": "Маракуйя-Ваниль", "price": 420 },
+      { "name": "Груша-Лаванда", "price": 420 }
+    ]
+  },
+  "чай": {
+    "volume_ml": 600,
+    "items": [
+      { "name": "Ассам", "price": 550 },
+      { "name": "Черный с чабрецом", "price": 550 },
+      { "name": "Зеленый с жасмином", "price": 550 },
+      { "name": "Эрл Грей", "price": 550 },
+      { "name": "Молочный Улун", "price": 550 },
+      { "name": "Те Гуанинь", "price": 550 }
+    ]
+  },
+  "софт_напитки": {
+    "items": [
+      { "name": "Coca Cola", "volume_ml": 330, "price": 350 },
+      { "name": "Соки Rich", "volume_ml": 200, "price": 290 },
+      { "name": "Roket Tonic Lavander", "desc": "тоник с соцветиями лаванды", "volume_ml": 200, "price": 300 },
+      { "name": "Roket Tonic Hibiscus", "desc": "тоник с соцветиями гибискуса", "volume_ml": 200, "price": 300 },
+      { "name": "The Gardenist Premium Tonic", "desc": "классический сухой тоник", "volume_ml": 200, "price": 300 },
+      { "name": "The Gardenist Sakura Tonic", "desc": "тоник с соцветиями сакуры", "volume_ml": 200, "price": 300 },
+      { "name": "The Gardenist Birch Tree Tonic", "desc": "тоник с березовым соком", "volume_ml": 200, "price": 300 },
+      { "name": "The Gardenist Grapefruit Tonic", "desc": "тоник с грейпфрутом", "volume_ml": 200, "price": 300 },
+      { "name": "Space Violet Tonic", "desc": "тоник с соцветиями фиалок", "volume_ml": 250, "price": 300 },
+      { "name": "Space Rose Tonic", "desc": "тоник с соцветиями роз", "volume_ml": 250, "price": 300 }
+    ]
+  }
+}

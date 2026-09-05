@@ -37,6 +37,26 @@
      MenuBook.jsx) — иначе позиции полезли бы за край листа. */
   --mbook-fs: 1.56;
 
+  /* ── Типографика страницы: ЕДИНЫЕ ТОКЕНЫ ───────────────────────────────
+     Четыре размера, от которых зависит вся плотность листа. Захардкожены
+     здесь и больше нигде: правило ниже по файлу обязано брать размер отсюда,
+     а не писать свой clamp. Автопагинация (src/menu/paginate.js) их не знает
+     и знать не должна — она меряет то, что получилось, поэтому менять эти
+     значения можно свободно: число позиций на странице пересчитается само.
+     Текущие значения — плотность эталонного разворота «Коктейли» (≈7 позиций
+     на лист на 1600×900); мельче не делать, меню читают с вытянутой руки. */
+  /* Заголовок раздела ограничен ЕЩЁ И шириной листа: самое длинное слово
+     карты («БЕЗАЛКОГОЛЬНЫЕ», капитель кириллицы) обязано влезать в рамку на
+     любом экране. 0.09 ширины листа — предел, при котором оно помещается
+     (замерено на 375px, где лист всего 174px). */
+  --menu-section-title: min(
+    calc(clamp(17px, 2.2vh, 25px) * var(--mbook-fs)),
+    calc(var(--mbook-page-w) * 0.09)
+  );
+  --menu-item-name:     calc(clamp(10px, 1.5vh, 14px) * var(--mbook-fs));
+  --menu-item-desc:     calc(clamp(8.5px, 1.15vh, 11px) * var(--mbook-fs) * 0.86);
+  --menu-item-price:    calc(clamp(9px, 1.2vh, 11.5px) * var(--mbook-fs));
+
   /* Слева пузыри, справа витрина коктейлей, книга — ровно по центру страницы:
      колонки по краям одинаковой ширины, книга в auto-колонке между ними. */
   display: grid;
@@ -355,8 +375,13 @@
 .mbook__fan--flip { transform: scaleY(-1); }
 
 .mbook__content {
-  position: relative;
-  height: 100%;
+  /* Абсолютом, а не height:100%: у листа-кнопки высота не «определённая», и
+     процент от неё вырождался в auto — длинный текст приветствия на узком
+     экране раздувал лист вдвое выше разворота (ловили на 375px). Теперь
+     содержимое физически не может изменить размер листа. */
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   /* Нижнее поле щедрее верхнего: лист набивается до последней помещающейся
@@ -377,11 +402,16 @@
 .mbook__title {
   font-family: 'Baskerville', serif;
   font-weight: 400;
-  font-size: calc(clamp(17px, 2.2vh, 25px) * var(--mbook-fs));
-  letter-spacing: 1.6px;
+  font-size: var(--menu-section-title);
+  /* 1px, а не 1.6: капитель кириллицы шире латиницы, и «БЕЗАЛКОГОЛЬНЫЕ
+     КОКТЕЙЛИ» на 1.6px вылезало из рамки листа на 5px (замерено). */
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--mbook-ink);
   margin: 0;
+  /* Страховка на будущее: слово длиннее листа переносится по слогам, а не
+     обрезается по overflow: hidden. Для помещающихся названий не срабатывает. */
+  hyphens: auto;
 }
 .mbook__unit {
   font-family: 'Involve', serif;
@@ -436,7 +466,7 @@
 .mbook__item { display: flex; flex-direction: column; gap: 1px; }
 .mbook__item-name {
   font-family: 'Avenir Next', sans-serif;
-  font-size: calc(clamp(10px, 1.5vh, 14px) * var(--mbook-fs));
+  font-size: var(--menu-item-name);
   line-height: 1.22;
   color: var(--mbook-ink);
 }
@@ -446,7 +476,7 @@
   /* Состав — вспомогательная строка: держим её на 15% мельче общего кегля,
      иначе длинные рецепты уезжают на три строки и лист вмещает на позицию
      меньше (компромисс уплотнения 2026-08-27). */
-  font-size: calc(clamp(8.5px, 1.15vh, 11px) * var(--mbook-fs) * 0.86);
+  font-size: var(--menu-item-desc);
   line-height: 1.28;
   color: var(--mbook-ink-dim);
 }
@@ -455,7 +485,7 @@
   align-items: baseline;
   gap: 8px;
   margin-top: 1px;
-  font-size: calc(clamp(9px, 1.2vh, 11.5px) * var(--mbook-fs));
+  font-size: var(--menu-item-price);
 }
 .mbook__item-vol {
   font-family: 'Involve', serif;
@@ -481,7 +511,7 @@
 .mbook__quote-text {
   font-family: 'Involve', serif;
   font-style: italic;
-  font-size: calc(clamp(9px, 1.2vh, 11.5px) * var(--mbook-fs));
+  font-size: var(--menu-item-price);
   line-height: 1.5;
   color: var(--mbook-ink-mid);
   margin: 0;
@@ -492,6 +522,52 @@
   color: var(--mbook-ink-mid);
   margin-top: 4px;
 }
+
+/* ─── Страница без списка: приветствие и «мы в сети» ─────────────────────
+   Первая и последняя страницы бумажного меню — такие же развороты, только
+   вместо позиций текст по центру листа. Отдельного листа им хватает всегда,
+   поэтому автопагинация их не меряет (см. paginate.js). */
+.mbook__sec--text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(8px, 1.6vh, 16px);
+  min-height: 0;
+}
+.mbook__prose {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.2vh, 12px);
+  overflow: hidden;
+}
+.mbook__prose p {
+  font-family: 'Involve', serif;
+  font-style: italic;
+  font-size: var(--menu-item-price);
+  line-height: 1.55;
+  color: var(--mbook-ink-mid);
+  margin: 0;
+}
+.mbook__sign {
+  font-family: 'Jar Binks', cursive;
+  font-size: calc(clamp(11px, 1.5vh, 15px) * var(--mbook-fs));
+  color: var(--mbook-ink-mid);
+  margin: 0;
+}
+.mbook__links {
+  font-family: 'Avenir Next', sans-serif;
+  font-size: var(--menu-item-desc);
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--mbook-gold);
+  margin: 0;
+}
+
+/* Оффскрин-лист автопагинации: тот же .mbook__paper того же размера, только
+   вне экрана и без событий. Живёт доли миллисекунды внутри .mbook — иначе не
+   унаследовал бы токены кегля и шрифты, и замер был бы не про эту вёрстку. */
+.mbook__measure { z-index: -1; }
 
 /* ─── Переворот листа ───────────────────────────────────────────────────── */
 
@@ -687,13 +763,20 @@
        умереннее: иначе заголовок раздела не влезает в рамку. */
     --mbook-fs: 1.12;
   }
+  /* Лист телефона втрое короче и вдвое уже: приветствие набираем плотнее,
+     иначе три абзаца не помещаются на свой лист. */
+  .mbook__sec--text { gap: 6px; }
+  .mbook__prose { gap: 5px; }
+  .mbook__prose p { font-size: calc(9px * var(--mbook-fs)); line-height: 1.4; }
+  .mbook__sign { font-size: calc(12px * var(--mbook-fs)); }
   /* Лист телефона втрое короче десктопного (46vh против 84vh), и десктопные
      поля съедали бы у него почти десятую часть высоты — здесь они скромнее.
-     ⚠️ Зеркалится в chromeHeight (MenuBook.jsx). */
+     Пагинации сообщать не надо: она меряет лист как есть. */
   .mbook__content { padding: clamp(6px, 0.9vh, 10px) clamp(8px, 2.4vw, 14px) clamp(7px, 1.1vh, 12px); }
-  /* Заголовок раздела меряем шириной листа, а не высотой экрана: длинные
-     названия («Коктейльная карта») обязаны уместиться в рамку. */
-  .mbook__title { font-size: clamp(14px, 5vw, 20px); letter-spacing: 1px; }
+  /* Отдельного правила для заголовка тут больше нет: токен
+     --menu-section-title сам ограничен шириной листа (см. его определение),
+     поэтому на телефоне название ужимается автоматически. */
+  .mbook__title { letter-spacing: .6px; }
   .mbook--front .mbook__book,
   .mbook--back .mbook__book { transform: none; }
 }

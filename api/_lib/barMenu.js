@@ -35,7 +35,21 @@ function cleanCategory(c) {
     items: (Array.isArray(c?.items) ? c.items : []).map(cleanItem).filter(Boolean),
   };
   const unit = str(c?.unit, 40); if (unit) out.unit = unit;
+  // Единая цена раздела («880 ₽») — подпись под названием, НЕ объём позиции.
+  const subtitle = str(c?.subtitle, 60); if (subtitle) out.subtitle = subtitle;
   const parent = str(c?.parent, 120); if (parent && parent !== title) out.parent = parent;
+  // Страница без списка позиций: приветствие и «мы в сети» — такие же
+  // развороты бумажного меню, только текстом. Раздел без items выживает
+  // только с kind: 'text', иначе пустой раздел по-прежнему выкидывается.
+  if (c?.kind === 'text') {
+    out.kind = 'text';
+    out.text = str(c?.text, 4000);
+    const sign = str(c?.sign, 200); if (sign) out.sign = sign;
+    const links = (Array.isArray(c?.links) ? c.links : [])
+      .map((l) => str(l, 40)).filter(Boolean).slice(0, 6);
+    if (links.length) out.links = links;
+  }
+  if (c?.nav === false) out.nav = false;
   const qText = str(c?.quote?.text, 400);
   if (qText) out.quote = { text: qText, author: str(c?.quote?.author, 120) };
   return out;
@@ -45,7 +59,10 @@ function cleanGroup(g) {
   const title = str(g?.title, 120);
   if (!title) return null;
   const categories = (Array.isArray(g?.categories) ? g.categories : [])
-    .map(cleanCategory).filter(Boolean);
+    .map(cleanCategory).filter(Boolean)
+    // Пустой раздел выкидываем — кроме текстовой страницы, у которой позиций
+    // не бывает по определению.
+    .filter((c) => c.items.length || c.kind === 'text');
   if (!categories.length) return null;
   return { id: slug(g?.id || title), title, categories };
 }

@@ -1,148 +1,140 @@
 // Раскладка барной карты по страницам книги-разворота (секция «Меню»).
-// Чистая функция без React и DOM — её гоняет devtools/menu_book_test.mjs на
-// реальной книге владельца.
+// Чистые функции без React и DOM — их гоняет devtools/menu_book_test.mjs.
 //
-// Правила раскладки (переписаны 2026-08-30):
+// Правила раскладки:
 //   • книга ОДНА и НЕПРЕРЫВНАЯ: страницы идут подряд по всему дереву меню
-//     (группы → категории → подкатегории), в том порядке, в каком карта
-//     лежит в данных (порядок листов и разделов файла владельца; переставить
-//     можно в админке стрелками ↑/↓);
-//   • ЛИСТ НАБИВАЕТСЯ ДО КОНЦА. Раздел больше НЕ начинается обязательно с
-//     новой страницы: кончились позиции — тут же, на том же листе, начинается
-//     следующий раздел со своим заголовком. Раньше было наоборот (каждый
-//     раздел с чистого листа) и позиции раскладывались ПОРОВНУ на минимальное
-//     число страниц — из-за этого низ каждого листа стоял пустым, а 21 раздел
-//     давал жёсткий пол в 21 страницу, сколько ни уплотняй набор;
-//   • единственное исключение — заголовок не бросаем в самом низу листа: если
-//     под ним не помещается хотя бы MIN_AFTER_HEAD позиций, раздел уезжает на
-//     следующую страницу целиком;
-//   • «О разделе» печатаем на первой странице категории, цитата-афоризм — на
-//     последней (как в логобуке);
+//     (группы → разделы → подразделы) в том порядке, в каком карта лежит в
+//     данных (порядок из barMenuData.js; переставить можно в админке ↑/↓);
+//   • ЛИСТ НАБИВАЕТСЯ ДО КОНЦА: кончились позиции раздела — тут же, на том же
+//     листе, начинается следующий со своим заголовком;
+//   • заголовок не бросаем в самом низу листа: если под ним не помещается
+//     хотя бы MIN_AFTER_HEAD позиций, раздел уезжает на следующую страницу;
+//   • раздел kind:'text' (приветствие, «мы в сети») всегда занимает лист
+//     целиком — это полноценные развороты меню, просто без списка;
+//   • «О разделе» печатаем на первой странице раздела, цитата — на последней;
 //   • книга всегда открыта на два листа, поэтому число страниц дополняем до
 //     чётного пустым листом.
 //
-// Ёмкость листа меряется в «позициях»: одна ЕДИНИЦА — позиция с составом в
-// одну строку (название + состав + строка «объём ⋯ цена»). Всё остальное на
-// листе выражено в долях этой единицы — коэффициенты ниже сняты с реальной
-// вёрстки (menubook.css, 1600×900). Правишь кегли или отступы в CSS — сверь
-// и эти числа, иначе позиции полезут за нижнюю рамку (лист режет по
-// overflow: hidden).
-const U_ORIGIN_LINE = 0.25; // каждая строка состава сверх первой
-const U_NO_ORIGIN   = 0.25; // на столько КОРОЧЕ позиция вообще без состава
-const U_HEAD        = 0.60; // название раздела
-const U_PARENT      = 0.24; // строка надгруппы над названием («ВИСКИ»)
-const U_UNIT        = 0.33; // подпись объёма под названием
-const U_CONT        = 0.30; // строка «… · продолжение»
-const U_STORY_LINE  = 0.40; // одна строка блока «О разделе»
-const U_QUOTE_LINE  = 0.36; // одна строка цитаты
-const U_QUOTE_SIGN  = 0.63; // рукописная подпись под цитатой + отбивка блока
+// ⚠️ ГЛАВНОЕ ОТЛИЧИЕ ОТ СТАРОЙ ВЕРСИИ (2026-09-05): packPages больше НИЧЕГО
+// не знает о вёрстке. Он получает готовые ВЫСОТЫ элементов и ёмкость листа в
+// тех же единицах — и просто набивает. Высоты приходят из paginate.js, где их
+// МЕРЯЕТ браузер на оффскрин-листе реального размера (getBoundingClientRect).
+// Раньше здесь жили коэффициенты вида «заголовок ≈ 0.60 позиции», снятые с
+// вёрстки руками: любая правка кегля или полей в CSS молча ломала раскладку —
+// низ листа пустовал либо позиции резались по overflow: hidden.
+//
+// buildBook ниже — ОЦЕНОЧНЫЙ путь для среды без DOM (SSR-пререндер /menu,
+// первый кадр до замера, юнит-тесты). Он собирает те же «высоты» из грубых
+// коэффициентов и зовёт тот же packPages, поэтому правила раскладки описаны
+// ровно в одном месте.
 
 /** Сколько позиций обязано поместиться под заголовком, иначе он не начинается. */
-const MIN_AFTER_HEAD = 2;
-
-/** Символов в строке — оценка по ширине листа; см. bookMetrics в MenuBook.jsx. */
-const DEFAULT_CPL = { origin: 62, story: 52, quote: 52 };
+export const MIN_AFTER_HEAD = 2;
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-zа-я0-9]+/gi, '-').replace(/(^-|-$)/g, '');
 
-/** Ключ раздела для навигации-пузырей: группа + название (названия совпадают между группами). */
+/** Ключ раздела для навигации-пузырей: группа + название (названия повторяются между группами). */
 export const catKey = (groupId, title) => `${groupId}/${slug(title)}`;
 /** Ключ надгруппы («Виски») — по ней пузырь ведёт на первый её раздел. */
 export const parentKey = (groupId, title) => `${groupId}/^${slug(title)}`;
 
-const linesOf = (text, cpl) => Math.max(1, Math.ceil(String(text || '').length / Math.max(10, cpl)));
-
-/** Во сколько «позиций» обходится одна позиция карты. */
-function itemCost(item, cpl) {
-  if (!item.origin) return 1 - U_NO_ORIGIN;
-  return 1 + (linesOf(item.origin, cpl.origin) - 1) * U_ORIGIN_LINE;
-}
-
-/** Во сколько обходится шапка раздела (с надгруппой и подписью объёма). */
-const headCost = (cat) => U_HEAD + (cat.parent ? U_PARENT : 0) + (cat.unit ? U_UNIT : 0);
-
-const storyCost = (story, cpl) => (story ? linesOf(story, cpl.story) * U_STORY_LINE : 0);
-
-/** Цитата-афоризм: длина текста → строки, плюс подпись. */
-const quoteCost = (quote, cpl) =>
-  (quote ? linesOf(quote.text, cpl.quote ?? cpl.story) * U_QUOTE_LINE + U_QUOTE_SIGN : 0);
+/** Номер разворота, на котором лежит страница. */
+export const spreadOfPage = (pageIndex) => Math.floor(pageIndex / 2);
 
 /**
- * Дерево меню → страницы книги.
- * @param menu     [{ id, title, categories: [{ title, parent?, unit?, items, quote? }] }]
- * @param stories  { [название раздела]: 'текст «О разделе»' }
- * @param perPage  ёмкость листа в «позициях» (см. выше)
- * @param cpl      { origin, story, quote } — символов в строке для оценки переносов
- * @returns { pages, spreads, jumps } — jumps: Map<ключ раздела, номер страницы>
+ * Набивка листов из измеренных разделов.
  *
- * Страница: { key, blocks: [ { groupTitle, title, parent, unit, head, story,
- * items, quote } ] } — блоков на листе может быть несколько, это и есть
- * набивка до конца.
+ * @param cats  [{ groupId, title, parent, unit, subtitle, kind, text, sign,
+ *                 links, story, items,
+ *                 h: { sec, head, story, listTop, listGap, cont, quote,
+ *                      items: [высота каждой позиции] } }]
+ * @param cap   свободная высота листа в тех же единицах, что и h.*
+ * @returns { pages, spreads, jumps }
  */
-export function buildBook(menu, stories = {}, perPage = 6, cpl = DEFAULT_CPL) {
-  const cap = Math.max(1, perPage);
+export function packPages(cats, cap) {
+  const limit = Math.max(1, cap);
   const pages = [];
   const jumps = new Map();
   let used = 0;
 
   const openPage = () => { pages.push({ key: `p${pages.length}`, blocks: [] }); used = 0; };
   const page = () => pages[pages.length - 1];
-  const pushBlock = (block) => { page().blocks.push(block); return block; };
+  const push = (block) => { page().blocks.push(block); return block; };
   openPage();
 
-  for (const group of menu || []) {
-    for (const cat of group.categories || []) {
-      const story = (stories && stories[cat.title]) || '';
-      const items = cat.items || [];
-      const head = headCost(cat);
-      const intro = head + storyCost(story, cpl);
+  for (const cat of cats) {
+    const h = cat.h;
+    const base = {
+      groupTitle: cat.groupTitle,
+      title: cat.title,
+      parent: cat.parent || '',
+      unit: cat.unit || '',
+      subtitle: cat.subtitle || '',
+    };
 
-      // Заголовок в самом низу листа — сирота: под ним должно поместиться
-      // хотя бы MIN_AFTER_HEAD позиций, иначе раздел начинаем с чистой страницы.
-      const probe = items.slice(0, MIN_AFTER_HEAD).reduce((s, it) => s + itemCost(it, cpl), 0);
-      if (used > 0 && used + intro + probe > cap) openPage();
-
-      jumps.set(catKey(group.id, cat.title), pages.length - 1);
-      // Пузырь надгруппы ведёт на первый её раздел («Виски» → «Шотландия»).
+    /** Раздел начинается на текущей странице — запомнить её для пузырей. */
+    const markJump = () => {
+      jumps.set(catKey(cat.groupId, cat.title), pages.length - 1);
       if (cat.parent) {
-        const pk = parentKey(group.id, cat.parent);
+        const pk = parentKey(cat.groupId, cat.parent);
         if (!jumps.has(pk)) jumps.set(pk, pages.length - 1);
       }
+    };
 
-      const base = {
-        groupTitle: group.title,
-        title: cat.title,
-        parent: cat.parent || '',
-        unit: cat.unit || '',
-      };
-      let block = pushBlock({ ...base, head: true, story, items: [], quote: null });
-      used += intro;
+    // Страница-текст: свой лист целиком, следующий раздел начинает новый.
+    if (cat.kind === 'text') {
+      if (page().blocks.length) openPage();
+      markJump();
+      push({
+        ...base, kind: 'text', head: true, items: [],
+        text: cat.text || '', sign: cat.sign || '', links: cat.links || [],
+      });
+      openPage();
+      continue;
+    }
 
-      /** Продолжение раздела на следующем листе — с пометкой вместо заголовка. */
-      const carryOver = () => {
-        openPage();
-        block = pushBlock({ ...base, head: false, story: '', items: [], quote: null });
-        used += U_CONT;
-      };
+    const items = cat.items || [];
+    const heights = h.items || [];
+    const body = h.head + (cat.story ? h.story : 0) + (items.length ? h.listTop : 0);
+    // Заголовок в самом низу листа — сирота: под ним должно поместиться хотя бы
+    // MIN_AFTER_HEAD позиций, иначе раздел начинаем с чистой страницы.
+    const probe = heights.slice(0, MIN_AFTER_HEAD)
+      .reduce((s, ih, i) => s + ih + (i ? h.listGap : 0), 0);
+    // Второй и следующий разделы на листе отбиваются от предыдущего.
+    let gapBefore = page().blocks.length ? h.sec : 0;
+    if (used > 0 && used + gapBefore + body + probe > limit) { openPage(); gapBefore = 0; }
 
-      for (const item of items) {
-        const cost = itemCost(item, cpl);
-        if (used + cost > cap && (block.items.length || page().blocks.length > 1)) carryOver();
-        block.items.push(item);
-        used += cost;
+    markJump();
+    let block = push({ ...base, head: true, story: cat.story || '', items: [], quote: null });
+    used += gapBefore + body;
+
+    /** Продолжение раздела на следующем листе — с пометкой вместо заголовка. */
+    const carryOver = () => {
+      openPage();
+      block = push({ ...base, head: false, story: '', items: [], quote: null });
+      used = h.cont + h.listTop;
+    };
+
+    items.forEach((item, i) => {
+      const ih = heights[i] ?? 0;
+      let cost = ih + (block.items.length ? h.listGap : 0);
+      if (used + cost > limit && (block.items.length || page().blocks.length > 1)) {
+        carryOver();
+        cost = ih;
       }
+      block.items.push(item);
+      used += cost;
+    });
 
-      if (cat.quote) {
-        const qc = quoteCost(cat.quote, cpl);
-        if (used + qc > cap) carryOver();
-        block.quote = cat.quote;
-        used += qc;
-      }
+    if (cat.quote) {
+      if (used + h.quote > limit) carryOver();
+      block.quote = cat.quote;
+      used += h.quote;
     }
   }
 
   // Пустая книга — хотя бы один разворот, иначе не из чего собрать спред.
-  if (pages.length === 1 && !pages[0].blocks.length) pages.pop();
+  while (pages.length && !pages[pages.length - 1].blocks.length) pages.pop();
   if (pages.length % 2) pages.push(null); // книга всегда открыта на два листа
   if (!pages.length) pages.push(null, null);
 
@@ -152,9 +144,84 @@ export function buildBook(menu, stories = {}, perPage = 6, cpl = DEFAULT_CPL) {
   return { pages, spreads, jumps };
 }
 
+/* ── Оценочный путь для среды без DOM ────────────────────────────────────── */
+
+// Условная «единица» — высота базовой позиции (название + состав в одну строку
+// + строка «объём ⋯ цена»). Числа грубые НАРОЧНО: этот путь работает только
+// там, где мерить нечем (SSR, тесты, первый кадр). В браузере его результат
+// живёт доли секунды и заменяется измеренным.
+const U = 100;
+const EST = {
+  sec: 0.22 * U,
+  head: 0.60 * U,
+  parent: 0.24 * U,
+  unit: 0.33 * U,
+  cont: 0.30 * U,
+  storyLine: 0.40 * U,
+  quoteLine: 0.36 * U,
+  quoteSign: 0.63 * U,
+  listTop: 0.08 * U,
+  listGap: 0.05 * U,
+  originLine: 0.25 * U,
+  noOrigin: -0.25 * U,
+};
+
+/** Символов в строке — оценка по ширине листа; см. bookMetrics в paginate.js. */
+const DEFAULT_CPL = { origin: 62, story: 52, quote: 52 };
+
+const linesOf = (text, cpl) => Math.max(1, Math.ceil(String(text || '').length / Math.max(10, cpl)));
+
+/**
+ * Дерево меню → страницы книги ОЦЕНОЧНО, без DOM.
+ * @param menu     [{ id, title, categories: [...] }]
+ * @param stories  { [название раздела]: 'текст «О разделе»' }
+ * @param perPage  ёмкость листа в «позициях»
+ * @param cpl      { origin, story, quote } — символов в строке
+ */
+export function buildBook(menu, stories = {}, perPage = 6, cpl = DEFAULT_CPL) {
+  const cats = [];
+  for (const group of menu || []) {
+    for (const cat of group.categories || []) {
+      const story = (stories && stories[cat.title]) || '';
+      const items = cat.items || [];
+      cats.push({
+        groupId: group.id,
+        groupTitle: group.title,
+        title: cat.title,
+        parent: cat.parent || '',
+        unit: cat.unit || '',
+        subtitle: cat.subtitle || '',
+        kind: cat.kind || '',
+        text: cat.text || '',
+        sign: cat.sign || '',
+        links: cat.links || [],
+        story,
+        items,
+        quote: cat.quote || null,
+        h: {
+          sec: EST.sec,
+          head: EST.head + (cat.parent ? EST.parent : 0) + (cat.subtitle || cat.unit ? EST.unit : 0),
+          story: story ? linesOf(story, cpl.story) * EST.storyLine : 0,
+          listTop: EST.listTop,
+          listGap: EST.listGap,
+          cont: EST.cont,
+          quote: cat.quote
+            ? linesOf(cat.quote.text, cpl.quote ?? cpl.story) * EST.quoteLine + EST.quoteSign
+            : 0,
+          items: items.map((it) => (it.origin
+            ? U + (linesOf(it.origin, cpl.origin) - 1) * EST.originLine
+            : U + EST.noOrigin)),
+        },
+      });
+    }
+  }
+  return packPages(cats, Math.max(1, perPage) * U);
+}
+
 /**
  * Дерево меню → список пузырей навигации: плоские разделы и надгруппы со
- * своими детьми. Порядок — как в карте.
+ * своими детьми. Порядок — как в карте. Разделы с nav: false (приветствие,
+ * «мы в сети») пузыря не дают: это страницы книги, а не разделы карты.
  */
 export function buildNav(menu) {
   const groups = [];
@@ -162,6 +229,7 @@ export function buildNav(menu) {
     const entries = [];
     let sub = null;
     for (const cat of group.categories || []) {
+      if (cat.nav === false || cat.kind === 'text') { sub = null; continue; }
       if (cat.parent) {
         if (!sub || sub.title !== cat.parent) {
           sub = { type: 'parent', title: cat.parent, key: parentKey(group.id, cat.parent), children: [] };
@@ -177,6 +245,3 @@ export function buildNav(menu) {
   }
   return groups;
 }
-
-/** Номер разворота, на котором лежит страница. */
-export const spreadOfPage = (pageIndex) => Math.floor(pageIndex / 2);
