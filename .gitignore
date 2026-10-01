@@ -14,3 +14,7 @@ public/uploads/showcase/
 # Оригиналы фото витрины коктейлей у книги-меню — в репо уезжают только
 # сжатые webp из cocktails-web/ (тот же скрипт).
 public/uploads/cocktails/
+
+# Design system sync and bundle artifacts
+.ds-sync/
+ds-bundle/

@@ -368,6 +368,8 @@ ok('H5 заявка в стафф-теме: дата, гости, текст, к
   && String(fbStaff.body.message_thread_id) === '7',
   JSON.stringify(fbStaff?.body || {}).slice(0, 400));
 ok('H6 гостю — «заявка у барменов»', calls('editMessageText').some(c => (c.body.text || '').includes('у барменов')));
+const savedInq = db.t('booking_inquiries').find(i => i.telegram_id === '424242');
+ok('H7 текстовая заявка сохранена в БД (booking_inquiries)', !!savedInq && savedInq.guests_count === 8 && savedInq.when_text === '12 июля, 21:00');
 
 // ═══ I. Админ-панель в боте ═══
 console.log('\n── I. Админ-панель ──');

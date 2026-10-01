@@ -41,12 +41,14 @@ const UNIQUE = {
   loyalty_transactions: [{ name: 'lt_pkey', cols: ['id'] }],
   loyalty_rewards: [{ name: 'lr_pkey', cols: ['id'] }],
   loyalty_redemptions: [{ name: 'lrd_pkey', cols: ['id'] }, { name: 'lrd_code_key', cols: ['code'] }],
+  booking_inquiries: [{ name: 'booking_inquiries_pkey', cols: ['id'] }],
 };
 const PK = { otps: 'phone', app_config: 'key', web_login_tokens: 'token' };
 
 const DEFAULTS = {
   users: r => ({ name: '', phone: '', telegram_id: null, telegram_username: null, role: 'guest', level_override: null, bot_blocked: false, created_at: now(), ...r }),
   reservations: r => ({ staff_message_id: null, staff_reminder_count: 0, attendance_prompt_sent_at: null, cancelled_at: null, cancellation_reason: null, note: '', guest_phone: '', created_at: now(), updated_at: now(), ...r }),
+  booking_inquiries: r => ({ guest_id: null, telegram_id: null, guest_name: '', guest_phone: '', when_text: '', guests_count: 1, message: '', status: 'new', staff_message_id: null, created_at: now(), updated_at: now(), ...r }),
   table_occupancy: r => ({ source: 'walk_in', reservation_id: null, occupied_since: now(), freed_at: null, ...r }),
   app_config: r => ({ value: {}, updated_at: now(), ...r }),
   events: r => ({ time: '', description: '', image_url: '', image_urls: [], sort_order: 0, active: true, awards_points: false, attendance_prompt_sent_at: null, created_at: now(), updated_at: now(), ...r }),

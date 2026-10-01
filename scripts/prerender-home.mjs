@@ -61,6 +61,7 @@ ${paras}
 <nav style="margin-top:20px">
 <a style="${S.link}" href="/menu/">Барная карта</a>
 <a style="${S.link}" href="/booking">Забронировать стол</a>
+<a style="${S.link}" href="/game/">${esc(tx.gameTitle)}</a>
 </nav>
 </div>`;
 

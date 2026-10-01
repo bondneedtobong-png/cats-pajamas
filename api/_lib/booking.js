@@ -736,3 +736,45 @@ export async function setTableSeatActive(tableId, seatIndex, active) {
   cfg[tableId].seats[seatIndex] = { ...cfg[tableId].seats[seatIndex], active };
   await saveTableConfig(cfg);
 }
+
+// ─── Текстовые заявки гостя через Telegram-бота (booking_inquiries) ───────────
+export async function createBookingInquiry({
+  guestId = null,
+  telegramId = null,
+  guestName = '',
+  guestPhone = '',
+  whenText = '',
+  guestsCount = 1,
+  message = '',
+  staffMessageId = null,
+} = {}) {
+  const row = {
+    id: generateId('inq'),
+    guest_id: guestId,
+    telegram_id: telegramId ? String(telegramId) : null,
+    guest_name: guestName || 'Гость',
+    guest_phone: guestPhone || '',
+    when_text: whenText,
+    guests_count: Number(guestsCount) || 1,
+    message: message || '',
+    status: 'new',
+    staff_message_id: staffMessageId ? Number(staffMessageId) : null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase.from('booking_inquiries').insert(row).select().single();
+  if (error) {
+    console.error('[booking] createBookingInquiry error:', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function updateBookingInquiryStaffMessageId(inquiryId, staffMessageId) {
+  if (!inquiryId || !staffMessageId) return;
+  await supabase.from('booking_inquiries')
+    .update({ staff_message_id: Number(staffMessageId), updated_at: new Date().toISOString() })
+    .eq('id', inquiryId)
+    .catch((e) => console.error('[booking] updateBookingInquiryStaffMessageId failed:', e.message));
+}
+

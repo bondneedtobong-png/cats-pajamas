@@ -59,6 +59,15 @@ export const translations = {
     // не используется с 2026-08-29: ссылка под книгой убрана по ТЗ владельца
     menuPrintLink: 'Открыть карту отдельной страницей',
 
+    // Мини-игра «Симулятор бармена» — отдельное приложение на /game/
+    // (см. sections/GameCta.jsx). Метка «Интерлюдия», а не «Глава N»:
+    // сквозная нумерация глав не сдвигается.
+    gameLabel: 'Интерлюдия · Мини-игра',
+    gameTitle: 'Симулятор бармена',
+    gameText: 'Смена за нашей стойкой: гости, заказы, налив до миллилитра и разговоры, в которых легко ошибиться. Три уровня сложности, играется прямо в браузере.',
+    gameCta: 'Встать за стойку',
+    gameHint: 'Откроется в новой вкладке',
+
     eventsLabel: 'Глава V · Вечерняя афиша', eventsTitle: 'Джазовая программа',
     eventsLoading: 'Загружаем события…',
     eventsEmpty: 'Ближайших событий пока нет — загляните позже.',
@@ -193,6 +202,13 @@ export const translations = {
     menuStoryLabel: 'About this section',
     // unused since 2026-08-29 (link under the book removed at the owner's request)
     menuPrintLink: 'Open the menu as a separate page',
+
+    // Mini-game "Bartender Simulator" — a separate app served at /game/.
+    gameLabel: 'Interlude · Mini-game',
+    gameTitle: 'Bartender Simulator',
+    gameText: 'A shift behind our bar: guests, orders, pours down to the millilitre and conversations that are easy to get wrong. Three difficulty levels, right in your browser.',
+    gameCta: 'Step Behind the Bar',
+    gameHint: 'Opens in a new tab',
 
     eventsLabel: 'Chapter V · Evening Bill', eventsTitle: 'The Jazz Program',
     eventsLoading: 'Loading events…',

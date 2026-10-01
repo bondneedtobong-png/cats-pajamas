@@ -8,6 +8,7 @@ import Wall     from './sections/Wall.jsx';
 import Team     from './sections/Team.jsx';
 import Menu     from './sections/Menu.jsx';
 import Events   from './sections/Events.jsx';
+import GameCta  from './sections/GameCta.jsx';
 // import Shelf from './sections/Shelf.jsx'; // полка в разработке, решение владельца 2026-07-05
 import Contacts from './sections/Contacts.jsx';
 import Footer   from './sections/Footer.jsx';
@@ -58,6 +59,12 @@ function MainSite() {
         <Wall tx={tx} />
         <Team tx={tx} />
         <Menu tx={tx} />
+        {/* Интерлюдия между главами IV и V: вход в мини-игру «Симулятор
+            бармена» (отдельное приложение, nginx отдаёт по /game/). Стоит
+            сразу после барной карты — гость только что листал коктейли, и
+            предложение собрать их самому читается продолжением, а не врезкой.
+            Не глава: нумерация sec-label не сдвигается. */}
+        <GameCta tx={tx} />
         {/* Главы V и VI лежат в одной обёртке ради общего фонового слоя
             «дорожка винила» — он идёт сквозным от афиши до контактов.
             Обёртка ЧИСТО фоновая (position: relative + слой), разметку секций

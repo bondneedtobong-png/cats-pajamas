@@ -314,6 +314,26 @@ create table if not exists public.team_applications (
 );
 create index if not exists team_applications_created_idx on public.team_applications (created_at);
 
+-- ─── Текстовые заявки на бронь через бота (свободная заявка) ────────────────
+-- Гость пишет дату/время/число гостей и пожелания свободным текстом (без стола).
+-- Заявка сохраняется в БД И пушится в стафф-тему «Брони» — ни один лид не потеряется.
+create table if not exists public.booking_inquiries (
+  id               text primary key,        -- 'inq_...'
+  guest_id         text references public.users (id) on delete set null,
+  telegram_id      text,
+  guest_name       text not null default '',
+  guest_phone      text default '',
+  when_text        text not null,
+  guests_count     integer not null default 1,
+  message          text default '',
+  status           text not null default 'new' check (status in ('new','contacted','booked','rejected')),
+  staff_message_id bigint,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+create index if not exists booking_inquiries_created_idx on public.booking_inquiries (created_at);
+create index if not exists booking_inquiries_guest_idx   on public.booking_inquiries (guest_id);
+
 -- ─── ⚠️ ВЫВЕДЕНО ИЗ ПРОДУКТА 2026-07-04: колесо дня и баллы ─────────────────
 -- Таблицы wheel_spins / loyalty_transactions / loyalty_rewards /
 -- loyalty_redemptions и функция redeem_loyalty_reward остаются в схеме только

@@ -21,10 +21,9 @@ import ApplicationsService from '../team/ApplicationsService.js';
 // главы, отдельный крупный заголовок с именем (имя живёт в плашке описания) и
 // «стать бартендером». Данные и админка «КОМАНДА» не тронуты.
 //
-// Тексты цитат владелец переписывает заново — до этого во всех карточках стоит
-// одна заглушка (QUOTE_STUB), цитаты из БД временно не показываются. Когда
-// новые тексты появятся, убрать QUOTE_STUB и вернуть current.quote.
-const QUOTE_STUB = 'Упс! Извините, текст временно украли, вернем его чуть позже!';
+// Цитата берётся из карточки бармена (current.quote). Если цитата в БД ещё не
+// заполнена — выводим атмосферный дефолтный текст без длинного тире (правило Jar Binks).
+const DEFAULT_QUOTE = 'Хороший коктейль, как и хороший джаз: строится на импровизации и безупречном вкусе.';
 
 /**
  * Дуга ряда аватарок: гладкая парабола, приподнятая к центру (как бровь).
@@ -296,7 +295,7 @@ export default function Team({ tx }) {
             <div className="tm3__body">
               <figure className="tm3__quote">
                 <QuoteFrame />
-                <blockquote className="tm3__quote-text">{QUOTE_STUB}</blockquote>
+                <blockquote className="tm3__quote-text">{current?.quote?.trim() || DEFAULT_QUOTE}</blockquote>
               </figure>
 
               <div className="tm3__stage">
