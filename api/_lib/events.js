@@ -145,8 +145,39 @@ export async function setEventPhotos(id, urls) {
   return rowToEvent(data);
 }
 
+async function referencedEventPhotos(id) {
+  // Supabase caps result sizes: scan every page, including hidden/legacy events.
+  // Fail closed before DB deletion if references cannot be checked.
+  const retainedUrls = new Set();
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.from('events').select('id,image_urls,image_url')
+      .neq('id', id).order('id', { ascending: true }).range(offset, offset + pageSize - 1);
+    if (error || !Array.isArray(data)) throw new Error('Не удалось проверить ссылки события');
+    for (const row of data) {
+      for (const url of Array.isArray(row.image_urls) ? row.image_urls : []) {
+        if (typeof url === 'string') retainedUrls.add(url);
+      }
+      if (typeof row.image_url === 'string') retainedUrls.add(row.image_url);
+    }
+    if (data.length < pageSize) break;
+  }
+  return retainedUrls;
+}
+
 export async function deleteEvent(id) {
+  if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(id)) throw new Error('Некорректный id события');
+  await referencedEventPhotos(id);
   const { error } = await supabase.from('events').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  await deleteEventPhotos(id); // best-effort уборка файлов события
+  try {
+    // Refresh after deletion so a copy saved during DB deletion is retained too.
+    const retainedUrls = await referencedEventPhotos(id);
+    await deleteEventPhotos(id, retainedUrls);
+    return { cleanupPending: false };
+  } catch (error) {
+    // The event is already deleted: do not turn a disk failure into a failed delete.
+    console.error('Event deleted, photo cleanup pending:', id, error);
+    return { cleanupPending: true, warning: 'Событие удалено, но очистка фото не завершена' };
+  }
 }

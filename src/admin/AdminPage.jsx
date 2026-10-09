@@ -772,6 +772,9 @@ function TabEvents() {
   const [showModal, setShowModal] = useState(false);
   const [editing,   setEditing]   = useState(null);
   const [confirm,   setConfirm]   = useState(null);
+  const [cleanupWarnings, setCleanupWarnings] = useState([]);
+  const [retryingCleanup, setRetryingCleanup] = useState([]);
+  const cleanupInFlight = useRef(new Set());
 
   useEffect(() => {
     EventsService.getAllAdmin().then(setEvents).catch(() => {});
@@ -789,11 +792,33 @@ function TabEvents() {
       message: `Удалить «${ev.title}» без возможности восстановления?`,
       confirmLabel: 'Удалить',
       onConfirm: async () => {
-        await EventsService.remove(ev.id);
+        const result = await EventsService.remove(ev.id);
+        if (result?.cleanupPending) {
+          setCleanupWarnings(list => [...list.filter(item => item.id !== ev.id), { id: ev.id, title: ev.title, message: result.warning }]);
+        }
         setConfirm(null);
+        setEvents(list => list.filter(item => item.id !== ev.id));
         setTick(n => n + 1);
       },
     });
+  }
+
+  async function retryDeletedPhotoCleanup(id) {
+    if (cleanupInFlight.current.has(id)) return;
+    cleanupInFlight.current.add(id);
+    setRetryingCleanup(list => [...list, id]);
+    try {
+      const result = await EventsService.remove(id);
+      setCleanupWarnings(list => result?.cleanupPending
+        ? list.map(item => item.id === id ? { ...item, message: result.warning } : item)
+        : list.filter(item => item.id !== id));
+    } catch (error) {
+      setCleanupWarnings(list => list.map(item => item.id === id
+        ? { ...item, message: `Событие уже удалено. Повторная очистка не удалась: ${error.message}` } : item));
+    } finally {
+      cleanupInFlight.current.delete(id);
+      setRetryingCleanup(list => list.filter(item => item !== id));
+    }
   }
 
   // "Повторить" clones the event one week later — a cheap way to keep
@@ -822,6 +847,15 @@ function TabEvents() {
           + Добавить событие
         </button>
       </div>
+
+      {cleanupWarnings.map(item => (
+        <div className="adm-error" role="status" key={item.id}>
+          <p>«{item.title}»: {item.message}</p>
+          <button className="adm-btn" disabled={retryingCleanup.includes(item.id)} onClick={() => retryDeletedPhotoCleanup(item.id)}>
+            {retryingCleanup.includes(item.id) ? 'Очистка…' : 'Повторить очистку фото'}
+          </button>
+        </div>
+      ))}
 
       {events.length === 0 ? (
         <div className="adm-empty">Событий пока нет</div>

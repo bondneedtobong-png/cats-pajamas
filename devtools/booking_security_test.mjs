@@ -197,16 +197,32 @@ try {
     await rejects(() => bk.updateReservation('r1', { tableId: 'T2' }));
     assert(row.table_id === 'T1', 'transfer bypassed seated race');
   });
-  await test('late seating occupancy compensated after concurrent completion', async () => {
-    const row = seed();
+  await test('walk-in helpers cannot create or close reservation occupancy', async () => {
+    await rejects(() => bk.setTableOccupied('T1', { source: 'reservation', reservationId: 'r1' }));
+    db.t('table_occupancy').push({ id: 'occ1', table_id: 'T1', source: 'reservation', reservation_id: 'r1', freed_at: null });
+    await rejects(() => bk.freeTableOccupancy('T1'));
+    assert(db.t('table_occupancy')[0].freed_at == null, 'reservation occupancy closed directly');
+  });
+  await test('status mutation leaves occupancy to the DB transaction', async () => {
+    seed();
     hook = async (url, opts) => {
-      if (url.pathname.endsWith('/table_occupancy') && opts?.method === 'POST') {
-        hook = null; await bk.updateReservationStatus('r1', 'completed', { fromStatus: 'seated' });
+      if (url.pathname.endsWith('/table_occupancy') && ['POST', 'PATCH'].includes(opts?.method)) {
+        throw new Error('separate occupancy mutation');
       }
     };
     await bk.updateReservationStatus('r1', 'seated', { fromStatus: 'confirmed' });
-    assert(row.status === 'completed', 'completion lost');
-    assert(!db.t('table_occupancy').some(o => o.freed_at == null), 'late occupancy remains open');
+    await bk.updateReservationStatus('r1', 'completed', { fromStatus: 'seated' });
+    seed('confirmed', { id: 'r2' });
+    await bk.cancelReservation('r2', '', { guestId: 'owner' });
+  });
+  await test('manual status and cancellation reject concurrently transferred snapshot', async () => {
+    for (const action of [() => bk.updateReservationStatus('r1', 'seated'), () => bk.cancelReservation('r1', '', { guestId: 'owner' })]) {
+      db.t('reservations').length = 0;
+      const row = seed();
+      beforeReservationPatch(() => { row.table_id = 'T2'; row.date = '2099-10-12'; });
+      await rejects(action);
+      assert(row.status === 'confirmed', 'stale mutation changed transferred reservation');
+    }
   });
   await test('old automatic seating snapshot cannot seat transferred date/time/table', async () => {
     for (const field of ['date', 'time_from', 'table_id']) {

@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       switch (body.action) {
         case 'create': return ok(res, { event: await createEvent(body.data || {}) });
         case 'update': return ok(res, { event: await updateEvent(body.id, body.data || {}) });
-        case 'delete': await deleteEvent(body.id); return ok(res, {});
+        case 'delete': return ok(res, await deleteEvent(body.id));
         case 'upload_photo': {
           if (!body.eventId) return badRequest(res, 'Не указан id события');
           const buf = decodeBase64Image(body.imageBase64);

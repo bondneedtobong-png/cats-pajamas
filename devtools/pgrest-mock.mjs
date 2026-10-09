@@ -122,7 +122,8 @@ function respond(res, rows, { single, status = 200 }) {
   res.end(JSON.stringify(rows));
 }
 
-export function startPgrestMock(db, port = 54321) {
+// Opt-in SQL-trigger model for bot E2E; the default lightweight mock is unchanged.
+export function startPgrestMock(db, port = 54321, { reservationOccupancyTrigger = false } = {}) {
   const server = http.createServer(async (req, res) => {
     let body = '';
     for await (const chunk of req) body += chunk;
@@ -163,6 +164,38 @@ export function startPgrestMock(db, port = 54321) {
       return respond(res, out, { single });
     }
 
+    // One PostgREST write is one transaction: if any row/trigger fails,
+    // restore both reservation and occupancy state before sending the error.
+    const transactional = reservationOccupancyTrigger && table === 'reservations'
+      && ['POST', 'PATCH'].includes(req.method);
+    const snapshots = transactional ? ['reservations', 'table_occupancy'].map(name => ({
+      rows: db.t(name), originals: [...db.t(name)], values: db.t(name).map(r => ({ ...r })),
+    })) : [];
+    function syncOccupancy(oldRow, next) {
+      if (!transactional) return;
+      const fail = message => { throw Object.assign(new Error(message), { code: '23514' }); };
+      if (oldRow) {
+        if (oldRow.status === 'seated' && ['table_id', 'date', 'time_from', 'time_to'].some(k => oldRow[k] !== next[k])) {
+          fail('Seated reservation cannot be relocated');
+        }
+        if (oldRow.status === next.status) return;
+        const transitions = { pending: ['confirmed', 'cancelled'], confirmed: ['seated', 'completed', 'no_show', 'cancelled'], seated: ['completed', 'no_show', 'cancelled'] };
+        if (!transitions[oldRow.status]?.includes(next.status)) fail('Invalid reservation status transition');
+      }
+      const occupancies = db.t('table_occupancy');
+      if (next.status === 'seated') {
+        const occupancy = DEFAULTS.table_occupancy({
+          id: 'occ_mock_' + next.id, table_id: next.table_id,
+          source: 'reservation', reservation_id: next.id,
+        });
+        const violation = checkUnique('table_occupancy', occupancies, occupancy);
+        if (violation) throw Object.assign(new Error('duplicate key value violates unique constraint "' + violation + '"'), { code: '23505' });
+        occupancies.push(occupancy);
+      } else if (['completed', 'no_show', 'cancelled'].includes(next.status)) {
+        for (const o of occupancies) if (o.reservation_id === next.id && o.freed_at == null) o.freed_at = now();
+      }
+    }
+    try {
     if (req.method === 'POST') {
       const items = (Array.isArray(payload) ? payload : [payload]).map(r => (DEFAULTS[table] || (x => x))(r));
       const isUpsert = prefer.includes('resolution=merge-duplicates');
@@ -171,10 +204,11 @@ export function startPgrestMock(db, port = 54321) {
       for (const item of items) {
         if (isUpsert) {
           const existing = rows.find(r => String(r[pk]) === String(item[pk]));
-          if (existing) { Object.assign(existing, item, { updated_at: now() }); inserted.push(existing); continue; }
+          if (existing) { syncOccupancy(existing, item); Object.assign(existing, item, { updated_at: now() }); inserted.push(existing); continue; }
         }
         const viol = checkUnique(table, rows, item);
-        if (viol) return err(res, 409, '23505', `duplicate key value violates unique constraint "${viol}"`);
+        if (viol) throw Object.assign(new Error(`duplicate key value violates unique constraint "${viol}"`), { code: "23505" });
+        syncOccupancy(null, item);
         rows.push(item);
         inserted.push(item);
       }
@@ -187,11 +221,24 @@ export function startPgrestMock(db, port = 54321) {
       for (const r of targets) {
         const next = { ...r, ...payload };
         const viol = checkUnique(table, rows, next, r);
-        if (viol) return err(res, 409, '23505', `duplicate key value violates unique constraint "${viol}"`);
+        if (viol) throw Object.assign(new Error(`duplicate key value violates unique constraint "${viol}"`), { code: "23505" });
+        syncOccupancy(r, next);
         Object.assign(r, payload, 'updated_at' in r ? { updated_at: now() } : {});
       }
       if (!wantRep) { res.writeHead(204); return res.end(); }
       return respond(res, targets, { single });
+    }
+
+    } catch (error) {
+      for (const snapshot of snapshots) {
+        for (let i = 0; i < snapshot.originals.length; i++) {
+          const row = snapshot.originals[i];
+          for (const key of Object.keys(row)) delete row[key];
+          Object.assign(row, snapshot.values[i]);
+        }
+        snapshot.rows.splice(0, snapshot.rows.length, ...snapshot.originals);
+      }
+      return err(res, error.code === '23505' ? 409 : 400, error.code || 'P0001', error.message);
     }
 
     if (req.method === 'DELETE') {

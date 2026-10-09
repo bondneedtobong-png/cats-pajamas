@@ -350,6 +350,9 @@ export async function getOpenOccupancies() {
 /** Бармен отметил стол занятым (walk-in) или система — по seated-брони.
  *  Идемпотентно: уже открытая занятость → false, не ошибка. */
 export async function setTableOccupied(tableId, { source = 'walk_in', reservationId = null } = {}) {
+  if (source !== 'walk_in' || reservationId != null) {
+    throw bookingError('Занятость по брони меняется только через статус брони');
+  }
   const { error } = await supabase.from('table_occupancy').insert({
     id: generateId('occ'), table_id: tableId, source, reservation_id: reservationId,
     occupied_since: new Date().toISOString(),
@@ -368,17 +371,15 @@ export async function freeTableOccupancy(tableId) {
     .select('*').eq('table_id', tableId).is('freed_at', null).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return false;
-  if (data.source === 'reservation') {
+  if (data.source === 'reservation' || data.reservation_id != null) {
     throw new Error('Стол занят по брони — отметьте «Гости ушли» или «Не пришли»');
   }
-  await supabase.from('table_occupancy').update({ freed_at: new Date().toISOString() }).eq('id', data.id);
-  return true;
-}
-
-async function closeOccupancyForReservation(reservationId) {
-  await supabase.from('table_occupancy')
-    .update({ freed_at: new Date().toISOString() })
-    .eq('reservation_id', reservationId).is('freed_at', null);
+  const { data: changed, error: closeError } = await supabase.from('table_occupancy')
+    .update({ freed_at: new Date().toISOString() }).eq('id', data.id)
+    .eq('source', 'walk_in').is('reservation_id', null).is('freed_at', null)
+    .select('id').maybeSingle();
+  if (closeError) throw new Error(closeError.message);
+  return !!changed;
 }
 
 // ─── статусы столов на плане (вычисляемые) ──────────────────────────────────
@@ -551,14 +552,14 @@ export async function cancelReservation(id, reason = '', opts = {}) {
   let q = supabase.from('reservations').update({
     status: 'cancelled', cancelled_at: new Date().toISOString(),
     cancellation_reason: reason,
-  }).eq('id', id).eq('status', existing.status);
+  }).eq('id', id).eq('status', existing.status)
+    .eq('table_id', existing.table_id).eq('date', existing.date).eq('time_from', existing.time_from);
   if (!opts.staffOverride) q = q.eq('guest_id', opts.guestId);
   const { data, error } = await q.select().maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw bookingError('Заявка уже обработана — обновите список');
   const res = rowToRes(data);
 
-  closeOccupancyForReservation(id).catch(() => {});
   // Стафф-сообщение с кнопками больше не актуально — правим его (best-effort)
   if (opts.editStaffMessage !== false) {
     editStaffBookingMessage(res, null, `🚫 ${reason || 'Отменена'}.`).catch(() => {});
@@ -573,7 +574,7 @@ export async function cancelReservation(id, reason = '', opts = {}) {
 // повторные баллы и т.п.).
 export async function updateReservationStatus(id, newStatus, { fromStatus, expectedDate, expectedTimeFrom, expectedTableId } = {}) {
   const { data: existing } = await supabase.from('reservations')
-    .select('status, guest_id, table_id').eq('id', id).maybeSingle();
+    .select('status, guest_id, table_id, date, time_from').eq('id', id).maybeSingle();
   if (!existing) throw new Error('Бронь не найдена');
   // Гость мог отменить бронь, пока у бармена на экране висит старый статус —
   // guard от «Подтвердить»/«Завершить» на брони в финальном статусе.
@@ -591,11 +592,14 @@ export async function updateReservationStatus(id, newStatus, { fromStatus, expec
   const patch = { status: newStatus };
   if (newStatus === 'cancelled') patch.cancelled_at = new Date().toISOString();
   let query = supabase.from('reservations').update(patch).eq('id', id).eq('status', existing.status);
-  if (expectedDate != null) query = query.eq('date', expectedDate);
-  if (expectedTimeFrom != null) query = query.eq('time_from', expectedTimeFrom);
-  if (expectedTableId != null) query = query.eq('table_id', expectedTableId);
+  query = query.eq('date', expectedDate ?? existing.date)
+    .eq('time_from', expectedTimeFrom ?? existing.time_from)
+    .eq('table_id', expectedTableId ?? existing.table_id);
   const { data, error } = await query.select().maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === '23505') throw bookingError('Этот стол сейчас занят гостями');
+    throw new Error(error.message);
+  }
   if (!data) throw bookingError('Заявка уже обработана — обновите список');
 
   // Заявка ушла из pending (подтверждена/отклонена) → убрать накопившиеся
@@ -605,17 +609,8 @@ export async function updateReservationStatus(id, newStatus, { fromStatus, expec
     clearStaffReminders(id).catch(() => {});
   }
 
-  // seated → стол занят по факту (строка occupancy); финал → занятость закрыта
-  if (newStatus === 'seated') {
-    await setTableOccupied(data.table_id, { source: 'reservation', reservationId: id })
-      .catch(e => console.error('[booking] occupancy open failed:', e.message));
-    // A concurrent completion may close occupancy before this insert lands.
-    // Recheck after opening and compensate only this reservation's occupancy.
-    const current = await getReservationById(id);
-    if (current?.status !== 'seated') await closeOccupancyForReservation(id);
-  } else if (FINAL_STATUSES.includes(newStatus)) {
-    closeOccupancyForReservation(id).catch(() => {});
-  }
+  // The DB trigger commits status and reservation occupancy together.
+  // Never open/close it in a second request: failures must roll back status.
 
   // Уровень гостя вычисляется из подтверждённых броней на лету (см.
   // _lib/loyalty.js) — отдельного начисления при 'completed' больше нет.

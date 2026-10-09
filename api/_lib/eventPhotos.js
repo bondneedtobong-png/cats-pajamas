@@ -9,7 +9,7 @@ import path from 'path';
 // их отдаёт nginx (^~ /uploads/events/ alias) или express.static-фолбэк server.js.
 //
 // Ошибки удаления одного фото показываются редактором для повторной очистки.
-// Удаление папки целиком остаётся best-effort. Порядок — в image_urls (БД).
+// При удалении события сохраняем пары, на которые ссылаются другие события.
 
 export const EVENT_UPLOADS_DIR =
   process.env.EVENT_UPLOADS_DIR || path.resolve(process.cwd(), 'uploads-runtime/events');
@@ -81,9 +81,23 @@ export async function deleteEventPhoto(eventId, url) {
   await fs.rm(path.join(dir, `${n}.thumb.webp`), { force: true });
 }
 
-/** Удалить все фото события (папку целиком). Best-effort — не роняет удаление события. */
-export async function deleteEventPhotos(eventId) {
-  await fs.rm(eventDir(eventId), { recursive: true, force: true }).catch(() => {});
+/** Удалить непривязанные пары; retainedUrls проверены вызывающим кодом в БД. */
+export async function deleteEventPhotos(eventId, retainedUrls) {
+  if (!/^[a-zA-Z0-9_-]+$/.test(String(eventId)) || !(retainedUrls instanceof Set)) {
+    throw new Error('Некорректная проверка ссылок фото события');
+  }
+  const dir = eventDir(eventId);
+  let files;
+  try { files = await fs.readdir(dir); }
+  catch (error) { if (error.code === 'ENOENT') return; throw error; }
+  const indices = new Set(files.map(f => f.match(/^(0|[1-9]\d*)(?:\.thumb)?\.webp$/)?.[1]).filter(Boolean));
+  for (const index of indices) {
+    const url = `${URL_BASE}/${eventId}/${index}.webp`;
+    if (!retainedUrls.has(url)) await deleteEventPhoto(eventId, url);
+  }
+  // Never recursively remove a directory: retained pairs and unknown files survive.
+  try { await fs.rmdir(dir); }
+  catch (error) { if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(error.code)) throw error; }
 }
 
 /** Абсолютный путь основного файла фото на диске (для отправки в Telegram через InputFile). */

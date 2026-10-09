@@ -11,8 +11,8 @@
     "preview": "vite preview",
     "start:api": "node server.js",
     "start:bot": "node bot-start.js",
-    "test:security": "node devtools/auth_security_test.mjs && node devtools/booking_security_test.mjs && node devtools/bar_menu_security_test.mjs && node devtools/schema_security_test.mjs",
-    "test:photos": "node devtools/event_photo_draft_test.mjs",
+    "test:security": "node devtools/auth_security_test.mjs && node devtools/booking_security_test.mjs && node devtools/bar_menu_security_test.mjs && node devtools/schema_security_test.mjs && node devtools/booking_transaction_contract_test.mjs",
+    "test:photos": "node devtools/event_photo_draft_test.mjs && node devtools/event_delete_shared_photos_test.mjs && node devtools/event_delete_cleanup_ui_test.mjs",
     "test:photos:browser": "node devtools/event_photo_browser_test.mjs",
     "test:a11y": "node devtools/floorplan_keyboard_test.mjs && node devtools/auth_dialog_test.mjs"
   },

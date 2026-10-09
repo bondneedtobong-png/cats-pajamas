@@ -279,7 +279,9 @@ async function cleanupTestRun(api, eventId, reason) {
   for (const mid of run.channelMessageIds || []) {
     await api.deleteMessage(CHANNEL, mid).catch((e) => errors.push(`пост ${mid}: ${e.message}`));
   }
-  await deleteEvent(eventId).catch((e) => errors.push(`событие: ${e.message}`));
+  await deleteEvent(eventId)
+    .then(result => { if (result?.cleanupPending) errors.push(result.warning); })
+    .catch((e) => errors.push(`событие: ${e.message}`));
 
   const done = errors.length
     ? `🧪 Тестовый прогон убран частично (${reason}).\n⚠️ ${errors.join('; ')}`

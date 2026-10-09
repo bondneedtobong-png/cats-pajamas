@@ -97,7 +97,7 @@ const db = createDb({
     { id: 'u_g2', name: 'Борис', phone: '79994445566', telegram_id: '515151', role: 'guest', loyalty_points: 0 },
   ],
 });
-await startPgrestMock(db, 54322);
+await startPgrestMock(db, 54322, { reservationOccupancyTrigger: true });
 
 const P = new URL('../', import.meta.url).href; // корень проекта (devtools на уровень ниже)
 const bk = await import(P + 'api/_lib/booking.js');
@@ -633,6 +633,33 @@ await cbPriv(`evtestdel:${evTest.id}`, 111);
 ok('M9 повторное удаление не падает и говорит «уже убран»',
   calls('editMessageText').some(c => (c.body.text || '').includes('уже убран')),
   JSON.stringify(calls('editMessageText').map(c => c.body.text)));
+
+// Transport-level negative controls: an error on the second row must undo
+// both the first reservation write and its trigger occupancy write.
+console.log('\n── N. Atomic DB transport regression ──');
+const txRows = [
+  { id: 'tx_mock_first', table_id: 'TX_FIRST', status: 'confirmed', date: evening, time_from: slot, time_to: slot },
+  { id: 'tx_mock_second', table_id: 'TX_SECOND', status: 'confirmed', date: evening, time_from: slot, time_to: slot },
+];
+db.t('reservations').push(...txRows);
+db.t('table_occupancy').push({ id: 'tx_mock_walkin', table_id: 'TX_SECOND', source: 'walk_in', freed_at: null });
+const txPatch = status => realFetch(process.env.SUPABASE_URL + '/rest/v1/reservations?id=in.(tx_mock_first,tx_mock_second)', {
+  method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ status }),
+});
+const conflictResponse = await txPatch('seated');
+ok('N1 occupancy unique error returned', conflictResponse.status === 409 && (await conflictResponse.json()).code === '23505');
+ok('N2 failed batch seating rolled back both statuses and new occupancy',
+  txRows.every(r => r.status === 'confirmed') && !openOcc('TX_FIRST') && openOcc('TX_SECOND')?.id === 'tx_mock_walkin');
+txRows[0].status = 'seated'; txRows[1].status = 'pending';
+db.t('table_occupancy').push({ id: 'tx_mock_seated', table_id: 'TX_FIRST', source: 'reservation', reservation_id: 'tx_mock_first', freed_at: null });
+const invalidResponse = await txPatch('completed');
+ok('N3 invalid transition returned DB constraint error', invalidResponse.status === 400 && (await invalidResponse.json()).code === '23514');
+ok('N4 failed batch completion rolled back status and occupancy closure',
+  txRows[0].status === 'seated' && txRows[1].status === 'pending' && openOcc('TX_FIRST')?.id === 'tx_mock_seated');
+for (const name of ['reservations', 'table_occupancy']) {
+  const rows = db.t(name);
+  for (let i = rows.length - 1; i >= 0; i--) if (rows[i].id.startsWith('tx_mock_')) rows.splice(i, 1);
+}
 
 await fsp.rm(EV_DIR, { recursive: true, force: true }).catch(() => {}); // уборка временных фото
 
