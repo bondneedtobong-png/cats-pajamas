@@ -218,6 +218,8 @@
    navigating to /auth ─── */
 @keyframes authOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .auth-modal-overlay {
+  color: var(--text);
+  font-family: 'Avenir Next', sans-serif;
   position: fixed;
   inset: 0;
   z-index: 500;

@@ -6,6 +6,8 @@ process.env.SUPABASE_URL = 'http://127.0.0.1:54322';
 process.env.SUPABASE_ANON_KEY = 'x';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'x';
 process.env.SESSION_SECRET = 'e2e-secret';
+process.env.NODE_ENV = 'test';
+process.env.ALLOW_DEMO_PAYMENTS = 'true'; // Explicit opt-in, isolated mock only.
 process.env.TELEGRAM_BOT_TOKEN = '999:e2e';
 process.env.TELEGRAM_ADMIN_IDS = '111';
 process.env.TELEGRAM_STAFF_IDS = '555';
@@ -270,14 +272,14 @@ console.log('\n── C. Отмена гостем ──');
 const rC = await bk.createReservation({ tableId: 'T5', date: evening, timeFrom: slot, guestName: 'Аня', source: 'web', guestId: 'u_g1' });
 await new Promise(r => setTimeout(r, 120));
 tgCalls.length = 0;
-await bk.cancelReservation(rC.id, 'Отменена гостем на сайте');
+await bk.cancelReservation(rC.id, 'Отменена гостем на сайте', { guestId: 'u_g1' });
 await new Promise(r => setTimeout(r, 120));
 ok('C1 pending: стафф-сообщение отредактировано', [...calls('editMessageCaption'), ...calls('editMessageText')].some(c => c.body.message_id === res(rC.id).staff_message_id && c.body.text.includes('🚫')));
 const rC2 = await bk.createReservation({ tableId: 'T5', date: evening, timeFrom: slot, guestName: 'Аня', source: 'web', guestId: 'u_g1' });
 await new Promise(r => setTimeout(r, 120));
 await cb(`stok:${rC2.id}`, 555, { messageId: res(rC2.id).staff_message_id });
 tgCalls.length = 0;
-await bk.cancelReservation(rC2.id, 'Отменена гостем через Telegram');
+await bk.cancelReservation(rC2.id, 'Отменена гостем через Telegram', { guestId: 'u_g1' });
 await new Promise(r => setTimeout(r, 120));
 ok('C2 confirmed: стафф-сообщение отредактировано', [...calls('editMessageCaption'), ...calls('editMessageText')].some(c => c.body.text.includes('🚫')));
 // кнопка по отменённой гостем брони
@@ -513,9 +515,9 @@ ok('K6 стафф-заявка: кнопки подтверждения + стр
   JSON.stringify(staffK?.body || {}).slice(0, 400));
 
 // Демо-оплата депозита: статус брони не меняется
-await bk.payDeposit(rK.id);
+await bk.payDeposit(rK.id, { guestId: rK.guestId });
 ok('K7 депозит paid_mock, бронь осталась pending', res(rK.id).deposit_status === 'paid_mock' && res(rK.id).status === 'pending');
-await bk.cancelReservation(rK.id, 'Тест завершён');
+await bk.cancelReservation(rK.id, 'Тест завершён', { staffOverride: true });
 
 // Блокировка дат: конкретная дата и флаг «сегодня»
 await bk.setBookingDatesConfig({ blockedDates: ['2026-12-30'] });

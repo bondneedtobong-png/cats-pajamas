@@ -1,6 +1,6 @@
-import { readBody, ok, badRequest, unauthorized, serverError, applyCors } from './_lib/http.js';
+import { readBody, ok, badRequest, unauthorized, forbidden, serverError, applyCors } from './_lib/http.js';
 import { getUser } from './_lib/session.js';
-import { requestOtp, verifyOtp, updateProfile, createLoginToken, checkLoginToken, authViaTelegramWebApp } from './_lib/auth.js';
+import { requestOtp, verifyOtp, updateProfile, createLoginToken, checkLoginToken, authViaTelegramWebApp, isDemoOtpEnabled } from './_lib/auth.js';
 
 export default async function handler(req, res) {
   if (applyCors(req, res)) return;
@@ -10,6 +10,7 @@ export default async function handler(req, res) {
     const action = body.action;
 
     switch (action) {
+      case 'login_options': return ok(res, { demoOtpEnabled: isDemoOtpEnabled() });
       case 'request_otp': {
         const r = await requestOtp(body.phone);
         return ok(res, r);
@@ -37,6 +38,7 @@ export default async function handler(req, res) {
       }
       case 'me': {
         const user = await getUser(req);
+        if (!user) return unauthorized(res);
         return ok(res, { user });
       }
       case 'update_profile': {
@@ -49,7 +51,9 @@ export default async function handler(req, res) {
         return badRequest(res, 'Неизвестное действие');
     }
   } catch (e) {
+    if (e.status === 403) return forbidden(res, e.message);
     if (/обязательн|корректн|код|Неверный|истёк|повторно|Telegram|подпись/.test(e.message)) return badRequest(res, e.message);
-    return serverError(res, e);
+    // Database errors can include row values (OTP/login/session secrets).
+    return serverError(res, new Error('Не удалось выполнить вход. Попробуйте позже.'));
   }
 }

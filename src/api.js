@@ -12,6 +12,9 @@ export function setToken(t) {
   if (t) localStorage.setItem(TOKEN_KEY, t);
   else localStorage.removeItem(TOKEN_KEY);
 }
+export function notifyAuthChanged() {
+  window.dispatchEvent(new CustomEvent('cpjc-auth-changed'));
+}
 
 export async function apiFetch(path, { method = 'GET', body, auth = true } = {}) {
   const headers = {};
@@ -27,6 +30,16 @@ export async function apiFetch(path, { method = 'GET', body, auth = true } = {})
 
   let data = {};
   try { data = await res.json(); } catch { /* empty body */ }
-  if (!res.ok) throw new Error(data.error || `Ошибка запроса (${res.status})`);
+  if (!res.ok) {
+    // Do not clear a newer login if an older in-flight request receives 401.
+    if (res.status === 401 && auth && token && getToken() === token) {
+      setToken(null);
+      localStorage.removeItem('cpjc_user');
+      notifyAuthChanged();
+    }
+    const error = new Error(data.error || `Ошибка запроса (${res.status})`);
+    error.status = res.status;
+    throw error;
+  }
   return data;
 }

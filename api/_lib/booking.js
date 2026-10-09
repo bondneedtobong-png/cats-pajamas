@@ -1,6 +1,5 @@
 import { supabase } from './supabase.js';
 import { TABLES, activeSeats } from '../../src/booking/tablesConfig.js';
-import { BOOKING_RULES } from '../../src/booking/bookingRules.js';
 import {
   timeToMin, minToTime, reservationInstant, barEveningDate,
 } from '../../src/booking/barTime.js';
@@ -25,6 +24,20 @@ const TABLE_CONFIG_KEY = 'table_config_v2';
 
 export const ACTIVE_STATUSES = ['pending', 'confirmed', 'seated'];
 const FINAL_STATUSES = ['cancelled', 'completed', 'no_show'];
+const STATUS_TRANSITIONS = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['seated', 'completed', 'no_show', 'cancelled'],
+  seated: ['completed', 'no_show', 'cancelled'],
+};
+
+export function isDemoPaymentEnabled() {
+  return ['development', 'test'].includes(process.env.NODE_ENV)
+    && process.env.ALLOW_DEMO_PAYMENTS === 'true';
+}
+
+function bookingError(message, statusCode = 400) {
+  return Object.assign(new Error(message), { statusCode });
+}
 
 // Гостевая заявка без ответа бармена 6 часов — чистим как мусор. Это НЕ
 // «авто-отмена вместо бармена» (та запрещена владельцем), а уборка заявок,
@@ -68,6 +81,7 @@ function rowToRes(r) {
     depositPrice: r.deposit_price,
     depositStatus: r.deposit_status,
     depositTransactionId: r.deposit_transaction_id || null,
+    demoPaymentAvailable: isDemoPaymentEnabled(),
     createdByAdminId: r.created_by_admin_id || null,
     cancellationReason: r.cancellation_reason || null,
     guestName: r.guest_name || '',
@@ -212,7 +226,7 @@ export function staffBookingText(r, table) {
   ];
   if (r.note) lines.push(`💬 ${mdEscape(r.note)}`);
   if (r.depositPrice > 0) {
-    lines.push(`💰 Депозит: ${r.depositPrice} ₽${r.depositStatus === 'paid_mock' ? ' · оплачен' : ''}`);
+    lines.push(`💰 Депозит: ${r.depositPrice} ₽${r.depositStatus === 'paid_mock' ? ' · демо, деньги не получены' : ''}`);
   }
   lines.push(`Источник: ${SRC_LABEL[r.source] || r.source}`);
   return lines.join('\n');
@@ -276,7 +290,13 @@ export async function getReservations(filters = {}) {
   if (error) throw new Error(error.message);
   const rows = (data || []).map(rowToRes);
   await expireStalePending(rows);
-  return rows;
+  // Expiry may refresh a row after a concurrent transfer/confirmation. Its
+  // latest state must still match the caller's original list constraints.
+  return rows.filter(r => (!filters.date || r.date === filters.date)
+    && (!filters.tableId || r.tableId === filters.tableId)
+    && (!filters.status || r.status === filters.status)
+    && (!filters.source || r.source === filters.source)
+    && (!filters.guestId || r.guestId === filters.guestId));
 }
 
 // Self-healing на каждом чтении (никто не смотрит в БД напрямую — только через
@@ -291,11 +311,22 @@ async function expireStalePending(rows) {
   if (!stale.length) return;
   const cancelledAt = new Date().toISOString();
   const reason = 'Не подтверждена вовремя';
-  await supabase.from('reservations').update({
-    status: 'cancelled', cancelled_at: cancelledAt, cancellation_reason: reason,
-  }).in('id', stale.map(r => r.id));
   for (const r of stale) {
-    r.status = 'cancelled'; r.cancelledAt = cancelledAt; r.cancellationReason = reason;
+    // A pending reservation may have been rescheduled since this read. Only
+    // expire the same arrival/table/creation snapshot whose age we evaluated.
+    const { data: changed, error } = await supabase.from('reservations').update({
+      status: 'cancelled', cancelled_at: cancelledAt, cancellation_reason: reason,
+    }).eq('id', r.id).eq('status', 'pending').eq('date', r.date)
+      .eq('time_from', r.timeFrom).eq('table_id', r.tableId)
+      .eq('created_at', r.createdAt).select('*').maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!changed) {
+      const current = await getReservationById(r.id);
+      if (current) Object.assign(r, current);
+      else rows.splice(rows.indexOf(r), 1);
+      continue;
+    }
+    Object.assign(r, rowToRes(changed));
     editStaffBookingMessage(r, null, '⌛️ Отменена автоматически — не подтверждена вовремя.').catch(() => {});
     clearStaffReminders(r).catch(() => {}); // убрать «Заявка ждёт N минут»
   }
@@ -494,7 +525,7 @@ export async function createReservation(p) {
   if (source === 'web') {
     // Мгновенное ЛС гостю от бота (сайт свой экран показывает сам)
     const depLine = depositPrice > 0
-      ? `\n💰 Депозит ${depositPrice} ₽ — после подтверждения его можно оплатить в «Мои брони» на сайте.\n`
+      ? `\n💰 Депозит ${depositPrice} ₽ — способ внесения уточните у бармена. Онлайн-оплата пока недоступна.\n`
       : '\n';
     getGuestTelegramId(guestId).then(tgId => tgId && notifyGuestTg(tgId,
       `📨 *Заявка отправлена!*\n\n${tableStaffLabel(table, tableId)}\n📅 ${fmtDateRu(date)} · к ${timeFrom}${depLine}\n`
@@ -510,18 +541,21 @@ export async function cancelReservation(id, reason = '', opts = {}) {
   const { data: existing, error: e1 } = await supabase.from('reservations').select('*').eq('id', id).single();
   if (e1 || !existing) throw new Error('Бронь не найдена');
   if (existing.status === 'cancelled') throw new Error('Бронь уже отменена');
-  const r = rowToRes(existing);
-
-  let depositStatus = r.depositStatus;
-  if (r.depositStatus === 'paid_mock' && r.date && r.timeFrom) {
-    const hoursUntil = (reservationInstant(r.date, r.timeFrom) - new Date()) / 3600000;
-    depositStatus = hoursUntil >= BOOKING_RULES.freeCancellationHours ? 'refunded' : 'partially_retained';
+  if (!opts.staffOverride && (!opts.guestId || existing.guest_id !== opts.guestId)) {
+    throw bookingError('Нет доступа к этой брони', 403);
   }
-  const { data, error } = await supabase.from('reservations').update({
+  const allowed = opts.staffOverride ? ACTIVE_STATUSES : ['pending', 'confirmed'];
+  if (!allowed.includes(existing.status)) throw bookingError('Этот статус брони не допускает отмену');
+  if (opts.fromStatus && existing.status !== opts.fromStatus) throw bookingError('Заявка уже обработана — обновите список');
+  // A mock payment never becomes a financial refund/retention record.
+  let q = supabase.from('reservations').update({
     status: 'cancelled', cancelled_at: new Date().toISOString(),
-    cancellation_reason: reason, deposit_status: depositStatus,
-  }).eq('id', id).select().single();
+    cancellation_reason: reason,
+  }).eq('id', id).eq('status', existing.status);
+  if (!opts.staffOverride) q = q.eq('guest_id', opts.guestId);
+  const { data, error } = await q.select().maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) throw bookingError('Заявка уже обработана — обновите список');
   const res = rowToRes(data);
 
   closeOccupancyForReservation(id).catch(() => {});
@@ -537,7 +571,7 @@ export async function cancelReservation(id, reason = '', opts = {}) {
 // по кнопке или гонка двух барменов упирается в условие на уровне БД, второй
 // вызов получает «уже обработана», а не повторное действие (двойной DM гостю,
 // повторные баллы и т.п.).
-export async function updateReservationStatus(id, newStatus, { fromStatus } = {}) {
+export async function updateReservationStatus(id, newStatus, { fromStatus, expectedDate, expectedTimeFrom, expectedTableId } = {}) {
   const { data: existing } = await supabase.from('reservations')
     .select('status, guest_id, table_id').eq('id', id).maybeSingle();
   if (!existing) throw new Error('Бронь не найдена');
@@ -550,13 +584,19 @@ export async function updateReservationStatus(id, newStatus, { fromStatus } = {}
   if (fromStatus && existing.status !== fromStatus) {
     throw new Error('Заявка уже обработана — обновите список');
   }
+  if (!STATUS_TRANSITIONS[existing.status]?.includes(newStatus)) {
+    throw bookingError('Недопустимый переход статуса брони — обновите список');
+  }
 
   const patch = { status: newStatus };
   if (newStatus === 'cancelled') patch.cancelled_at = new Date().toISOString();
-  let q = supabase.from('reservations').update(patch).eq('id', id);
-  if (fromStatus) q = q.eq('status', fromStatus);
-  const { data, error } = await q.select().single();
-  if (error) throw new Error(fromStatus ? 'Заявка уже обработана — обновите список' : 'Бронь не найдена');
+  let query = supabase.from('reservations').update(patch).eq('id', id).eq('status', existing.status);
+  if (expectedDate != null) query = query.eq('date', expectedDate);
+  if (expectedTimeFrom != null) query = query.eq('time_from', expectedTimeFrom);
+  if (expectedTableId != null) query = query.eq('table_id', expectedTableId);
+  const { data, error } = await query.select().maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw bookingError('Заявка уже обработана — обновите список');
 
   // Заявка ушла из pending (подтверждена/отклонена) → убрать накопившиеся
   // напоминания «Заявка ждёт N минут»; исходная карточка остаётся с итогом.
@@ -567,8 +607,12 @@ export async function updateReservationStatus(id, newStatus, { fromStatus } = {}
 
   // seated → стол занят по факту (строка occupancy); финал → занятость закрыта
   if (newStatus === 'seated') {
-    await setTableOccupied(existing.table_id, { source: 'reservation', reservationId: id })
+    await setTableOccupied(data.table_id, { source: 'reservation', reservationId: id })
       .catch(e => console.error('[booking] occupancy open failed:', e.message));
+    // A concurrent completion may close occupancy before this insert lands.
+    // Recheck after opening and compensate only this reservation's occupancy.
+    const current = await getReservationById(id);
+    if (current?.status !== 'seated') await closeOccupancyForReservation(id);
   } else if (FINAL_STATUSES.includes(newStatus)) {
     closeOccupancyForReservation(id).catch(() => {});
   }
@@ -592,7 +636,9 @@ export async function autoSeatDueReservations() {
     if (r.date !== evening) continue;
     if (reservationInstant(r.date, r.timeFrom).getTime() > now) continue;
     try {
-      await updateReservationStatus(r.id, 'seated');
+      await updateReservationStatus(r.id, 'seated', {
+        fromStatus: 'confirmed', expectedDate: r.date, expectedTimeFrom: r.timeFrom, expectedTableId: r.tableId,
+      });
     } catch (e) {
       console.error('[autoSeat]', r.id, 'failed:', e.message);
     }
@@ -660,41 +706,72 @@ export async function markAttendancePromptSent(id) {
 }
 
 export async function updateReservation(id, updates) {
+  if (Object.hasOwn(updates, 'status')) {
+    throw bookingError('Меняйте статус отдельным действием — перенос не меняет статус брони');
+  }
+  const existing = await getReservationById(id);
+  if (!existing) throw bookingError('Бронь не найдена');
+  const relocating = ['tableId', 'date', 'timeFrom', 'timeTo'].some(k => Object.hasOwn(updates, k) && updates[k] !== existing[k]);
+  if (relocating) {
+    if (existing.status === 'seated') throw bookingError('Перенос после посадки пока недоступен — обратитесь к администратору');
+    if (!['pending', 'confirmed'].includes(existing.status)) throw bookingError('Перенос брони в финальном статусе недоступен');
+    const target = { ...existing, ...updates };
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(target.timeFrom)) throw bookingError('Выберите корректное время прихода');
+    const dateMs = Date.parse(target.date + 'T00:00:00Z');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(target.date) || !Number.isFinite(dateMs) || new Date(dateMs).toISOString().slice(0, 10) !== target.date) throw bookingError('Выберите корректную дату');
+    if (Object.hasOwn(updates, 'timeTo') && !/^([01]\d|2[0-3]):[0-5]\d$/.test(target.timeTo)) throw bookingError('Выберите корректное время окончания');
+    if (reservationInstant(target.date, target.timeFrom).getTime() < Date.now() - PAST_ARRIVAL_GRACE_MS) throw bookingError('Это время уже прошло — выберите другое');
+    if (!(await getTablesMerged()).some(t => t.id === target.tableId)) throw bookingError('Такого стола нет на плане');
+    await assertDateBookable(target.date);
+    const reservations = await getReservations({ date: target.date });
+    if (reservations.some(r => r.id !== id && r.tableId === target.tableId && ACTIVE_STATUSES.includes(r.status))) throw bookingError('Этот стол уже занят в выбранный вечер');
+    if (target.date === barEveningDate() && (await getOpenOccupancies()).some(o => o.tableId === target.tableId)) throw bookingError('Этот стол сейчас занят гостями');
+  }
   const map = {
     tableId: 'table_id', date: 'date', timeFrom: 'time_from', timeTo: 'time_to',
     guestsCount: 'guests_count', guestName: 'guest_name', guestPhone: 'guest_phone',
-    note: 'note', status: 'status',
+    note: 'note',
   };
   const patch = {};
-  for (const [k, v] of Object.entries(updates)) if (map[k]) patch[map[k]] = v;
-  const { data, error } = await supabase.from('reservations').update(patch).eq('id', id).select().single();
-  if (error) throw new Error('Бронь не найдена');
+  for (const [k, v] of Object.entries(updates)) if (Object.hasOwn(map, k)) patch[map[k]] = v;
+  const { data, error } = await supabase.from('reservations').update(patch)
+    .eq('id', id).eq('status', existing.status).eq('table_id', existing.tableId)
+    .eq('date', existing.date).eq('time_from', existing.timeFrom).select().maybeSingle();
+  if (error) {
+    if (error.code === '23505') throw bookingError('Этот стол уже занят в выбранный вечер');
+    throw new Error(error.message);
+  }
+  if (!data) throw bookingError('Заявка уже обработана — обновите список');
   return rowToRes(data);
 }
 
-export async function payDeposit(reservationId) {
+export async function payDeposit(reservationId, { guestId } = {}) {
+  if (!isDemoPaymentEnabled()) throw bookingError('Онлайн-оплата пока недоступна — способ внесения депозита уточните у бармена', 403);
   const { data: existing, error: e1 } = await supabase.from('reservations').select('*').eq('id', reservationId).single();
   if (e1 || !existing) throw new Error('Бронь не найдена');
+  if (!guestId || existing.guest_id !== guestId) throw bookingError('Нет доступа к этой брони', 403);
   const r = rowToRes(existing);
-  if (r.status === 'cancelled') throw new Error('Время на оплату истекло, бронь отменена — выберите стол заново');
-  if (r.depositStatus === 'paid_mock') throw new Error('Депозит уже оплачен');
+  if (!['pending', 'confirmed'].includes(r.status)) throw bookingError('Демо-оплата для этого статуса брони недоступна');
+  if (r.depositStatus === 'paid_mock') throw bookingError('Демонстрация уже выполнена — деньги не списывались');
   if (!r.depositPrice || r.depositPrice <= 0) throw new Error('Депозит не требуется');
   const txId = 'tx_mock_' + Date.now();
   // Статус брони НЕ меняем: подтверждает только бармен кнопкой (оплата
   // депозита — не подтверждение; правило «без автоподтверждений», 2026-07-04).
   const { data, error } = await supabase.from('reservations').update({
     deposit_status: 'paid_mock', deposit_transaction_id: txId,
-  }).eq('id', reservationId).select().single();
+  }).eq('id', reservationId).eq('guest_id', guestId).eq('status', r.status)
+    .eq('deposit_status', 'pending').select().maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) throw bookingError('Заявка уже обработана — обновите список');
   const res = rowToRes(data);
-  // Барменам видно, что депозит уже внесён — правим карточку заявки.
+  // Demonstration is visibly separate from receipt of a real deposit.
   // Если заявка ещё pending, кнопки подтверждения обязаны остаться на месте.
   if (res.staffMessageId) {
     getTablesMerged().then(tables => {
       const table = tables.find(t => t.id === res.tableId);
       const markup = res.status === 'pending' ? staffConfirmKeyboard(res.id) : undefined;
       return editStaffMessage(res.staffMessageId,
-        staffBookingText(res, table) + '\n\n💰 Депозит оплачен гостем.',
+        staffBookingText(res, table) + '\n\n🧪 Демо-оплата: деньги не получены, депозит не внесён.',
         { replyMarkup: markup });
     }).catch(() => {});
   }

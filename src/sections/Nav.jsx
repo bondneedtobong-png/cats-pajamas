@@ -35,6 +35,16 @@ function TelegramNavLink({ loggedIn, onClick, onRequestAuth, tx }) {
 // состояния тоже нет (в макете владельца ссылки не подсвечиваются).
 export default function Nav({ tx, lang, onLangToggle, onRequestAuth }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [, setAuthTick] = useState(0);
+  useEffect(() => {
+    const sync = () => setAuthTick(tick => tick + 1);
+    window.addEventListener('cpjc-auth-changed', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('cpjc-auth-changed', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
   // Not cached in state — read fresh on every render so it picks up a login
   // that just happened in AuthModal (which re-renders this via App.jsx's
   // authOpen state closing) without needing a page reload.
@@ -44,8 +54,10 @@ export default function Nav({ tx, lang, onLangToggle, onRequestAuth }) {
   const isAdmin = AuthService.isAdmin();
 
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
   }, [menuOpen]);
 
   const close = () => setMenuOpen(false);

@@ -373,7 +373,13 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
   useEffect(() => {
     const sync = () => setCurrentUser(AuthService.getCurrentUser());
     window.addEventListener('focus', sync);
-    return () => window.removeEventListener('focus', sync);
+    window.addEventListener('cpjc-auth-changed', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('focus', sync);
+      window.removeEventListener('cpjc-auth-changed', sync);
+      window.removeEventListener('storage', sync);
+    };
   }, []);
 
   // Статусы столов: подгрузка при открытии/смене даты + фоновый поллинг
@@ -406,6 +412,10 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
   }
 
   const planTx = {
+    tableWord: tx.bkTableWord,
+    sofaWord: tx.bkSofa,
+    seatsWord: tx.bkSeatsLabel,
+    statusReserved: tx.bkStatusReservedAt,
     statusVacant: tx.bkStatusVacant,
     statusReservedAt: tx.bkStatusReservedShort || tx.bkStatusReservedAt, // короткая метка на плане («к 20:00»)
     statusOccupied: tx.bkStatusOccupied,

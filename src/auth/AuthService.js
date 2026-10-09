@@ -1,10 +1,11 @@
-import { apiFetch, setToken, getToken } from '../api.js';
+import { apiFetch, setToken, getToken, notifyAuthChanged } from '../api.js';
 
 const USER_KEY = 'cpjc_user';
 
 function cacheUser(u) {
   if (u) localStorage.setItem(USER_KEY, JSON.stringify(u));
   else localStorage.removeItem(USER_KEY);
+  notifyAuthChanged();
 }
 
 /**
@@ -16,19 +17,25 @@ function cacheUser(u) {
 const AuthService = {
   /** Sync read of the cached user (UI convenience). */
   getCurrentUser() {
+    if (!getToken()) return null;
     try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); } catch { return null; }
   },
 
   isAuthenticated() { return !!getToken() && !!AuthService.getCurrentUser(); },
   isAdmin() { return AuthService.getCurrentUser()?.role === 'admin'; },
 
-  /** Phone OTP — step 1. Returns the dev code (demo only). */
+  /** Server-controlled login modes; phone mock exists only in local demo. */
+  async getLoginOptions() {
+    return apiFetch('/api/auth', { method: 'POST', auth: false, body: { action: 'login_options' } });
+  },
+
+  /** Local demo phone code — no SMS is sent. */
   async requestOtp(phone) {
     const d = await apiFetch('/api/auth', { method: 'POST', auth: false, body: { action: 'request_otp', phone } });
     return d.devCode;
   },
 
-  /** Phone OTP — step 2. Opens a session. */
+  /** Local demo phone code — step 2. Opens a guest session. */
   async verifyOtp(phone, code) {
     const d = await apiFetch('/api/auth', { method: 'POST', auth: false, body: { action: 'verify_otp', phone, code } });
     setToken(d.token); cacheUser(d.user);
@@ -63,10 +70,11 @@ const AuthService = {
 
   /** Re-validate the cached user against the server (optional refresh). */
   async refresh() {
-    if (!getToken()) return null;
+    if (!getToken()) { cacheUser(null); return null; }
     try {
       const d = await apiFetch('/api/auth', { method: 'POST', body: { action: 'me' } });
-      cacheUser(d.user || null);
+      if (!d.user) AuthService.logout();
+      else cacheUser(d.user);
       return d.user || null;
     } catch { return null; }
   },

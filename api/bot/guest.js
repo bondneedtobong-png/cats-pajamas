@@ -180,10 +180,11 @@ guestComposer.callbackQuery('my', async (ctx) => {
 guestComposer.callbackQuery(/^myx:(.+)$/, async (ctx) => {
   const id = ctx.match[1];
   try {
-    await cancelReservation(id, 'Отменено гостем через Telegram');
+    const user = await ensureTelegramUser(ctx.from);
+    await cancelReservation(id, 'Отменено гостем через Telegram', { guestId: user.id });
     await ctx.answerCallbackQuery({ text: 'Бронь отменена' });
   } catch (e) {
-    await ctx.answerCallbackQuery({ text: e.message, show_alert: true });
+    return ctx.answerCallbackQuery({ text: e.message, show_alert: true });
   }
   return ctx.editMessageText('Бронь отменена.', {
     reply_markup: new InlineKeyboard().text('📋 Мои брони', 'my').text('🏠 Меню', 'menu'),

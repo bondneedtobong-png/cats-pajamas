@@ -6,6 +6,7 @@
 // this process's — see HANDOFF_CATS_PAJAMAS.md "VPS-миграция".
 import 'dotenv/config'; // must run before any api/_lib/*.js reads process.env at import time
 import express from 'express';
+import { assertSessionConfigured } from './api/_lib/session.js';
 import { EVENT_UPLOADS_DIR } from './api/_lib/eventPhotos.js';
 
 import authHandler          from './api/auth.js';
@@ -21,6 +22,7 @@ import applicationsHandler  from './api/applications.js';
 import loyaltyHandler       from './api/loyalty.js';
 import guestsHandler        from './api/guests.js';
 
+assertSessionConfigured();
 const app = express();
 
 // Фолбэк-раздача фото событий (план v4 §B). На проде их отдаёт nginx

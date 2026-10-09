@@ -10,7 +10,11 @@
     "gallery": "node scripts/generate-gallery-manifest.mjs",
     "preview": "vite preview",
     "start:api": "node server.js",
-    "start:bot": "node bot-start.js"
+    "start:bot": "node bot-start.js",
+    "test:security": "node devtools/auth_security_test.mjs && node devtools/booking_security_test.mjs && node devtools/bar_menu_security_test.mjs && node devtools/schema_security_test.mjs",
+    "test:photos": "node devtools/event_photo_draft_test.mjs",
+    "test:photos:browser": "node devtools/event_photo_browser_test.mjs",
+    "test:a11y": "node devtools/floorplan_keyboard_test.mjs && node devtools/auth_dialog_test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",

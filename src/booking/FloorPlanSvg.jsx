@@ -8,7 +8,7 @@
  * HTML-оверлеями поверх (см. .bkw__glowbar) либо мгновенной сменой классов.
  * Стулья/обивка — декор (pointer-events: none), кликабельна форма стола.
  */
-import { ZONE_LABELS, WINDOWS, BAR_GEO, PLAN_VB } from './tablesConfig.js';
+import { ZONE_LABELS, WINDOWS, BAR_GEO, PLAN_VB, activeSeats } from './tablesConfig.js';
 import { CHAIR, chairsFor, boothParts } from './furniture.js';
 
 const noPtr = { pointerEvents: 'none' };
@@ -17,7 +17,10 @@ const noSel = { pointerEvents: 'none', userSelect: 'none' };
 const T_DEF = {
   statusVacant: 'Свободен',
   statusReservedAt: 'к',
+  statusReserved: 'Бронь к',
   statusOccupied: 'Занят',
+  tableWord: 'Стол',
+  sofaWord: 'Диван',
   barNote: 'Стойка не бронируется — просто приходите',
   entrance: 'ВХОД',
   seatsWord: 'мест',
@@ -27,6 +30,7 @@ const T_DEF = {
 };
 
 const BAR = BAR_GEO;
+const ZONE_KEY = { 'Основной зал': 'zoneMain', 'У окна': 'zoneWindow', 'Диваны': 'zoneSofas' };
 // Центр проёма-входа между двумя окнами нижней стены.
 const ENTRANCE_X = (WINDOWS[0].x + WINDOWS[0].w + WINDOWS[1].x) / 2;
 
@@ -63,11 +67,29 @@ function Furniture({ tbl }) {
 function TableShape({ tbl, selectedTableId, onSelect, tx }) {
   const { status, reservation } = tbl;
   const isSel = tbl.id === selectedTableId;
+  // Busy tables remain inspectable (booking details and admin settings).
+  // Only an explicit opt-out disables selection; no callback means a static plan.
+  const interactive = typeof onSelect === 'function';
+  const disabled = tbl.selectable === false;
   const statusText = status === 'vacant' ? tx.statusVacant
     : status === 'occupied' ? tx.statusOccupied
     : `${tx.statusReservedAt} ${reservation?.timeFrom || ''}`.trim();
+  const accessibleStatus = status === 'reserved'
+    ? `${tx.statusReserved} ${reservation?.timeFrom || ''}`.trim() : statusText;
+  const seatsCount = Number.isFinite(tbl.activeSeatsCount) ? tbl.activeSeatsCount : activeSeats(tbl);
+  const zone = tx[ZONE_KEY[tbl.zone]] || tbl.zone;
+  const label = `${tbl.type === 'booth' ? tx.sofaWord : tx.tableWord} №${tbl.num ?? ''}, ${zone}, ${seatsCount} ${tx.seatsWord}, ${accessibleStatus}`;
 
-  const handleClick = (e) => { e.stopPropagation(); onSelect(tbl.id); };
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (!disabled) onSelect(tbl.id);
+  };
+  const handleKeyDown = (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault(); // Space must select without scrolling the booking page.
+    e.stopPropagation();
+    if (!disabled && !e.repeat) onSelect(tbl.id);
+  };
   const cls = `fp-table fp-t--${status}${isSel ? ' fp-t--sel' : ''}`;
 
   // Центр стола + геометрия столешницы, ободка (глубина) и колец выделения.
@@ -109,7 +131,16 @@ function TableShape({ tbl, selectedTableId, onSelect, tx }) {
   }
 
   return (
-    <g className={cls} onClick={handleClick}>
+    <g
+      className={cls}
+      role={interactive ? 'button' : 'img'}
+      tabIndex={interactive ? (disabled ? -1 : 0) : undefined}
+      aria-label={label}
+      aria-pressed={interactive ? isSel : undefined}
+      aria-disabled={interactive && disabled ? true : undefined}
+      onClick={interactive ? handleClick : undefined}
+      onKeyDown={interactive ? handleKeyDown : undefined}
+    >
       <Furniture tbl={tbl} />
       {shape}
       {seams && (

@@ -56,8 +56,8 @@ const BookingService = {
     const d = await apiFetch('/api/reservations', { method: 'PATCH', body: { id, action: 'cancel', reason } });
     return d.reservation;
   },
-  async updateReservationStatus(id, status) {
-    const d = await apiFetch('/api/reservations', { method: 'PATCH', body: { id, action: 'status', status } });
+  async updateReservationStatus(id, status, fromStatus) {
+    const d = await apiFetch('/api/reservations', { method: 'PATCH', body: { id, action: 'status', status, fromStatus } });
     return d.reservation;
   },
   async updateReservation(id, updates) {

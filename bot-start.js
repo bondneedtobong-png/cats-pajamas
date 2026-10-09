@@ -4,8 +4,10 @@
 // as the webhook version — logic is untouched, only the transport differs.
 import 'dotenv/config'; // must run before api/bot.js reads process.env at import time
 import { buildBot } from './api/bot.js';
+import { assertSessionConfigured } from './api/_lib/session.js';
 import { autoSeatDueReservations, remindStalePendingBookings } from './api/_lib/booking.js';
 
+assertSessionConfigured();
 const bot = buildBot();
 
 bot.catch((err) => console.error('[bot-start] unhandled error:', err));

@@ -5,6 +5,7 @@ module.exports = {
     {
       name: 'cats-api',
       script: 'server.js',
+      env: { NODE_ENV: 'production' },
       time: true,
       autorestart: true,
       max_restarts: 10,
@@ -13,6 +14,7 @@ module.exports = {
     {
       name: 'cats-bot',
       script: 'bot-start.js',
+      env: { NODE_ENV: 'production' },
       time: true,
       autorestart: true,
       max_restarts: 10,

@@ -722,12 +722,14 @@
   --st-reserved: var(--gold, #B08900);
   --st-occupied: #7C6480;
   --fp-ink:      var(--text, #C6BFB5);
+  --fp-focus-width: 2px;
 }
 
 /* ВАЖНО: внутри .fp-svg НЕТ ни одной animation/transition — любое изменение
    внутри SVG перерисовывает план на CPU каждый кадр (профилировано: на слабых
    машинах это фризы). Hover мгновенный, пульс стойки — HTML-оверлей .bkw__glowbar. */
-.fp-table { cursor: pointer; }
+.fp-table[role="button"] { cursor: pointer; }
+.fp-table[aria-disabled="true"] { cursor: default; }
 .fp-t--vacant   { --tbl: var(--st-vacant); }
 .fp-t--reserved { --tbl: var(--st-reserved); }
 .fp-t--occupied { --tbl: var(--st-occupied); opacity: 0.5; } /* занято — приглушено, меньше шума */
@@ -755,7 +757,16 @@
   stroke-width: 30;
 }
 /* Ховер меняет только заливку (мгновенно, без transition — правило .fp-svg) */
-.fp-table:hover .fp-t-shape { fill: color-mix(in srgb, var(--tbl) 22%, transparent); }
+.fp-table[role="button"]:not([aria-disabled="true"]):hover .fp-t-shape { fill: color-mix(in srgb, var(--tbl) 22%, transparent); }
+
+/* Keyboard focus uses a firm brand outline at every plan scale. SVG strokes
+   do not change layout; no animation/transition is introduced inside the plan. */
+.fp-table[role="button"]:focus-visible { outline: none; opacity: 1; }
+.fp-table[role="button"]:focus-visible .fp-t-shape {
+  stroke: var(--fp-ink);
+  stroke-width: var(--fp-focus-width);
+  vector-effect: non-scaling-stroke;
+}
 
 /* Выбранный стол — двойное кольцо (наружное тусклое + внутреннее чёткое) */
 .fp-t--sel { opacity: 1; }

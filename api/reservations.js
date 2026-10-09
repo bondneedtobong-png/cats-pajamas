@@ -2,7 +2,7 @@ import { readBody, ok, badRequest, unauthorized, forbidden, serverError, applyCo
 import { getUser } from './_lib/session.js';
 import {
   getReservations, createReservation, cancelReservation,
-  updateReservationStatus, updateReservation, payDeposit,
+  updateReservationStatus, updateReservation, payDeposit, isDemoPaymentEnabled,
 } from './_lib/booking.js';
 
 export default async function handler(req, res) {
@@ -59,26 +59,25 @@ export default async function handler(req, res) {
           const own = (await getReservations({ guestId: user.id })).some(r => r.id === id);
           if (!own) return forbidden(res);
         }
-        return ok(res, { reservation: await cancelReservation(id, body.reason || '') });
+        return ok(res, { reservation: await cancelReservation(id, body.reason || '', {
+          guestId: user.id, staffOverride: user.role === 'admin', fromStatus: body.fromStatus,
+        }) });
       }
       if (action === 'pay') {
-        // Депозит оплачивает сам гость из ЛК (демо-оплата); админ — как фолбэк
-        // «оплатили на месте». Гость может платить только по своей брони.
-        if (user.role !== 'admin') {
-          const own = (await getReservations({ guestId: user.id })).some(r => r.id === id);
-          if (!own) return forbidden(res);
-        }
-        return ok(res, { reservation: await payDeposit(id) });
+        if (!isDemoPaymentEnabled()) return forbidden(res, 'Онлайн-оплата пока недоступна — способ внесения депозита уточните у бармена');
+        return ok(res, { reservation: await payDeposit(id, { guestId: user.id }) });
       }
       // status / transfer — admin only
       if (user.role !== 'admin') return forbidden(res);
-      if (action === 'status') return ok(res, { reservation: await updateReservationStatus(id, body.status) });
+      if (action === 'status') return ok(res, { reservation: await updateReservationStatus(id, body.status, { fromStatus: body.fromStatus }) });
       if (action === 'update') return ok(res, { reservation: await updateReservation(id, body.updates || {}) });
       return badRequest(res, 'Неизвестное действие');
     }
 
     return badRequest(res, 'Метод не поддерживается');
   } catch (e) {
+    if (e.statusCode === 403) return forbidden(res, e.message);
+    if (e.statusCode === 400) return badRequest(res, e.message);
     if (/обязательн|занят|не найдена|не требуется|уже оплачен|выбран|уже прошло|уже есть|нет на плане|уже отменена|финальном статусе/.test(e.message)) return badRequest(res, e.message);
     return serverError(res, e);
   }

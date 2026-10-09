@@ -25,8 +25,8 @@ export async function performConfirm(id, who) {
   }
   getGuestTelegramId(r.guestId).then(async (tgId) => {
     if (!tgId) return;
-    const depLine = r.depositPrice > 0 && r.depositStatus !== 'paid_mock'
-      ? `💰 Депозит ${r.depositPrice} ₽ — оплатите на сайте в «Мои брони» (засчитывается в счёт заказа).\n`
+    const depLine = r.depositPrice > 0
+      ? `💰 Депозит ${r.depositPrice} ₽ — способ внесения уточните у бармена. Онлайн-оплата пока недоступна.\n`
       : '';
     const caption = `✅ *Бронь подтверждена!*\n\nЖдём вас ${fmtDate(r.date)} к ${r.timeFrom}.\n🪑 ${tableGuestLabel(table)}\n${depLine}\n`
       + 'Передумаете — отмените в «📋 Мои брони» или на сайте.';
@@ -39,14 +39,14 @@ export async function performConfirm(id, who) {
   return r;
 }
 
-export async function performReject(id, reason, who) {
-  const r = await cancelReservation(id, reason, { editStaffMessage: false });
+export async function performReject(id, reason, who, fromStatus = 'pending') {
+  const r = await cancelReservation(id, reason, { editStaffMessage: false, staffOverride: true, fromStatus });
   const table = await findTable(r.tableId);
   if (r.staffMessageId) {
     editStaffMessage(r.staffMessageId, staffBookingText(r, table) + `\n\n❌ Отклонил ${who}: ${escapeMd(reason)}`).catch(() => {});
   }
   getGuestTelegramId(r.guestId).then(tgId => tgId && notifyGuestTg(tgId,
-    `😿 *Бронь не подтверждена*\n\n${fmtDate(r.date)} к ${r.timeFrom} — ${escapeMd(reason.toLowerCase())}.\n\n`
+    `😿 *${fromStatus === 'pending' ? 'Бронь не подтверждена' : 'Бронь отменена'}*\n\n${fmtDate(r.date)} к ${r.timeFrom} — ${escapeMd(reason.toLowerCase())}.\n\n`
     + 'Попробуйте другое время или другой стол. И помните: барная стойка не бронируется — за ней место найдётся, просто приходите 🎷',
   )).catch(() => {});
   return r;
@@ -112,7 +112,7 @@ async function admDetailContent(id) {
   if (r.cancellationReason) lines.push(`❕ Причина отмены: ${escapeMd(r.cancellationReason)}`);
   const kb = new InlineKeyboard();
   if (r.status === 'pending')   kb.text('✅ Подтвердить', `admok:${id}`).text('❌ Отклонить', `admno:${id}`).row();
-  if (r.status === 'confirmed') kb.text('🙋 Гости пришли', `admseat:${id}`).text('❌ Отменить', `admno:${id}`).row();
+  if (r.status === 'confirmed') kb.text('🙋 Гости пришли', `admseat:${id}`).text('❌ Отменить', `admcancel:${id}`).row();
   if (r.status === 'seated')    kb.text('🏁 Гости ушли', `admdone:${id}`).text('🚫 Не пришли', `admnoshow:${id}`).row();
   kb.text('‹ К списку', 'adm').text('🏠 Меню', 'adminmenu');
   return { text: lines.join('\n'), kb };
@@ -150,6 +150,10 @@ staffReservationsComposer.callbackQuery(/^admok:(.+)$/, (ctx) => admAction(ctx, 
 
 staffReservationsComposer.callbackQuery(/^admno:(.+)$/, (ctx) => admAction(ctx, ctx.match[1],
   () => performReject(ctx.match[1], 'Отменена персоналом', staffName(ctx.from)),
+  'Отменено — гость получил уведомление'));
+
+staffReservationsComposer.callbackQuery(/^admcancel:(.+)$/, (ctx) => admAction(ctx, ctx.match[1],
+  () => performReject(ctx.match[1], 'Отменена персоналом', staffName(ctx.from), 'confirmed'),
   'Отменено — гость получил уведомление'));
 
 staffReservationsComposer.callbackQuery(/^admseat:(.+)$/, (ctx) => admAction(ctx, ctx.match[1],

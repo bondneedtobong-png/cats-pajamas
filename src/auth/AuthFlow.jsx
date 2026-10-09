@@ -39,7 +39,7 @@ function PhoneStep({ onOtpSent }) {
       </div>
       {error && <div className="auth-error">{error}</div>}
       <button className="auth-btn" type="submit" disabled={loading || !phone.trim()}>
-        {loading ? 'Отправляем…' : 'Получить код'}
+        {loading ? 'Создаём…' : 'Получить демо-код'}
       </button>
     </form>
   );
@@ -70,19 +70,19 @@ function OtpStep({ phone, devCode, onSuccess, onBack }) {
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <p className="auth-hint">
-        Код отправлен на номер, оканчивающийся на <strong>…{maskedPhone}</strong>
+        Локальная демонстрация для номера <strong>…{maskedPhone}</strong>. SMS не отправляется.
       </p>
 
       {/* Dev-mode mock code display */}
       {devCode && (
         <div className="auth-dev-code">
-          <span className="auth-dev-code__lbl">DEV — ваш код:</span>
+          <span className="auth-dev-code__lbl">Локальный демо-код:</span>
           <span className="auth-dev-code__val">{devCode}</span>
         </div>
       )}
 
       <div className="auth-field">
-        <label className="auth-label">КОД ИЗ SMS</label>
+        <label className="auth-label">ДЕМО-КОД</label>
         <input
           className="auth-input auth-input--code"
           type="text"
@@ -206,9 +206,9 @@ function TelegramLoginStep({ onSuccess, onSwitchToPhone }) {
         </>
       )}
 
-      {state === 'idle' && (
+      {state === 'idle' && onSwitchToPhone && (
         <button type="button" className="auth-link" onClick={onSwitchToPhone}>
-          Войти по номеру телефона
+          Локальная демонстрация входа по телефону
         </button>
       )}
     </div>
@@ -222,6 +222,14 @@ export default function AuthFlow({ onSuccess, subtitle = 'Для брониро�
   const [step,    setStep]    = useState('telegram');
   const [phone,   setPhone_]  = useState('');
   const [devCode, setDevCode] = useState('');
+  const [demoOtpEnabled, setDemoOtpEnabled] = useState(false);
+  useEffect(() => {
+    let active = true;
+    AuthService.getLoginOptions().then(options => {
+      if (active) setDemoOtpEnabled(options.demoOtpEnabled === true);
+    }).catch(() => { /* Telegram is the safe default if options are unavailable. */ });
+    return () => { active = false; };
+  }, []);
 
   function handleOtpSent(ph, code) {
     setPhone_(ph);
@@ -235,17 +243,17 @@ export default function AuthFlow({ onSuccess, subtitle = 'Для брониро�
         {step === 'otp' ? 'Подтверждение' : 'Войти или зарегистрироваться'}
       </h1>
       <p className="auth-sub">
-        {step === 'otp' ? 'Введите код из SMS' : subtitle}
+        {step === 'otp' ? 'Введите локальный демо-код' : subtitle}
       </p>
 
       {step === 'telegram' && (
         <TelegramLoginStep
           onSuccess={onSuccess}
-          onSwitchToPhone={() => setStep('phone')}
+          onSwitchToPhone={demoOtpEnabled ? () => setStep('phone') : undefined}
         />
       )}
 
-      {step === 'phone' && (
+      {step === 'phone' && demoOtpEnabled && (
         <>
           <PhoneStep onOtpSent={handleOtpSent} />
           <button type="button" className="auth-link" onClick={() => setStep('telegram')}>
@@ -254,7 +262,7 @@ export default function AuthFlow({ onSuccess, subtitle = 'Для брониро�
         </>
       )}
 
-      {step === 'otp' && (
+      {step === 'otp' && demoOtpEnabled && (
         <OtpStep
           phone={phone}
           devCode={devCode}

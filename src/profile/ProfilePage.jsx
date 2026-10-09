@@ -36,7 +36,7 @@ const STATUS_LABELS = {
 
 const DEPOSIT_LABELS = {
   pending:            'ожидает оплаты',
-  paid_mock:          'оплачен',
+  paid_mock:          'демо, деньги не списаны',
   refunded:           'возвращён',
   partially_retained: 'частично удержан',
 };
@@ -311,11 +311,12 @@ function ReservationCard({ r, featured = false, onCancel, onPay, busyCancel, bus
       {r.depositPrice > 0 && (
         <div className="prof-res-card__deposit">
           <span>Депозит {r.depositPrice} ₽ · {DEPOSIT_LABELS[r.depositStatus] || r.depositStatus}</span>
-          {r.depositStatus === 'pending' && (
+          {r.depositStatus === 'pending' && r.demoPaymentAvailable && ['pending', 'confirmed'].includes(r.status) && (
             <button className="prof-pay-btn" onClick={() => onPay(r)} disabled={busyPay}>
-              {busyPay ? 'Оплачиваем…' : `Оплатить ${r.depositPrice} ₽`}
+              {busyPay ? 'Проверяем демо…' : `Демо-оплата ${r.depositPrice} ₽`}
             </button>
           )}
+          {r.depositStatus === 'pending' && !r.demoPaymentAvailable && <span>Способ внесения уточните у бармена. Онлайн-оплата пока недоступна.</span>}
         </div>
       )}
 
@@ -371,6 +372,16 @@ export default function ProfilePage() {
     loadLoyalty();
   }, []);
 
+  useEffect(() => {
+    const syncAuth = () => {
+      const current = AuthService.getCurrentUser();
+      setUser(current);
+      if (!current) navigate('/auth?next=/profile', { replace: true });
+    };
+    window.addEventListener('cpjc-auth-changed', syncAuth);
+    return () => window.removeEventListener('cpjc-auth-changed', syncAuth);
+  }, [navigate]);
+
   // Старые deep-link'и из Mini App-хаба (/profile?tab=loyalty) вкладок больше
   // не находят — прокручиваем к соответствующей плитке, чтобы ссылки в боте и
   // в /app продолжали вести туда, куда обещают.
@@ -421,16 +432,16 @@ export default function ProfilePage() {
   // подтверждение брони это НЕ заменяет, его делает бармен.
   async function handlePayDeposit(r) {
     const ok = await confirm({
-      title: 'Оплатить депозит?',
-      message: `Депозит ${r.depositPrice} ₽ за стол ${r.tableId}. Демо-оплата: спишется мгновенно и засчитается в счёт заказа при визите.`,
-      confirmLabel: `Оплатить ${r.depositPrice} ₽`,
+      title: 'Проверить демо-оплату?',
+      message: `Демонстрация депозита ${r.depositPrice} ₽ за стол ${r.tableId}. Деньги не списываются, депозит не вносится и не засчитывается в счёт заказа.`,
+      confirmLabel: 'Запустить демо',
     });
     if (!ok) return;
     setPayingId(r.id);
     try {
       await BookingService.payDeposit(r.id);
       loadReservations();
-      toast.success('Депозит оплачен — барменам уже видно');
+      toast.success('Демо завершено. Деньги не списаны, депозит не внесён.');
     } catch (e) {
       toast.error(e.message);
     } finally {

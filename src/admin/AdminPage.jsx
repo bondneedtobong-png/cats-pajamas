@@ -226,7 +226,7 @@ function TabReservations({ adminId }) {
 
   async function handleStatus(id, newStatus) {
     try {
-      await BookingService.updateReservationStatus(id, newStatus);
+      await BookingService.updateReservationStatus(id, newStatus, reservations.find(r => r.id === id)?.status);
       setTick(n => n + 1);
     } catch (e) {
       toast.error(e.message);
@@ -303,7 +303,7 @@ function TabReservations({ adminId }) {
                         )}
                         {isActive && (
                           <>
-                            <button className="adm-act-btn adm-act-btn--move" onClick={() => setTransferRes(r)} title="Перенести">⇄</button>
+                            <button className="adm-act-btn adm-act-btn--move" onClick={() => setTransferRes(r)} disabled={r.status === 'seated'} title={r.status === 'seated' ? 'Перенос после посадки пока недоступен' : 'Перенести'} aria-label={r.status === 'seated' ? 'Перенос после посадки пока недоступен' : 'Перенести'}>⇄</button>
                             <button className="adm-act-btn adm-act-btn--del" onClick={() => handleCancelClick(r.id)} title="Отменить">✕</button>
                           </>
                         )}
@@ -555,88 +555,161 @@ function EventModal({ initial, onSave, onClose }) {
   const [saving,      setSaving]      = useState(false);
   const [uploading,   setUploading]   = useState(false);
   const eventId = useRef(initial?.id || genEventId());
+  const originalPhotos = useRef(new Set(photos));
+  const uploadedPhotos = useRef(new Set());
+  const draftPhotos = useRef(photos);
+  const cleanupPending = useRef(new Set());
+  const committed = useRef(false);
+  const canceling = useRef(false);
+  const operation = useRef(false);
 
-  async function handleFiles(fileList) {
-    setErr('');
-    const files = Array.from(fileList || []);
-    for (const file of files) {
-      if (photos.length >= MAX_EVENT_PHOTOS) { setErr(`Не больше ${MAX_EVENT_PHOTOS} фото`); break; }
-      if (file.size > 10 * 1024 * 1024) { setErr(`${file.name}: больше 10 МБ`); continue; }
-      setUploading(true);
+  function updatePhotos(next) {
+    draftPhotos.current = next;
+    setPhotos(next);
+  }
+
+  function ownPhoto(url) {
+    return url.startsWith(`/uploads/events/${eventId.current}/`);
+  }
+
+  async function cleanupPhotos() {
+    const errors = [];
+    for (const url of cleanupPending.current) {
       try {
-        const base64 = await new Promise((res, rej) => {
-          const fr = new FileReader();
-          fr.onload = () => res(fr.result);
-          fr.onerror = rej;
-          fr.readAsDataURL(file);
-        });
-        const { url } = await EventsService.uploadPhoto(eventId.current, base64);
-        setPhotos(prev => [...prev, url]);
+        await EventsService.deletePhoto(eventId.current, url);
+        cleanupPending.current.delete(url);
       } catch (ex) {
-        setErr(ex.message);
-      } finally {
-        setUploading(false);
+        errors.push(ex.message);
       }
     }
+    if (errors.length) throw new Error(errors.join('; '));
   }
 
-  function addUrl() {
-    const u = urlDraft.trim();
-    if (!u) return;
-    if (photos.length >= MAX_EVENT_PHOTOS) { setErr(`Не больше ${MAX_EVENT_PHOTOS} фото`); return; }
-    setPhotos(prev => [...prev, u]);
-    setUrlDraft('');
-  }
-
-  function removePhoto(url) {
-    setPhotos(prev => prev.filter(p => p !== url));
-    if (url.startsWith('/uploads/events/')) EventsService.deletePhoto(eventId.current, url).catch(() => {});
-  }
-
-  function makeFirst(url) {
-    setPhotos(prev => [url, ...prev.filter(p => p !== url)]);
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setErr('');
+  async function handleClose() {
+    if (operation.current) return;
+    // After a successful save all referenced uploads belong to the event.
+    if (committed.current) { onClose(); return; }
+    operation.current = true;
     setSaving(true);
+    setErr('');
+    // Once cancellation starts, successfully deleted uploads cannot be saved
+    // again. Keep the draft locked and retry only the unfinished cleanup.
+    if (!canceling.current) {
+      canceling.current = true;
+      cleanupPending.current = new Set([...uploadedPhotos.current].filter(url => ownPhoto(url) && !originalPhotos.current.has(url)));
+    }
     try {
-      // id передаём для нового события (папка фото уже названа так же).
-      await onSave({ id: eventId.current, title, date, time, description, imageUrls: photos, channelPostUrl: postUrl, active });
+      await cleanupPhotos();
+      onClose();
     } catch (ex) {
-      setErr(ex.message);
+      setErr(`Не удалось удалить загруженные фото: ${ex.message}. Повторите закрытие.`);
+    } finally {
+      operation.current = false;
       setSaving(false);
     }
   }
 
+  async function handleFiles(fileList) {
+    if (operation.current || committed.current || canceling.current) return;
+    operation.current = true;
+    setUploading(true);
+    setErr('');
+    const files = Array.from(fileList || []);
+    try {
+      for (const file of files) {
+        if (draftPhotos.current.length >= MAX_EVENT_PHOTOS) { setErr(`Не больше ${MAX_EVENT_PHOTOS} фото`); break; }
+        if (file.size > 10 * 1024 * 1024) { setErr(`${file.name}: больше 10 МБ`); continue; }
+        try {
+          const base64 = await new Promise((res, rej) => {
+            const fr = new FileReader();
+            fr.onload = () => res(fr.result);
+            fr.onerror = rej;
+            fr.readAsDataURL(file);
+          });
+          const { url } = await EventsService.uploadPhoto(eventId.current, base64);
+          uploadedPhotos.current.add(url);
+          updatePhotos([...draftPhotos.current, url]);
+        } catch (ex) {
+          setErr(ex.message);
+        }
+      }
+    } finally {
+      operation.current = false;
+      setUploading(false);
+    }
+  }
+
+  function addUrl() {
+    if (operation.current || committed.current || canceling.current) return;
+    const u = urlDraft.trim();
+    if (!u) return;
+    if (draftPhotos.current.length >= MAX_EVENT_PHOTOS) { setErr(`Не больше ${MAX_EVENT_PHOTOS} фото`); return; }
+    if (!draftPhotos.current.includes(u)) updatePhotos([...draftPhotos.current, u]);
+    setUrlDraft('');
+  }
+
+  function removePhoto(url) {
+    if (operation.current || committed.current || canceling.current) return;
+    updatePhotos(draftPhotos.current.filter(p => p !== url));
+  }
+
+  function makeFirst(url) {
+    if (operation.current || committed.current || canceling.current) return;
+    updatePhotos([url, ...draftPhotos.current.filter(p => p !== url)]);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (operation.current || canceling.current) return;
+    operation.current = true;
+    setErr('');
+    setSaving(true);
+    try {
+      if (!committed.current) {
+        // Publish the photo list before deleting any excluded original files.
+        const saved = await onSave({ id: eventId.current, title, date, time, description, imageUrls: draftPhotos.current, channelPostUrl: postUrl, active });
+        committed.current = true;
+        const retained = new Set(saved?.imageUrls || draftPhotos.current);
+        cleanupPending.current = new Set([...originalPhotos.current, ...uploadedPhotos.current].filter(url => ownPhoto(url) && !retained.has(url)));
+      }
+      await cleanupPhotos();
+      onClose();
+    } catch (ex) {
+      setErr(committed.current ? `Событие сохранено, но не удалось удалить лишние фото: ${ex.message}. Можно повторить очистку или закрыть окно.` : ex.message);
+    } finally {
+      operation.current = false;
+      setSaving(false);
+    }
+  }
+
+  const locked = saving || committed.current || canceling.current;
   const thumb = (u) => (u.endsWith('.webp') ? u.replace(/\.webp$/, '.thumb.webp') : u);
 
   return (
-    <div className="adm-modal-overlay" onClick={onClose}>
+    <div className="adm-modal-overlay" onClick={handleClose}>
       <div className="adm-modal" onClick={e => e.stopPropagation()}>
         <div className="adm-modal__head">
           <span className="adm-modal__title">{initial ? 'Редактировать событие' : 'Новое событие'}</span>
-          <button className="adm-modal__close" onClick={onClose}>✕</button>
+          <button className="adm-modal__close" disabled={saving || uploading} onClick={handleClose}>✕</button>
         </div>
         <form className="adm-modal__form" onSubmit={handleSubmit}>
           <div className="adm-form-field">
             <label className="adm-form-lbl">НАЗВАНИЕ *</label>
-            <input className="adm-form-input" type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="Живая музыка" />
+            <input className="adm-form-input" type="text" required disabled={locked} value={title} onChange={e => setTitle(e.target.value)} placeholder="Живая музыка" />
           </div>
           <div className="adm-form-row">
             <div className="adm-form-field">
               <label className="adm-form-lbl">ДАТА *</label>
-              <input className="adm-form-input" type="date" required value={date} onChange={e => setDate(e.target.value)} />
+              <input className="adm-form-input" type="date" required disabled={locked} value={date} onChange={e => setDate(e.target.value)} />
             </div>
             <div className="adm-form-field">
               <label className="adm-form-lbl">ВРЕМЯ</label>
-              <input className="adm-form-input" type="time" value={time} onChange={e => setTime(e.target.value)} />
+              <input className="adm-form-input" type="time" disabled={locked} value={time} onChange={e => setTime(e.target.value)} />
             </div>
           </div>
           <div className="adm-form-field">
             <label className="adm-form-lbl">ОПИСАНИЕ</label>
-            <textarea className="adm-form-input adm-form-textarea" rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Ансамбль Дмитрия Дмитриева — джаз прямо на сцене бара" />
+            <textarea className="adm-form-input adm-form-textarea" rows={3} disabled={locked} value={description} onChange={e => setDescription(e.target.value)} placeholder="Ансамбль Дмитрия Дмитриева — джаз прямо на сцене бара" />
           </div>
 
           <div className="adm-form-field">
@@ -648,8 +721,8 @@ function EventModal({ initial, onSave, onClose }) {
                     <img src={thumb(u)} alt="" />
                     {i === 0 && <span className="adm-evphoto__badge">Обложка</span>}
                     <div className="adm-evphoto__acts">
-                      {i !== 0 && <button type="button" title="Сделать обложкой" onClick={() => makeFirst(u)}>★</button>}
-                      <button type="button" title="Удалить" onClick={() => removePhoto(u)}>✕</button>
+                      {i !== 0 && <button type="button" title="Сделать обложкой" disabled={locked || uploading} onClick={() => makeFirst(u)}>★</button>}
+                      <button type="button" title="Удалить" disabled={locked || uploading} onClick={() => removePhoto(u)}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -658,21 +731,21 @@ function EventModal({ initial, onSave, onClose }) {
             <div className="adm-evphotos__add">
               <label className="adm-btn adm-btn--ghost">
                 {uploading ? 'Загрузка…' : '📷 Загрузить файлом'}
-                <input type="file" accept="image/*" multiple hidden disabled={uploading || photos.length >= MAX_EVENT_PHOTOS}
+                <input type="file" accept="image/*" multiple hidden disabled={locked || uploading || photos.length >= MAX_EVENT_PHOTOS}
                   onChange={e => { handleFiles(e.target.files); e.target.value = ''; }} />
               </label>
             </div>
             <div className="adm-evphotos__url">
-              <input className="adm-form-input" type="text" value={urlDraft} onChange={e => setUrlDraft(e.target.value)}
+              <input className="adm-form-input" type="text" disabled={locked || uploading} value={urlDraft} onChange={e => setUrlDraft(e.target.value)}
                 placeholder="…или вставьте ссылку на фото" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }} />
-              <button type="button" className="adm-btn adm-btn--ghost" onClick={addUrl}>Добавить</button>
+              <button type="button" className="adm-btn adm-btn--ghost" disabled={locked || uploading} onClick={addUrl}>Добавить</button>
             </div>
             <p className="adm-evphotos__hint">Первое фото — обложка карточки. 2+ фото → витрина с лайтбоксом на сайте.</p>
           </div>
 
           <div className="adm-form-field">
             <label className="adm-form-lbl">ССЫЛКА НА ПОСТ В КАНАЛЕ</label>
-            <input className="adm-form-input" type="url" value={postUrl} onChange={e => setPostUrl(e.target.value)}
+            <input className="adm-form-input" type="url" disabled={locked} value={postUrl} onChange={e => setPostUrl(e.target.value)}
                    placeholder="https://t.me/catspajajam/123" />
             <p className="adm-evphotos__hint">
               Кнопка «Открыть пост в канале» в витрине на сайте. У событий, опубликованных через бота, заполняется сама — здесь нужна только для заведённых руками.
@@ -680,12 +753,12 @@ function EventModal({ initial, onSave, onClose }) {
           </div>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'rgba(242,237,228,0.6)', cursor: 'pointer' }}>
-            <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
+            <input type="checkbox" disabled={locked} checked={active} onChange={e => setActive(e.target.checked)} />
             Показывать на сайте
           </label>
           {err && <div className="adm-error">{err}</div>}
-          <button className="adm-btn adm-btn--primary" type="submit" disabled={saving}>
-            {saving ? 'Сохраняем…' : 'Сохранить'}
+          <button className="adm-btn adm-btn--primary" type="submit" disabled={saving || uploading || canceling.current}>
+            {saving ? 'Подождите…' : committed.current ? 'Повторить очистку' : 'Сохранить'}
           </button>
         </form>
       </div>
@@ -705,11 +778,9 @@ function TabEvents() {
   }, [tick]);
 
   async function handleSave(data) {
-    if (editing) await EventsService.update(editing.id, data);
-    else await EventsService.create(data);
-    setShowModal(false);
-    setEditing(null);
+    const saved = editing ? await EventsService.update(editing.id, data) : await EventsService.create(data);
     setTick(n => n + 1);
+    return saved;
   }
 
   function handleDelete(ev) {
@@ -1841,6 +1912,15 @@ export default function AdminPage() {
   usePageMeta({ title: "Админ-панель — The Cat's Pajamas Club", noindex: true });
   const navigate  = useNavigate();
   const [user,    setUser]    = useState(null);
+  useEffect(() => {
+    const syncAuth = () => {
+      const current = AuthService.getCurrentUser();
+      setUser(current);
+      if (!current) navigate('/auth?next=/admin', { replace: true });
+    };
+    window.addEventListener('cpjc-auth-changed', syncAuth);
+    return () => window.removeEventListener('cpjc-auth-changed', syncAuth);
+  }, [navigate]);
   const [tab,     setTab]     = useState('reservations');
   const [checked, setChecked] = useState(false);
 

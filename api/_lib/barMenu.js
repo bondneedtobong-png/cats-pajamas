@@ -79,7 +79,8 @@ export function sanitizeBarMenu(payload) {
   const seen = new Set();
   groups.forEach((g, i) => {
     let id = g.id;
-    while (seen.has(id)) id = `${g.id}-${i}`;
+    let suffix = i;
+    while (seen.has(id)) id = `${g.id}-${suffix++}`;
     seen.add(id);
     g.id = id;
   });

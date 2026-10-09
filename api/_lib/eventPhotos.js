@@ -8,8 +8,8 @@ import path from 'path';
 // В БД (events.image_urls) пишем абсолютные веб-пути /uploads/events/<id>/<n>.webp —
 // их отдаёт nginx (^~ /uploads/events/ alias) или express.static-фолбэк server.js.
 //
-// Всё best-effort на удаление; сохранение бросает при сбое (вызывающий покажет
-// дружелюбную ошибку). Порядок фото — в массиве image_urls (БД), не в именах.
+// Ошибки удаления одного фото показываются редактором для повторной очистки.
+// Удаление папки целиком остаётся best-effort. Порядок — в image_urls (БД).
 
 export const EVENT_UPLOADS_DIR =
   process.env.EVENT_UPLOADS_DIR || path.resolve(process.cwd(), 'uploads-runtime/events');
@@ -29,12 +29,6 @@ function eventDir(eventId) {
 /** Публичный путь основного фото → путь его миниатюры (соглашение об именах). */
 export function thumbUrl(url) {
   return typeof url === 'string' ? url.replace(/\.webp$/, '.thumb.webp') : url;
-}
-
-/** Индекс из имени: /uploads/events/<id>/3.webp → 3 (или null). */
-function indexFromUrl(url) {
-  const m = String(url).match(/\/(\d+)\.webp$/);
-  return m ? Number(m[1]) : null;
 }
 
 /** Существующие индексы фото события (по файлам <n>.webp, без thumb). */
@@ -75,13 +69,16 @@ export async function saveEventPhoto(eventId, buffer) {
   return { url, thumbUrl: thumbUrl(url), index: n };
 }
 
-/** Удалить одно фото (основное + миниатюру) по его публичному пути. Best-effort. */
+/** Удалить одно принадлежащее событию фото; ошибки диска не скрываем. */
 export async function deleteEventPhoto(eventId, url) {
-  const n = indexFromUrl(url);
-  if (n == null) return;
+  const match = typeof url === 'string' && url.match(/^\/uploads\/events\/([a-zA-Z0-9_-]+)\/(0|[1-9]\d*)\.webp$/);
+  if (!match || match[1] !== String(eventId) || !Number.isSafeInteger(Number(match[2]))) {
+    throw new Error('Некорректная ссылка на фото события');
+  }
+  const n = Number(match[2]);
   const dir = eventDir(eventId);
-  await fs.rm(path.join(dir, `${n}.webp`), { force: true }).catch(() => {});
-  await fs.rm(path.join(dir, `${n}.thumb.webp`), { force: true }).catch(() => {});
+  await fs.rm(path.join(dir, `${n}.webp`), { force: true });
+  await fs.rm(path.join(dir, `${n}.thumb.webp`), { force: true });
 }
 
 /** Удалить все фото события (папку целиком). Best-effort — не роняет удаление события. */

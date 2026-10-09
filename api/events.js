@@ -2,6 +2,7 @@ import { readBody, ok, badRequest, forbidden, serverError, applyCors } from './_
 import { getUser } from './_lib/session.js';
 import { getEvents, createEvent, updateEvent, deleteEvent } from './_lib/events.js';
 import { saveEventPhoto, deleteEventPhoto, MAX_SOURCE_BYTES } from './_lib/eventPhotos.js';
+import { supabase } from './_lib/supabase.js';
 
 // Декод base64 (с data-URL префиксом или без) → Buffer, с проверкой размера.
 function decodeBase64Image(b64) {
@@ -50,6 +51,14 @@ export default async function handler(req, res) {
         }
         case 'delete_photo': {
           if (!body.eventId || !body.url) return badRequest(res, 'Не указан id или ссылка');
+          // Duplicated events share URLs. Also protect uploads from cancellation
+          // if a save committed but its HTTP response never reached the editor.
+          const [arrayRefs, legacyRefs] = await Promise.all([
+            supabase.from('events').select('id').contains('image_urls', [body.url]).limit(1),
+            supabase.from('events').select('id').eq('image_url', body.url).limit(1),
+          ]);
+          if (arrayRefs.error || legacyRefs.error) throw new Error('Не удалось проверить ссылки события');
+          if (arrayRefs.data?.length || legacyRefs.data?.length) return ok(res, { retained: true });
           await deleteEventPhoto(body.eventId, body.url);
           return ok(res, {});
         }

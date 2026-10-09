@@ -446,6 +446,7 @@ alter table public.reviews           enable row level security;
 alter table public.press_mentions    enable row level security;
 alter table public.team_members      enable row level security;
 alter table public.team_applications enable row level security;
+alter table public.booking_inquiries enable row level security;
 alter table public.wheel_spins        enable row level security;
 alter table public.event_rsvps        enable row level security;
 alter table public.loyalty_transactions enable row level security;

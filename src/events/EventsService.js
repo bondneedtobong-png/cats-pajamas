@@ -32,7 +32,7 @@ const EventsService = {
   async uploadPhoto(eventId, imageBase64) {
     return apiFetch('/api/events', { method: 'POST', body: { action: 'upload_photo', eventId, imageBase64 } });
   },
-  /** Удалить файл фото на сервере (best-effort). */
+  /** Удалить файл; сервер сохраняет фото с текущими ссылками из событий. */
   async deletePhoto(eventId, url) {
     return apiFetch('/api/events', { method: 'POST', body: { action: 'delete_photo', eventId, url } });
   },

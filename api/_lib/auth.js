@@ -5,8 +5,37 @@ import { issueToken, verifyToken, rowToUser } from './session.js';
 const OTP_TTL_MS = 5 * 60 * 1000;
 const LOGIN_TOKEN_TTL_MS = 10 * 60 * 1000;
 
-function genOtp() { return String(Math.floor(1000 + Math.random() * 9000)); }
+function genOtp() { return String(crypto.randomInt(1000, 10000)); }
 function genId() { return 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6); }
+
+function isLocalUrl(value) {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  } catch { return false; }
+}
+// This mock is only a local UI sandbox, never an SMS authentication provider.
+// Require both server opt-in and local site/database; unset NODE_ENV is closed.
+export function isDemoOtpEnabled() {
+  return ['development', 'test'].includes(process.env.NODE_ENV)
+    && process.env.AUTH_DEMO_OTP === 'true'
+    && isLocalUrl(process.env.PUBLIC_SITE_URL)
+    && isLocalUrl(process.env.SUPABASE_URL);
+}
+function denyDemoOtp() {
+  const error = new Error('Вход по телефону недоступен. Войдите через Telegram.');
+  error.status = 403;
+  return error;
+}
+async function demoPhoneUsers(phone) {
+  if (!isDemoOtpEnabled()) throw denyDemoOtp();
+  const { data, error } = await supabase.from('users').select('*').eq('phone', phone);
+  if (error) throw new Error('Не удалось проверить локальный аккаунт');
+  // Never map public mock proof to Telegram identities (owner/staff may have
+  // role=guest), privileged roles, or merge those identities into a demo user.
+  if (data?.some(user => user.role !== 'guest' || user.telegram_id)) throw denyDemoOtp();
+  return data || [];
+}
 
 // Единая форма номера — иначе один человек = несколько аккаунтов: гость вводит
 // «8 927…» на сайте (OTP) и делится «+7 927…» в боте, раньше это были разные
@@ -71,39 +100,32 @@ async function mergeUsersByPhone(keepUserId, normalizedPhone) {
 }
 
 export async function requestOtp(phone) {
+  if (!isDemoOtpEnabled()) throw denyDemoOtp();
   const normalized = normalizePhone(phone);
   if (normalized.length < 10) throw new Error('Введите корректный номер телефона');
+  await demoPhoneUsers(normalized);
   const code = genOtp();
-  await supabase.from('otps').upsert({
+  const { error } = await supabase.from('otps').upsert({
     phone: normalized, code, expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
   });
-  // === SMS provider integration point === (replace with real send)
-  console.log(`[OTP] +${normalized} -> ${code}`);
-  // devCode returned only so the demo UI can display it
+  if (error) throw new Error('Не удалось создать локальный демо-код');
   return { devCode: code };
 }
 
 export async function verifyOtp(phone, code) {
+  if (!isDemoOtpEnabled()) throw denyDemoOtp();
   const normalized = normalizePhone(phone);
+  const matches = await demoPhoneUsers(normalized);
   const { data: otp } = await supabase.from('otps').select('*').eq('phone', normalized).maybeSingle();
   if (!otp) throw new Error('Запросите код повторно');
-  if (new Date(otp.expires_at) < new Date()) throw new Error('Код истёк, запросите новый');
+  if (!Number.isFinite(Date.parse(otp.expires_at)) || Date.parse(otp.expires_at) <= Date.now()) throw new Error('Код истёк, запросите новый');
   if (otp.code !== String(code).trim()) throw new Error('Неверный код');
-  await supabase.from('otps').delete().eq('phone', normalized);
-
-  // Admin — только через Telegram (TELEGRAM_ADMIN_IDS, см. ensureTelegramUser).
-  // Вход по телефону находит существующего гостя по номеру. Если у гостя уже
-  // есть Telegram-аккаунт с этим номером — входим именно в него (а не плодим
-  // отдельный phone-only дубль): при нескольких совпадениях предпочитаем строку
-  // с telegram_id и вливаем остальные (см. дубли Кристины 2026-07-16).
-  const { data: matches } = await supabase.from('users').select('*').eq('phone', normalized);
-  let existing = null;
-  if (matches?.length) {
-    existing = matches.find(u => u.telegram_id) || matches[0];
-    if (matches.length > 1) {
-      await mergeUsersByPhone(existing.id, normalized).catch((e) => console.error('[auth] merge failed:', e.message));
-    }
-  }
+  const { data: consumed, error: consumeError } = await supabase.from('otps').delete()
+    .eq('phone', normalized).eq('code', otp.code).eq('expires_at', otp.expires_at)
+    .gt('expires_at', new Date(Date.now()).toISOString()).select('phone');
+  if (consumeError) throw new Error('Не удалось проверить локальный демо-код');
+  if (!consumed?.length) throw new Error('Запросите код повторно');
+  let existing = matches[0] || null;
   if (!existing) {
     const row = {
       id: genId(), name: '', phone: normalized, telegram_id: null,
@@ -159,10 +181,8 @@ export function isTelegramAdmin(tgId) {
 
 const STAFF_TG_IDS = (process.env.TELEGRAM_STAFF_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
 
-// Более узкая роль, чем isTelegramAdmin — только подтверждать/отклонять явку
-// по бронях и RSVP (кнопки в группе персонала), без доступа к /admin
-// (создание событий, рассылки, выдача призов). Админы неявно тоже персонал,
-// чтобы владелец не терял доступ к этим кнопкам.
+// Персонал из env имеет служебные права бота; роль веб-админки задаётся
+// отдельно. Администраторы неявно тоже персонал.
 export function isTelegramStaff(tgId) {
   return STAFF_TG_IDS.includes(String(tgId)) || isTelegramAdmin(tgId);
 }
@@ -209,15 +229,17 @@ export async function completeLoginToken(loginToken, tgUser, phone) {
   const { data: row } = await supabase.from('web_login_tokens').select('*').eq('token', loginToken).maybeSingle();
   if (!row) throw new Error('Ссылка для входа не найдена, попробуйте войти на сайте заново');
   if (row.status !== 'pending') throw new Error('Эта ссылка для входа уже использована');
-  if (new Date(row.expires_at) < new Date()) throw new Error('Ссылка для входа истекла, попробуйте войти на сайте заново');
+  if (!Number.isFinite(Date.parse(row.expires_at)) || Date.parse(row.expires_at) <= Date.now()) throw new Error('Ссылка для входа истекла, попробуйте войти на сайте заново');
 
   const user = await ensureTelegramUser(tgUser);
   if (!user.phone && phone) await setUserPhone(user.id, phone);
   const sessionToken = issueToken(user.id);
-  const { error } = await supabase.from('web_login_tokens')
+  const { data: completed, error } = await supabase.from('web_login_tokens')
     .update({ status: 'completed', telegram_id: String(tgUser.id), session_token: sessionToken })
-    .eq('token', loginToken);
-  if (error) throw new Error(error.message);
+    .eq('token', loginToken).eq('status', 'pending')
+    .gt('expires_at', new Date(Date.now()).toISOString()).select('token');
+  if (error) throw new Error('Не удалось завершить вход через Telegram');
+  if (!completed?.length) throw new Error('Ссылка для входа истекла или уже использована');
   return user;
 }
 
@@ -227,19 +249,25 @@ export async function checkLoginToken(token) {
   const { data: row } = await supabase.from('web_login_tokens').select('*').eq('token', token).maybeSingle();
   if (!row) return { status: 'not_found' };
 
-  if (row.status === 'pending' && new Date(row.expires_at) < new Date()) {
-    await supabase.from('web_login_tokens').update({ status: 'expired' }).eq('token', token);
+  if (!Number.isFinite(Date.parse(row.expires_at)) || Date.parse(row.expires_at) <= Date.now()) {
+    await supabase.from('web_login_tokens').delete().eq('token', token).eq('expires_at', row.expires_at);
     return { status: 'expired' };
   }
   if (row.status !== 'completed') return { status: row.status };
-
-  const userId = verifyToken(row.session_token);
+  // DELETE ... RETURNING is the atomic claim: concurrent pollers can select
+  // the same row but only one receives it from this mutation.
+  const { data: claimed, error } = await supabase.from('web_login_tokens').delete()
+    .eq('token', token).eq('status', 'completed')
+    .gt('expires_at', new Date(Date.now()).toISOString()).select('*');
+  if (error) throw new Error('Не удалось проверить вход через Telegram');
+  if (!claimed?.length) return { status: 'not_found' };
+  const sessionToken = claimed[0].session_token;
+  const userId = verifyToken(sessionToken);
   const { data: userRow } = userId
     ? await supabase.from('users').select('*').eq('id', userId).maybeSingle()
     : { data: null };
-  await supabase.from('web_login_tokens').delete().eq('token', token);
   if (!userRow) return { status: 'expired' };
-  return { status: 'completed', token: row.session_token, user: rowToUser(userRow) };
+  return { status: 'completed', token: sessionToken, user: rowToUser(userRow) };
 }
 
 // ─── Telegram Mini App (WebApp) — вход для /booking, открытого внутри бота ───
