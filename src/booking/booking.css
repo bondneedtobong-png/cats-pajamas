@@ -1712,3 +1712,16 @@ select option { background: #110E22; color: #F2EDE4; }
 @media (prefers-reduced-motion: reduce) {
   .bkw__chips--dates, .bkw__chips--time { scroll-behavior: auto; }
 }
+
+/* Readable alternative to the scaled floor labels. No new fixed layer:
+   booking header/nav/cookie banner retain their existing screen zones. */
+.bkw__table-list { display: none; }
+.bkw__selection { margin-top: 16px; padding: 16px; border: 1px solid var(--bkw-gold); }
+.bkw__selection p { margin: 0 0 8px; font-size: 14px; color: var(--bkw-text); line-height: 1.5; }
+.bkw__side:focus-visible { outline: 2px solid var(--bkw-gold); outline-offset: -2px; }
+@media (max-width: 900px) {
+  .bkw__table-list { display: grid; gap: 8px; margin-top: 16px; }
+  .bkw__table-option { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; min-height: 48px; padding: 8px 16px; background: var(--bkw-bg2); color: var(--bkw-text); border: 1px solid var(--bkw-border); font: inherit; font-size: 14px; line-height: 1.5; text-align: left; cursor: pointer; }
+  .bkw__table-option[aria-pressed="true"] { border-color: var(--bkw-gold); }
+  .bkw__table-option:focus-visible { outline: 2px solid var(--bkw-gold); outline-offset: 2px; }
+}

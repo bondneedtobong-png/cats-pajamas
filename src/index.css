@@ -3183,3 +3183,10 @@ html { scroll-behavior: smooth; }
   mix-blend-mode: overlay;
   opacity: .85;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__content { animation: none; opacity: 1; transform: none; }
+  .hero__curtain-wrap { display: none; }
+  .hero__curtain-l, .hero__curtain-r { animation: none; will-change: auto; }
+  .nav__mobile { transition: none; }
+}

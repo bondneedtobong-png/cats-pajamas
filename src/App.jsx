@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { HOME_META, usePageMeta } from './usePageMeta.js';
 import { translations } from './data.js';
 import Nav      from './sections/Nav.jsx';
 import Hero     from './sections/Hero.jsx';
@@ -38,6 +39,7 @@ const NotFoundPage     = lazy(() => import('./pages/NotFoundPage.jsx'));
 // который остаётся полностью рабочим отдельным маршрутом) — Booking.jsx и
 // PageBackdrop.jsx оставлены в репо неиспользуемыми, не удалены.
 function MainSite() {
+  usePageMeta(HOME_META);
   const [lang, setLang] = useState('ru');
   // Login opens as an overlay (see AuthModal) instead of navigating away to
   // /auth and losing scroll position — triggered from Nav's "Войти через

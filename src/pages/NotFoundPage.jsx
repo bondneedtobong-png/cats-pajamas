@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { usePageMeta } from '../usePageMeta.js';
 
 export default function NotFoundPage() {
-  usePageMeta({ title: "Страница не найдена — The Cat's Pajamas Club", noindex: true });
+  usePageMeta({ title: "Страница не найдена — The Cat's Pajamas Club", description: 'Такой страницы нет. Вернитесь на главную страницу The Cat\'s Pajamas Club, чтобы посмотреть барную карту или забронировать столик.', noindex: true });
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

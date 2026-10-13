@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import AuthService from '../auth/AuthService.js';
 
 // Telegram — единственный способ входа/регистрации на сайте (см. AuthModal).
@@ -35,6 +35,8 @@ function TelegramNavLink({ loggedIn, onClick, onRequestAuth, tx }) {
 // состояния тоже нет (в макете владельца ссылки не подсвечиваются).
 export default function Nav({ tx, lang, onLangToggle, onRequestAuth }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const burgerRef = useRef(null);
+  const menuId = useId();
   const [, setAuthTick] = useState(0);
   useEffect(() => {
     const sync = () => setAuthTick(tick => tick + 1);
@@ -57,7 +59,17 @@ export default function Nav({ tx, lang, onLangToggle, onRequestAuth }) {
     if (!menuOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previousOverflow; };
+    const onKeyDown = event => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        burgerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, [menuOpen]);
 
   const close = () => setMenuOpen(false);
@@ -97,13 +109,17 @@ export default function Nav({ tx, lang, onLangToggle, onRequestAuth }) {
         <button
           className={`nav__burger${menuOpen ? ' nav__burger--open' : ''}`}
           onClick={() => setMenuOpen(v => !v)}
-          aria-label="Меню"
+          ref={burgerRef}
+          type="button"
+          aria-expanded={menuOpen}
+          aria-controls={menuId}
+          aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
         >
           <span /><span /><span />
         </button>
       </nav>
 
-      <div className={`nav__mobile${menuOpen ? ' nav__mobile--open' : ''}`}>
+      <div id={menuId} className={`nav__mobile${menuOpen ? ' nav__mobile--open' : ''}`} inert={menuOpen ? undefined : ''} aria-hidden={!menuOpen}>
         <a href="#about"    className="nav__mobile-link u-glare" onClick={close}>{tx.navAbout}</a>
         <a href="#team"     className="nav__mobile-link u-glare" onClick={close}>{tx.navTeam}</a>
         <a href="#menu"     className="nav__mobile-link u-glare" onClick={close}>{tx.navMenu}</a>

@@ -255,3 +255,18 @@
   transition: color 0.15s, border-color 0.15s, transform 0.15s;
 }
 .auth-modal__close:hover { color: #F2EDE4; border-color: rgba(212,168,67,0.45); transform: rotate(90deg); }
+
+/* AMBER NIGHT surfaces and readable supporting copy in both entry points. */
+.auth-root { min-height: 100svh; background: var(--bg, #1C101A); color: var(--text, #C6BFB5); }
+.auth-card { background: var(--bg3, #140B12); border-color: var(--border, rgba(176,137,0,0.15)); }
+.auth-title, .auth-input { color: var(--text, #C6BFB5); }
+.auth-sub, .auth-hint, .auth-link, .auth-checking, .auth-label { color: var(--text, #C6BFB5); }
+.auth-label { font-size: 12px; letter-spacing: 1px; }
+.auth-link { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.auth-link:hover { color: var(--gold-hover, #CBA53A); }
+.auth-input:focus-visible, .auth-link:focus-visible { outline: 2px solid var(--gold-hover, #CBA53A); outline-offset: 2px; }
+.auth-btn { background: var(--gold, #B08900); color: var(--bg3, #140B12); transition: opacity 0.15s; }
+.auth-btn:hover:not(:disabled) { background: var(--gold-hover, #CBA53A); }
+.auth-btn--tg { background: var(--gold, #B08900); }
+.auth-btn--tg:hover:not(:disabled) { background: var(--gold-hover, #CBA53A); }
+@media (prefers-reduced-motion: reduce) { .auth-checking__spinner { animation: none; } }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import AuthService from './AuthService.js';
 
 const POLL_INTERVAL_MS = 2000;
@@ -6,6 +6,7 @@ const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
 // ─── Phone step ───────────────────────────────────────────────
 function PhoneStep({ onOtpSent }) {
+  const fieldId = useId();
   const [phone,   setPhone]   = useState('');
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
@@ -27,8 +28,12 @@ function PhoneStep({ onOtpSent }) {
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <div className="auth-field">
-        <label className="auth-label">НОМЕР ТЕЛЕФОНА</label>
+        <label className="auth-label" htmlFor={fieldId}>НОМЕР ТЕЛЕФОНА</label>
         <input
+          id={fieldId}
+          autoComplete="tel"
+          aria-invalid={!!error}
+          aria-describedby={error ? `${fieldId}-error` : undefined}
           className="auth-input"
           type="tel"
           placeholder="+7 (900) 000-00-00"
@@ -37,7 +42,7 @@ function PhoneStep({ onOtpSent }) {
           autoFocus
         />
       </div>
-      {error && <div className="auth-error">{error}</div>}
+      {error && <div className="auth-error" id={`${fieldId}-error`} role="alert">{error}</div>}
       <button className="auth-btn" type="submit" disabled={loading || !phone.trim()}>
         {loading ? 'Создаём…' : 'Получить демо-код'}
       </button>
@@ -47,6 +52,7 @@ function PhoneStep({ onOtpSent }) {
 
 // ─── OTP step ─────────────────────────────────────────────────
 function OtpStep({ phone, devCode, onSuccess, onBack }) {
+  const fieldId = useId();
   const [code,    setCode]    = useState('');
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
@@ -69,7 +75,7 @@ function OtpStep({ phone, devCode, onSuccess, onBack }) {
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
-      <p className="auth-hint">
+      <p className="auth-hint" id={`${fieldId}-hint`}>
         Локальная демонстрация для номера <strong>…{maskedPhone}</strong>. SMS не отправляется.
       </p>
 
@@ -82,8 +88,12 @@ function OtpStep({ phone, devCode, onSuccess, onBack }) {
       )}
 
       <div className="auth-field">
-        <label className="auth-label">ДЕМО-КОД</label>
+        <label className="auth-label" htmlFor={fieldId}>ДЕМО-КОД</label>
         <input
+          id={fieldId}
+          autoComplete="one-time-code"
+          aria-invalid={!!error}
+          aria-describedby={`${fieldId}-hint${error ? ` ${fieldId}-error` : ''}`}
           className="auth-input auth-input--code"
           type="text"
           inputMode="numeric"
@@ -94,7 +104,7 @@ function OtpStep({ phone, devCode, onSuccess, onBack }) {
           autoFocus
         />
       </div>
-      {error && <div className="auth-error">{error}</div>}
+      {error && <div className="auth-error" id={`${fieldId}-error`} role="alert">{error}</div>}
       <button className="auth-btn" type="submit" disabled={loading || code.length < 4}>
         {loading ? 'Проверяем…' : 'Войти'}
       </button>

@@ -82,13 +82,13 @@ function TableShape({ tbl, selectedTableId, onSelect, tx }) {
 
   const handleClick = (e) => {
     e.stopPropagation();
-    if (!disabled) onSelect(tbl.id);
+    if (!disabled) onSelect(tbl.id, e);
   };
   const handleKeyDown = (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault(); // Space must select without scrolling the booking page.
     e.stopPropagation();
-    if (!disabled && !e.repeat) onSelect(tbl.id);
+    if (!disabled && !e.repeat) onSelect(tbl.id, e);
   };
   const cls = `fp-table fp-t--${status}${isSel ? ' fp-t--sel' : ''}`;
 

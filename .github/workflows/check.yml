@@ -1,0 +1,63 @@
+name: Check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Node 22 / browser / nginx
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium and OS dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Install isolated nginx test dependency
+        run: sudo apt-get update && sudo apt-get install -y nginx
+      - run: npm run check
+      - name: Browser evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: browser-evidence
+          path: |
+            ../docs/audit-2026-10-09/fixes/floorplan/
+            ../docs/audit-2026-10-09/fixes/auth-dialog/
+            ../docs/audit-2026-10-09/fixes/events/
+            ../docs/audit-2026-10-13/screenshots/
+          if-no-files-found: warn
+          retention-days: 7
+
+  vps-network-probe:
+    name: VPS SSH reachability (no authentication)
+    if: github.event_name == 'workflow_dispatch'
+    permissions: {}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - name: Read only public SSH handshake within five seconds
+        shell: bash
+        run: |
+          banner=$(timeout 5 nc -w 5 31.77.151.27 22 </dev/null 2>/dev/null) || true
+          if [[ "$banner" == SSH-2.0-* ]]; then
+            echo 'SUCCESS: VPS port 22 returned an SSH handshake; no authentication attempted.'
+          else
+            echo 'FAIL: VPS port 22 did not return an SSH handshake within five seconds.'
+            exit 1
+          fi

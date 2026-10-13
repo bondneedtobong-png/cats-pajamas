@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const page = readFileSync(new URL('../dist/404.html', import.meta.url), 'utf8');
+assert.equal((page.match(/<title>/g) || []).length, 1);
+assert(page.includes('Страница не найдена'));
+assert(page.includes('<h1>Этот столик не найден</h1>'));
+assert(page.includes('name="robots" content="noindex, nofollow"'));
+assert(!page.includes('rel="canonical"'));
+assert(!page.includes('application/ld+json'));
+assert(!page.includes('seo-home'));
+assert(!page.includes('seo-menu'));
+assert(!page.includes('Барная карта'));
+assert(!page.includes('Авторские коктейли'));
+assert(page.includes('var(--bg,#1C101A)'));
+assert(page.includes('type="module"'));
+console.log('PASS raw 404: unique title/H1, noindex, no canonical/home JSON-LD/content, brand tokens and React entry');

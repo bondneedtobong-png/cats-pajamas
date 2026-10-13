@@ -349,6 +349,8 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
   const [success, setSuccess] = useState(null);
   const [currentUser, setCurrentUser] = useState(() => AuthService.getCurrentUser());
   const [authOpen, setAuthOpen] = useState(false);
+  const panelRef = useRef(null);
+  const selectionRef = useRef(null);
 
   useEffect(() => {
     BookingService.getBookingDates().then(setDateCfg).catch(() => {});
@@ -405,6 +407,14 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
 
   const sel = selId ? tables.find(t => t.id === selId) : null;
 
+  function selectTable(id, event) {
+    setSelId(id);
+    setSuccess(null);
+    // Keep Space from scrolling; pointer selection brings its confirmation into view.
+    if (event?.type !== 'keydown') requestAnimationFrame(() =>
+      selectionRef.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' }));
+  }
+
   function handleSubmitted(res) {
     setSuccess(res);
     setSelId(null);
@@ -442,7 +452,7 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
               <FloorPlanSvg
                 tables={tables}
                 selectedTableId={selId}
-                onSelect={id => { setSelId(id); setSuccess(null); }}
+                onSelect={selectTable}
                 onDeselect={() => setSelId(null)}
                 tx={planTx}
               />
@@ -454,9 +464,30 @@ export default function BookingWidget({ tx, active = true, authTick = 0, variant
           </div>
           {loading && <div className="bkw__loading">{tx.bkLoading}</div>}
           <Legend tx={tx} />
+          {sel && <div className="bkw__selection" ref={selectionRef}>
+            <p role="status">{zoneName(sel, tx)} · {tableTitle(sel, tx)} · {sel.activeSeatsCount} {tx.bkSeatsLabel}</p>
+            <button type="button" className="bkw__submit" onClick={() => {
+              panelRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+              panelRef.current?.focus({ preventScroll: true });
+            }}>{sel.status === 'vacant' ? (currentUser ? tx.bkStepForm : tx.bkAuthBtn) : tx.bkTableDetails}</button>
+          </div>}
+          <div className="bkw__table-list" role="group" aria-label={tx.bkStepTable}>
+            {tables.map(table => (
+              <button key={table.id} type="button"
+                className="bkw__table-option"
+                aria-pressed={selId === table.id}
+                onClick={event => selectTable(table.id, event)}>
+                <span>{zoneName(table, tx)} · {tableTitle(table, tx)}</span>
+                <span>{table.activeSeatsCount} {tx.bkSeatsLabel} · {table.status === 'vacant' ? tx.bkStatusVacant
+                  : table.status === 'occupied' ? tx.bkStatusOccupied
+                  : `${tx.bkStatusReservedAt} ${table.reservation?.timeFrom || ''}`.trim()}</span>
+              </button>
+            ))}
+          </div>
+
         </div>
 
-        <div className="bkw__side">
+        <div className="bkw__side" ref={panelRef} tabIndex={-1}>
           <Panel
             table={sel}
             when={when}

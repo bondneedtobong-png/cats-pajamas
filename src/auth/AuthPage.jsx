@@ -31,7 +31,7 @@ export default function AuthPage() {
         <AuthFlow onSuccess={handleSuccess} />
 
         <div className="auth-back-link">
-          <Link to={nextUrl} className="auth-link">← Назад к плану зала</Link>
+          <Link to="/booking" className="auth-link">← Назад к плану зала</Link>
         </div>
       </div>
     </div>

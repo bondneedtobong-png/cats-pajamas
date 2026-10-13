@@ -1,0 +1,71 @@
+name: One-time production release
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cats-production-release
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Require successful Check workflow for this exact commit
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner, repo: context.repo.repo,
+              workflow_id: 'check.yml', head_sha: context.sha,
+              status: 'completed', per_page: 100
+            });
+            if (!data.workflow_runs.some(run => run.head_sha === context.sha &&
+                run.head_branch === 'main' && run.event !== 'pull_request' &&
+                run.path === '.github/workflows/check.yml' && run.conclusion === 'success')) {
+              core.setFailed('Successful main Check workflow required for this exact commit.');
+            }
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Prepare temporary SSH identity
+        env:
+          RELEASE_KEY: ${{ secrets.CATS_RELEASE_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$RELEASE_KEY" > "$HOME/.ssh/cats-release-key"
+          install -m 600 ops/cats-pajamas-known-hosts "$HOME/.ssh/known_hosts"
+          cat > "$HOME/.ssh/config" <<EOF
+          Host cats-pajamas
+            HostName 31.77.151.27
+            User root
+            IdentityFile $HOME/.ssh/cats-release-key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            UserKnownHostsFile $HOME/.ssh/known_hosts
+            BatchMode yes
+            ConnectTimeout 30
+            ServerAliveInterval 10
+            ServerAliveCountMax 3
+          EOF
+          printf 'server: root@31.77.151.27\nssh_host_alias: cats-pajamas\nproject_path_on_server: /opt/cats-pajamas-club\n' > .deploy-info
+      - name: Isolated production Nginx preflight and fresh backup
+        run: ssh cats-pajamas "bash -s -- '$GITHUB_SHA' '$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT'" < ops/ci-nginx-preflight.sh
+      - name: Existing application release
+        run: bash deploy.sh
+      - name: Publish validated Nginx candidate and verify production
+        run: ssh cats-pajamas "bash -s -- '$GITHUB_SHA' '$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT'" < ops/ci-nginx-publish.sh
+      - name: Remove temporary SSH identity
+        if: always()
+        run: rm -f -- "$HOME/.ssh/cats-release-key" "$HOME/.ssh/config" .deploy-info

@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "check": "node devtools/check.mjs",
     "dev": "vite",
     "predev": "node scripts/generate-gallery-manifest.mjs",
-    "build": "vite build && node scripts/prerender-menu.mjs && node scripts/prerender-home.mjs",
+    "build": "vite build && node scripts/prerender-menu.mjs && node scripts/prerender-404.mjs && node scripts/prerender-home.mjs",
     "prebuild": "node scripts/generate-gallery-manifest.mjs",
     "gallery": "node scripts/generate-gallery-manifest.mjs",
     "preview": "vite preview",
