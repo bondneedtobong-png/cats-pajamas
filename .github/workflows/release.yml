@@ -66,6 +66,46 @@ jobs:
         run: bash deploy.sh
       - name: Publish validated Nginx candidate and verify production
         run: ssh cats-pajamas "bash -s -- '$GITHUB_SHA' '$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT'" < ops/ci-nginx-publish.sh
-      - name: Remove temporary SSH identity
+      - name: Encrypt fresh backup for private local recovery
+        run: |
+          set -euo pipefail
+          umask 077
+          folder="$RUNNER_TEMP/cats-release-backup"
+          install -d -m 700 "$folder"
+          ssh cats-pajamas 'python3 -' > "$folder/source-metadata" <<'PY'
+          from pathlib import Path
+          import hashlib, re
+          root = Path('/var/backups/cats-pajamas')
+          files = sorted(p for p in root.iterdir() if re.fullmatch(r'\d{8}-\d{6}\.tar\.gz', p.name) and p.is_file() and not p.is_symlink())
+          assert files, 'No backup archive available'
+          archive = files[-1]
+          assert archive.resolve().parent == root.resolve()
+          assert archive.stat().st_size <= 512 * 1024 * 1024
+          digest = hashlib.sha256()
+          with archive.open('rb') as source:
+              for block in iter(lambda: source.read(1024 * 1024), b''):
+                  digest.update(block)
+          print(archive.name, digest.hexdigest())
+          PY
+          read -r archive checksum extra < "$folder/source-metadata"
+          [[ "$archive" =~ ^[0-9]{8}-[0-9]{6}\.tar\.gz$ && "$checksum" =~ ^[a-f0-9]{64}$ && -z "${extra:-}" ]]
+          ARCHIVE="$archive" node --input-type=module -e '
+          const n=process.env.ARCHIVE;
+          const iso=`${n.slice(0,4)}-${n.slice(4,6)}-${n.slice(6,8)}T${n.slice(9,11)}:${n.slice(11,13)}:${n.slice(13,15)}.000Z`;
+          const d=new Date(iso), age=Date.now()-d.valueOf();
+          if(!Number.isFinite(age)||d.toISOString()!==iso||age>36*3600000||age< -10*60000)process.exit(1);'
+          scp -q "cats-pajamas:/var/backups/cats-pajamas/$archive" "$folder/plain.tar.gz"
+          node ops/backup-envelope.mjs encrypt "$folder/plain.tar.gz" "$folder/encrypted.enc" ops/backup-recipient.pem "$checksum" "$archive"
+          rm -f -- "$folder/plain.tar.gz" "$folder/source-metadata"
+      - name: Upload encrypted recovery envelope only
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: protected-backup
+          path: ${{ runner.temp }}/cats-release-backup/encrypted.enc
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove temporary identity and backup files
         if: always()
-        run: rm -f -- "$HOME/.ssh/cats-release-key" "$HOME/.ssh/config" .deploy-info
+        run: |
+          rm -f -- "$HOME/.ssh/cats-release-key" "$HOME/.ssh/config" .deploy-info
+          rm -f -- "$RUNNER_TEMP/cats-release-backup/plain.tar.gz" "$RUNNER_TEMP/cats-release-backup/encrypted.enc" "$RUNNER_TEMP/cats-release-backup/source-metadata"

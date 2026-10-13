@@ -31,16 +31,38 @@ jobs:
       - name: Install isolated nginx test dependency
         run: sudo apt-get update && sudo apt-get install -y nginx
       - run: npm run check
+      - name: Stage only browser fixture screenshots inside the workspace
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          fixtures = {
+              'floorplan': Path('../docs/audit-2026-10-09/fixes/floorplan'),
+              'auth-dialog': Path('../docs/audit-2026-10-09/fixes/auth-dialog'),
+              'events': Path('../docs/audit-2026-10-09/fixes/events'),
+              'mobile': Path('../docs/audit-2026-10-13/screenshots'),
+          }
+          count = 0
+          for name, source in fixtures.items():
+              if not source.is_dir():
+                  continue
+              for image in source.rglob('*.png'):
+                  if image.is_symlink() or not image.is_file():
+                      continue
+                  target = Path('ci-evidence') / name / image.relative_to(source)
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  shutil.copyfile(image, target)
+                  count += 1
+          print(f'Staged {count} browser fixture screenshots')
+          PY
       - name: Browser evidence
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: browser-evidence
-          path: |
-            ../docs/audit-2026-10-09/fixes/floorplan/
-            ../docs/audit-2026-10-09/fixes/auth-dialog/
-            ../docs/audit-2026-10-09/fixes/events/
-            ../docs/audit-2026-10-13/screenshots/
+          path: ci-evidence/
           if-no-files-found: warn
           retention-days: 7
 

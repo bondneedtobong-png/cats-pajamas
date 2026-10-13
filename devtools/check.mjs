@@ -85,6 +85,7 @@ async function main() {
     try { await npm('build'); } finally { await restoreGeneratedMetadata(snapshots); }
     await npm('test:security');
     await npm('test:photos');
+    await node('ops/backup-envelope-test.mjs');
     await node('devtools/bot_e2e.mjs');
     await node('devtools/menu_import_test.mjs');
     await node('devtools/menu_book_test.mjs');

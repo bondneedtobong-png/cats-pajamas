@@ -203,7 +203,14 @@ const rA = await bk.createReservation({
   tableId: 'T2', date: evening, timeFrom: slot, guestsCount: 2,
   guestName: 'Аня', guestPhone: '+79991112233', note: 'у сцены', source: 'web', guestId: 'u_g1',
 });
-await new Promise(r => setTimeout(r, 150)); // fire-and-forget уведомления
+// Rendering and notification run asynchronously. Cold CI rendering can exceed
+// 150ms; wait for the externally visible message and the persisted message ID.
+// Date is fixed above, so use the real monotonic clock for this bounded wait.
+const staffMessageDeadline = performance.now() + 5000;
+while (!(res(rA.id)?.staff_message_id && [...calls('sendPhoto'), ...calls('sendMessage')]
+  .some(c => String(c.body.chat_id) === '-100500')) && performance.now() < staffMessageDeadline) {
+  await new Promise(resolve => setTimeout(resolve, 20));
+}
 ok('A1 заявка pending', rA.status === 'pending');
 const staffMsg = [...calls('sendPhoto'), ...calls('sendMessage')].find(c => String(c.body.chat_id) === '-100500');
 ok('A2 стафф-сообщение с кнопками', !!staffMsg && JSON.stringify(staffMsg.body.reply_markup).includes(`stok:${rA.id}`), JSON.stringify(staffMsg?.body));
