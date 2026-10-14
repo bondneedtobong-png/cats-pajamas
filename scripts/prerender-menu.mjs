@@ -35,7 +35,7 @@ async function loadMenu() {
   return STATIC_MENU;
 }
 
-const esc = (s) => String(s)
+const esc = (s) => String(s ?? '')
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
   .replaceAll('"', '&quot;');
 
@@ -86,16 +86,31 @@ function pageHtml(menu) {
 }
 
 // ─── JSON-LD schema.org/Menu — цены из данных, без выдумок ──────────────────
-const priceOf = (p) => (String(p).split('/')[0].match(/[\d\s]+/) || [''])[0].replace(/\s/g, '');
+// Accept complete numeric prices, including the imported glass/bottle format.
+// Do not extract digits from free text (a volume or an approximate price).
+const priceOf = (p) => {
+  if (typeof p !== 'string' && typeof p !== 'number') return null;
+  const parts = String(p).trim().split('/');
+  const amounts = parts.map(part => {
+    const match = part.trim().match(/^((?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+)(?:\.\d{1,2})?)\s*₽?$/);
+    if (!match) return null;
+    const amount = match[1].replace(/\s/g, '');
+    return Number.isFinite(Number(amount)) && Number(amount) > 0 ? amount : null;
+  });
+  return amounts.every(Boolean) ? amounts[0] : null;
+};
 const sectionOf = (c) => ({
   '@type': 'MenuSection',
   name: c.title,
-  hasMenuItem: c.items.map(i => ({
+  hasMenuItem: c.items.map(i => {
+    const price = priceOf(i.price);
+    return ({
     '@type': 'MenuItem',
     name: i.name,
     ...(i.origin ? { description: i.origin } : {}),
-    offers: { '@type': 'Offer', priceCurrency: 'RUB', price: priceOf(i.price) },
-  })),
+    ...(price ? { offers: { '@type': 'Offer', priceCurrency: 'RUB', price } } : {}),
+  });
+  }),
 });
 
 // Разделы с parent («Виски» → Шотландия, Ирландия…) уходят в схему вложенной
@@ -125,6 +140,9 @@ const buildSchema = (menu) => ({
   hasMenuSection: menu.flatMap(g => sectionsOf(g.categories)),
 });
 
+// HTML script parsing ends on </script> even inside a JSON string.
+const schemaJson = (menu) => JSON.stringify(buildSchema(menu)).replaceAll('<', '\\u003c');
+
 // ─── Сборка dist/menu/index.html из dist/index.html ─────────────────────────
 const TITLE = "Барная карта — The Cat's Pajamas Club, джаз-бар в Самаре";
 const DESC = "Полное меню бара: авторские коктейли, вина, виски, ром, джин, настойки и закуски с ценами. Джаз-бар The Cat's Pajamas Club, Самара, ул. Куйбышева, 98.";
@@ -143,8 +161,8 @@ async function main() {
     .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${DESC}$2`)
     .replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${TITLE}$2`)
     .replace(/(<meta name="twitter:description" content=")[^"]*(")/, `$1${DESC}$2`)
-    .replace('</head>', `<script type="application/ld+json">${JSON.stringify(buildSchema(menu))}</script>\n</head>`)
-    .replace('<div id="root"></div>', `<div id="root">${pageHtml(menu)}</div>`);
+    .replace('</head>', () => `<script type="application/ld+json">${schemaJson(menu)}</script>\n</head>`)
+    .replace('<div id="root"></div>', () => `<div id="root">${pageHtml(menu)}</div>`);
 
   mkdirSync(join(root, 'dist', 'menu'), { recursive: true });
   writeFileSync(join(root, 'dist', 'menu', 'index.html'), html);
@@ -157,4 +175,4 @@ async function main() {
 const runAsScript = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
 if (runAsScript) main().catch((e) => { console.error('[prerender-menu] ошибка:', e); process.exit(1); });
 
-export { pageHtml, buildSchema };
+export { pageHtml, buildSchema, schemaJson };

@@ -90,6 +90,7 @@ async function main() {
     await node('devtools/menu_import_test.mjs');
     await node('devtools/menu_book_test.mjs');
     await node('devtools/menu_content_test.mjs');
+    await node('devtools/menu_prerender_price_test.mjs');
     await node('devtools/raw_404_test.mjs');
 
     server = await createServer({ root, configFile: false, envDir: temporary,
