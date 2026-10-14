@@ -5,6 +5,24 @@ import gzip, hashlib, json, pathlib, re, subprocess, sys, tarfile
 def digest(rows):
     return hashlib.sha256(''.join(sorted(rows)).encode('utf-8')).hexdigest()
 
+def safe_errors(text):
+    """Return only sqlstate and optional source line; never server detail."""
+    result=[]
+    pattern=re.compile(r'^(?:psql:(?:<stdin>|-):(\d+):\s*)?ERROR:\s+([0-9A-Z]{5})(?=\s|$)')
+    for line in text.splitlines():
+        match=pattern.match(line)
+        if match:
+            item='SQLSTATE='+match[2]
+            if match[1]: item+=' line='+match[1]
+            result.append(item)
+    return result
+
+def diagnostics(work):
+    for name in ('roles.log','sql.log'):
+        path=pathlib.Path(work)/name
+        if path.is_file():
+            for item in safe_errors(path.read_text(errors='replace')): print(item)
+
 def prepare(archive, work):
     work = pathlib.Path(work)
     with tarfile.open(archive, 'r:gz') as tar:
@@ -61,6 +79,7 @@ def verify(work, container):
 if __name__=='__main__':
     try:
         if sys.argv[1]=='prepare': prepare(sys.argv[2],sys.argv[3])
+        elif sys.argv[1]=='diagnostics': diagnostics(sys.argv[2])
         elif sys.argv[1]=='verify': verify(sys.argv[2],sys.argv[3])
         else: raise ValueError('Mode rejected')
     except Exception:

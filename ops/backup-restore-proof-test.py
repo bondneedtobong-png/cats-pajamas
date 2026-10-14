@@ -16,7 +16,7 @@ def fixture_directory():
 
 class RestoreFixtures(unittest.TestCase):
     def test_archive_and_restored_content(self):
-        sql='CREATE SCHEMA fixture;\nALTER TABLE public.events OWNER TO fixture_owner;\nCOPY public.events (id, "time", note) FROM stdin;\n2\t12:00\tКот 🐈\n1\t\\N\tстрока\\nдва\n\\.\n'
+        sql='CREATE SCHEMA fixture;\nALTER TABLE public.events OWNER TO fixture_owner;\nCOPY public.events (id, "time", note) FROM stdin;\n2\t12:00\tРљРѕС‚ рџђ€\n1\t\\N\tСЃС‚СЂРѕРєР°\\nРґРІР°\n\\.\n'
         with fixture_directory() as temp:
             archive=pathlib.Path(temp)/'fixture.tar.gz'
             with tarfile.open(archive,'w:gz') as tar:
@@ -29,7 +29,7 @@ class RestoreFixtures(unittest.TestCase):
             def run(args,input,**kwargs):
                 self.assertIn('/tmp',args)
                 query=input.decode()
-                output='fixture\n' if 'pg_namespace' in query else 'fixture_owner\n' if 'pg_roles' in query else 'public.events\n' if 'pg_tables' in query else '1\t\\N\tстрока\\nдва\n2\t12:00\tКот 🐈\n'
+                output='fixture\n' if 'pg_namespace' in query else 'fixture_owner\n' if 'pg_roles' in query else 'public.events\n' if 'pg_tables' in query else '1\t\\N\tСЃС‚СЂРѕРєР°\\nРґРІР°\n2\t12:00\tРљРѕС‚ рџђ€\n'
                 return subprocess.CompletedProcess(args,0,output.encode(),b'')
             with patch.object(proof.subprocess,'run',run), patch('builtins.print'):
                 proof.verify(temp,'fixture-container')
@@ -48,6 +48,10 @@ class RestoreFixtures(unittest.TestCase):
                 for name in ('./database.sql.gz','database.sql.gz'):
                     payload=gzip.compress(b'fixture');info=tarfile.TarInfo(name);info.size=len(payload);tar.addfile(info,io.BytesIO(payload))
             with self.assertRaises(ValueError):proof.prepare(archive,temp)
+    def test_sqlstate_diagnostics(self):
+        text='psql:<stdin>:17: ERROR:  42P07 private relation detail\nERROR:  42501 private permission detail\npsql:-:23: ERROR:  XX000 private detail\nDETAIL: secret\nCONTEXT: private SQL\nERROR: private password is secret\npsql:<stdin>:9: ERROR: 42P070 invalid code\n'
+        self.assertEqual(proof.safe_errors(text),['SQLSTATE=42P07 line=17','SQLSTATE=42501','SQLSTATE=XX000 line=23'])
+        self.assertEqual(proof.safe_errors('ERROR:  42P01\n'),['SQLSTATE=42P01'])
     def test_hash_order_independent_and_content_sensitive(self):
         self.assertEqual(proof.digest(['a\n','b\n']),proof.digest(['b\n','a\n']))
         self.assertNotEqual(proof.digest(['a\n']),proof.digest(['b\n']))

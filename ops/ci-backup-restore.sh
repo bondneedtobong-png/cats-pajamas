@@ -17,15 +17,7 @@ cleanup() {
     fi
   fi
   if (( code != 0 )) && [[ -n "$work" && -d "$work" && ! -L "$work" ]]; then
-    python3 - "$work" <<'PYSAFE' >&2
-import pathlib,re,sys
-for name in ('roles.log','sql.log'):
-    p=pathlib.Path(sys.argv[1])/name
-    if p.is_file():
-        for line in p.read_text(errors='replace').splitlines():
-            m=re.search(r'psql:<stdin>:(\d+): ERROR:\s+([0-9A-Z]{5})(?:\s|$)',line)
-            if m: print('SQLSTATE='+m[2]+' line='+m[1])
-PYSAFE
+    python3 "$helper" diagnostics "$work" >&2 || true
   fi
   if [[ -n "$work" && "$work" =~ ^/var/tmp/cats-restore\.[a-zA-Z0-9]{8}$ && -d "$work" && ! -L "$work" && $(stat -c %u "$work") == 0 ]]; then
     rm -rf -- "$work"
@@ -84,9 +76,9 @@ for attempt in $(seq 1 60); do
 done
 [[ $ready == 1 ]]
 stage=roles
-timeout 180 docker exec -i "$container" psql -h /tmp -X -U postgres -d postgres -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate <"$work/roles.sql" >"$work/roles.log" 2>&1
+timeout 180 docker exec -i "$container" psql -h /tmp -X -U postgres -d postgres -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate -f - <"$work/roles.sql" >"$work/roles.log" 2>&1
 stage=sql
-timeout 180 docker exec -i "$container" psql -h /tmp -X -U postgres -d postgres -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate <"$work/database.sql" >"$work/sql.log" 2>&1
+timeout 180 docker exec -i "$container" psql -h /tmp -X -U postgres -d postgres -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate -f - <"$work/database.sql" >"$work/sql.log" 2>&1
 stage=content
 timeout 180 python3 "$helper" verify "$work" "$container" >"$work/proof.json" 2>"$work/verify.log"
 printf 'PASS isolated backup restore archive=%s sha256=%s network=none photo_restore=unproven\n' "${archive##*/}" "$archive_sha"
