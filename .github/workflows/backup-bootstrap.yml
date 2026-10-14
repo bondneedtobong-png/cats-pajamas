@@ -1,0 +1,123 @@
+name: One-time restricted backup bootstrap
+on:
+  workflow_dispatch:
+    inputs:
+      backup_public_key:
+        description: New dedicated backup Ed25519 PUBLIC key, one line
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cats-production-release
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require successful Check for this exact main commit
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner, repo: context.repo.repo,
+              workflow_id: 'check.yml', head_sha: context.sha,
+              status: 'completed', per_page: 100
+            });
+            if (!data.workflow_runs.some(run => run.head_sha === context.sha &&
+                run.head_branch === 'main' && run.event !== 'pull_request' &&
+                run.path === '.github/workflows/check.yml' && run.conclusion === 'success')) {
+              core.setFailed('Successful main Check required for exact bootstrap commit.');
+            }
+  bootstrap:
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Validate public key and install checked bootstrap
+        env:
+          RELEASE_KEY: ${{ secrets.CATS_RELEASE_SSH_KEY }}
+          BACKUP_KEY: ${{ secrets.CATS_BACKUP_SSH_KEY }}
+          BACKUP_PUBLIC_KEY: ${{ inputs.backup_public_key }}
+        run: |
+          set -euo pipefail
+          umask 077
+          folder="$RUNNER_TEMP/cats-backup-bootstrap"
+          install -d -m 700 "$folder"
+          [[ "$BACKUP_PUBLIC_KEY" =~ ^ssh-ed25519\ [A-Za-z0-9+/]+={0,2}(\ [A-Za-z0-9._@-]+)?$ ]]
+          printf '%s\n' "$BACKUP_PUBLIC_KEY" > "$folder/new-backup-key.pub"
+          ssh-keygen -l -f "$folder/new-backup-key.pub" >/dev/null
+          # Confirm the permanently restricted identity matches the approved public input before any server mutation.
+          test -n "$BACKUP_KEY"
+          printf '%s\n' "$BACKUP_KEY" > "$folder/backup-key"
+          ssh-keygen -y -P '' -f "$folder/backup-key" > "$folder/derived.pub"
+          [[ "$(awk '{print $1 " " $2}' "$folder/derived.pub")" == "$(awk '{print $1 " " $2}' "$folder/new-backup-key.pub")" ]]
+          test -n "$RELEASE_KEY"
+          printf '%s\n' "$RELEASE_KEY" > "$folder/key"
+          ssh-keygen -y -P '' -f "$folder/key" > "$folder/release-derived.pub"
+          [[ "$(awk '{print $1 " " $2}' "$folder/derived.pub")" != "$(awk '{print $1 " " $2}' "$folder/release-derived.pub")" ]]
+          install -m 600 ops/cats-pajamas-known-hosts "$folder/known_hosts"
+          # Bundle only public inputs and exact checked-out bootstrap sources.
+          tar -czf "$folder/bootstrap.tar.gz" -C ops backup-channel-install.sh backup-channel.mjs backup-envelope.mjs backup-recipient.pem backup-export.sh -C "$folder" new-backup-key.pub
+          timeout 600 ssh -i "$folder/key" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$folder/known_hosts" \
+            -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 \
+            root@31.77.151.27 'bash -c '\''set -euo pipefail; work=$(mktemp -d /tmp/cats-backup-bootstrap.XXXXXXXX); cleanup() { rm -rf -- "$work"; }; trap cleanup EXIT; tar -xzf - -C "$work"; bash "$work/backup-channel-install.sh" "$work/new-backup-key.pub"'\''' < "$folder/bootstrap.tar.gz"
+      - name: Verify actual restricted SSH access
+        run: |
+          set -euo pipefail
+          umask 077
+          folder="$RUNNER_TEMP/cats-backup-bootstrap"
+          ulimit -f 525312
+          options=(-i "$folder/backup-key" -o IdentitiesOnly=yes -o BatchMode=yes
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$folder/known_hosts"
+            -o ConnectTimeout=15 -o ServerAliveInterval=5 -o ServerAliveCountMax=2)
+          target=cats-backup@31.77.151.27
+          timeout 30 ssh "${options[@]}" "$target" export-latest > "$folder/latest.enc" 2> "$folder/export.stderr"
+          node --input-type=module - "$folder" <<'JS'
+          import { exportLatest } from './ops/backup-channel.mjs';
+          exportLatest(process.argv[2], 'export-latest');
+          JS
+          # Status 1 plus our exact forced-command refusal proves policy denial;
+          # timeout, authentication failure and connection failure never count as success.
+          reject_command() {
+            set +e
+            timeout 30 ssh "${options[@]}" "$target" "$1" > "$folder/deny.stdout" 2> "$folder/deny.stderr"
+            status=$?
+            set -e
+            [[ $status == 1 && ! -s "$folder/deny.stdout" ]]
+            grep -Fxq 'Backup command rejected' "$folder/deny.stderr"
+          }
+          reject_command id
+          reject_command bash
+          reject_command 'scp -f /var/backups/cats-pajamas/'
+          set +e
+          timeout 30 ssh "${options[@]}" -s "$target" sftp > "$folder/deny.stdout" 2> "$folder/deny.stderr"
+          status=$?
+          set -e
+          [[ $status == 1 && ! -s "$folder/deny.stdout" ]]
+          grep -Fxq 'Backup command rejected' "$folder/deny.stderr"
+          set +e
+          timeout 30 ssh "${options[@]}" -tt "$target" id > "$folder/deny.stdout" 2> "$folder/deny.stderr"
+          status=$?
+          set -e
+          [[ $status != 124 && $status != 0 && ! -s "$folder/deny.stdout" ]]
+          grep -Eq '^PTY allocation request failed on channel [0-9]+\r?$' "$folder/deny.stderr"
+          set +e
+          timeout 30 ssh "${options[@]}" -N -o ExitOnForwardFailure=yes -R 127.0.0.1:0:127.0.0.1:22 "$target" > "$folder/deny.stdout" 2> "$folder/deny.stderr"
+          status=$?
+          set -e
+          [[ $status == 255 && ! -s "$folder/deny.stdout" ]]
+          grep -Fq 'remote port forwarding failed for listen port 0' "$folder/deny.stderr"
+          echo 'PASS: fresh encrypted export; shell, SCP command, SFTP, PTY and remote forwarding denied'
+      - name: Remove temporary root identity and public bundle
+        if: always()
+        run: |
+          rm -f -- "$RUNNER_TEMP/cats-backup-bootstrap/key" "$RUNNER_TEMP/cats-backup-bootstrap/backup-key" "$RUNNER_TEMP/cats-backup-bootstrap/derived.pub" "$RUNNER_TEMP/cats-backup-bootstrap/release-derived.pub" "$RUNNER_TEMP/cats-backup-bootstrap/known_hosts" "$RUNNER_TEMP/cats-backup-bootstrap/bootstrap.tar.gz" "$RUNNER_TEMP/cats-backup-bootstrap/new-backup-key.pub" "$RUNNER_TEMP/cats-backup-bootstrap/latest.enc" "$RUNNER_TEMP/cats-backup-bootstrap/export.stderr" "$RUNNER_TEMP/cats-backup-bootstrap/deny.stdout" "$RUNNER_TEMP/cats-backup-bootstrap/deny.stderr"

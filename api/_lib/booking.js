@@ -2,6 +2,7 @@ import { supabase } from './supabase.js';
 import { TABLES, activeSeats } from '../../src/booking/tablesConfig.js';
 import {
   timeToMin, minToTime, reservationInstant, barEveningDate,
+  WORKING_HOURS, NIGHT_CUTOFF_MIN, SLOT_STEP_MIN, LAST_SLOT_BEFORE_CLOSE_MIN,
 } from '../../src/booking/barTime.js';
 import { notifyStaff, notifyStaffPhoto, editStaffMessage, deleteStaffMessage } from './staffNotify.js';
 import { notifyGuestTg } from './telegramNotify.js';
@@ -37,6 +38,28 @@ export function isDemoPaymentEnabled() {
 
 function bookingError(message, statusCode = 400) {
   return Object.assign(new Error(message), { statusCode });
+}
+
+function assertClockTime(time, message) {
+  if (typeof time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw bookingError(message);
+}
+
+function assertArrival(date, timeFrom) {
+  const dateMs = typeof date === 'string' ? Date.parse(date + 'T00:00:00Z') : NaN;
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)
+    || !Number.isFinite(dateMs) || new Date(dateMs).toISOString().slice(0, 10) !== date) throw bookingError('Выберите корректную дату');
+  assertClockTime(timeFrom, 'Выберите корректное время прихода');
+  const hours = WORKING_HOURS[new Date(dateMs).getUTCDay()];
+  const minutes = timeToMin(timeFrom);
+  const eveningMinutes = minutes < NIGHT_CUTOFF_MIN ? minutes + 1440 : minutes;
+  if (eveningMinutes < hours.openMin || eveningMinutes > hours.closeMin - LAST_SLOT_BEFORE_CLOSE_MIN
+    || (eveningMinutes - hours.openMin) % SLOT_STEP_MIN !== 0) throw bookingError('Выберите время прихода из доступных получасовых слотов');
+  if (reservationInstant(date, timeFrom).getTime() < Date.now() - PAST_ARRIVAL_GRACE_MS) throw bookingError('Это время уже прошло — выберите другое');
+}
+
+function assertPartySize(guestsCount, table) {
+  if (!Number.isInteger(guestsCount) || guestsCount < 1) throw bookingError('Число гостей должно быть положительным целым числом');
+  if (guestsCount > activeSeats(table)) throw bookingError('Для выбранного числа гостей недостаточно мест за столом');
 }
 
 // Гостевая заявка без ответа бармена 6 часов — чистим как мусор. Это НЕ
@@ -453,14 +476,13 @@ export async function createReservation(p) {
   if (!date) throw new Error('Дата обязательна');
   if (!timeFrom) throw new Error('Время прихода обязательно');
 
-  const timeTo = p.timeTo || minToTime(timeToMin(timeFrom) + LEGACY_TIME_TO_MIN);
-
-  if (reservationInstant(date, timeFrom).getTime() < Date.now() - PAST_ARRIVAL_GRACE_MS) {
-    throw new Error('Это время уже прошло — выберите другое');
-  }
+  assertArrival(date, timeFrom);
+  if (Object.hasOwn(p, 'timeTo')) assertClockTime(p.timeTo, 'Выберите корректное время окончания');
+  const timeTo = Object.hasOwn(p, 'timeTo') ? p.timeTo : minToTime(timeToMin(timeFrom) + LEGACY_TIME_TO_MIN);
 
   const table = (await getTablesMerged()).find(t => t.id === tableId);
   if (!table) throw new Error('Такого стола нет на плане');
+  assertPartySize(guestsCount, table);
 
   // Правило одного вечера: активная бронь (pending/confirmed/seated) на дату
   // блокирует стол целиком — «по факту» значит, что конец брони неизвестен.
@@ -707,16 +729,17 @@ export async function updateReservation(id, updates) {
   const existing = await getReservationById(id);
   if (!existing) throw bookingError('Бронь не найдена');
   const relocating = ['tableId', 'date', 'timeFrom', 'timeTo'].some(k => Object.hasOwn(updates, k) && updates[k] !== existing[k]);
+  const target = { ...existing, ...updates };
+  if (Object.hasOwn(updates, 'timeTo')) assertClockTime(target.timeTo, 'Выберите корректное время окончания');
+  if (relocating || Object.hasOwn(updates, 'guestsCount')) {
+    const table = (await getTablesMerged()).find(t => t.id === target.tableId);
+    if (!table) throw bookingError('Такого стола нет на плане');
+    assertPartySize(target.guestsCount, table);
+  }
   if (relocating) {
     if (existing.status === 'seated') throw bookingError('Перенос после посадки пока недоступен — обратитесь к администратору');
     if (!['pending', 'confirmed'].includes(existing.status)) throw bookingError('Перенос брони в финальном статусе недоступен');
-    const target = { ...existing, ...updates };
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(target.timeFrom)) throw bookingError('Выберите корректное время прихода');
-    const dateMs = Date.parse(target.date + 'T00:00:00Z');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(target.date) || !Number.isFinite(dateMs) || new Date(dateMs).toISOString().slice(0, 10) !== target.date) throw bookingError('Выберите корректную дату');
-    if (Object.hasOwn(updates, 'timeTo') && !/^([01]\d|2[0-3]):[0-5]\d$/.test(target.timeTo)) throw bookingError('Выберите корректное время окончания');
-    if (reservationInstant(target.date, target.timeFrom).getTime() < Date.now() - PAST_ARRIVAL_GRACE_MS) throw bookingError('Это время уже прошло — выберите другое');
-    if (!(await getTablesMerged()).some(t => t.id === target.tableId)) throw bookingError('Такого стола нет на плане');
+    assertArrival(target.date, target.timeFrom);
     await assertDateBookable(target.date);
     const reservations = await getReservations({ date: target.date });
     if (reservations.some(r => r.id !== id && r.tableId === target.tableId && ACTIVE_STATUSES.includes(r.status))) throw bookingError('Этот стол уже занят в выбранный вечер');
@@ -731,7 +754,8 @@ export async function updateReservation(id, updates) {
   for (const [k, v] of Object.entries(updates)) if (Object.hasOwn(map, k)) patch[map[k]] = v;
   const { data, error } = await supabase.from('reservations').update(patch)
     .eq('id', id).eq('status', existing.status).eq('table_id', existing.tableId)
-    .eq('date', existing.date).eq('time_from', existing.timeFrom).select().maybeSingle();
+    .eq('date', existing.date).eq('time_from', existing.timeFrom)
+    .eq('guests_count', existing.guestsCount).select().maybeSingle();
   if (error) {
     if (error.code === '23505') throw bookingError('Этот стол уже занят в выбранный вечер');
     throw new Error(error.message);

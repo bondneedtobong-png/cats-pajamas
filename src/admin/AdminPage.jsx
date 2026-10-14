@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import AuthService from '../auth/AuthService.js';
 import BookingService from '../booking/BookingService.js';
 import FloorPlanSvg from '../booking/FloorPlanSvg.jsx';
-import { upcomingEveningDates } from '../booking/barTime.js';
+import { upcomingEveningDates, barEveningDate, WORKING_HOURS, SLOT_STEP_MIN, LAST_SLOT_BEFORE_CLOSE_MIN, minToTime, reservationInstant } from '../booking/barTime.js';
+import { activeSeats } from '../booking/tablesConfig.js';
 import '../booking/booking.css';
 import CocktailsService from '../menu/CocktailsService.js';
 import EventsService from '../events/EventsService.js';
@@ -36,7 +37,25 @@ function formatDate(d) {
   const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
   return `${parseInt(day)} ${months[parseInt(m)-1]}`;
 }
-const TIME_OPTS = ['17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30','22:00','22:30','23:00','23:30'];
+const END_TIME_OPTS = Array.from({ length: 48 }, (_, i) => minToTime(i * SLOT_STEP_MIN));
+// Administrators retain the server's 30-minute arrival grace.
+function adminArrivalSlots(date, now = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
+  const day = new Date(`${date}T12:00:00Z`);
+  if (!Number.isFinite(day.getTime()) || day.toISOString().slice(0, 10) !== date) return [];
+  const { openMin, closeMin } = WORKING_HOURS[day.getUTCDay()];
+  const slots = [];
+  for (let m = openMin; m <= closeMin - LAST_SLOT_BEFORE_CLOSE_MIN; m += SLOT_STEP_MIN) {
+    const time = minToTime(m);
+    if (reservationInstant(date, time).getTime() >= now.getTime() - 30 * 60000) slots.push(time);
+  }
+  return slots;
+}
+function endTimeOptions(selected) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(selected) && !END_TIME_OPTS.includes(selected)
+    ? [...END_TIME_OPTS, selected] : END_TIME_OPTS;
+}
+
 
 // ─── Manual booking modal ────────────────────────────────────────
 function ManualBookingModal({ adminId, onSaved, onClose }) {
@@ -47,7 +66,7 @@ function ManualBookingModal({ adminId, onSaved, onClose }) {
       .then(t => { setTableOptions(t); setTableId(prev => prev || t[0]?.id || ''); })
       .catch(() => {});
   }, []);
-  const [date,     setDate]     = useState(todayIso());
+  const [date,     setDate]     = useState(barEveningDate());
   const [timeFrom, setTimeFrom] = useState('19:00');
   const [timeTo,   setTimeTo]   = useState('21:00');
   const [name,     setName]     = useState('');
@@ -55,14 +74,25 @@ function ManualBookingModal({ adminId, onSaved, onClose }) {
   const [guests,   setGuests]   = useState('2');
   const [note,     setNote]     = useState('');
   const [err,      setErr]      = useState('');
+  const arrivalSlots = adminArrivalSlots(date);
+  const capacity = tableOptions.find(t => t.id === tableId);
+  const guestsOptions = Array.from({ length: capacity ? activeSeats(capacity) : 0 }, (_, i) => String(i + 1));
+  useEffect(() => { if (!arrivalSlots.includes(timeFrom)) setTimeFrom(''); }, [date]);
+  useEffect(() => {
+    if (capacity && !guestsOptions.includes(guests)) setGuests('');
+  }, [tableId, tableOptions]);
+
 
   async function handleSave(e) {
     e.preventDefault();
     setErr('');
+    if (!adminArrivalSlots(date).includes(timeFrom) || !guestsOptions.includes(guests)) {
+      setErr('Выберите время прихода и число гостей по вместимости стола'); return;
+    }
     try {
       await BookingService.createReservation({
         tableId, date, timeFrom, timeTo,
-        guestsCount: parseInt(guests) || 2,
+        guestsCount: Number(guests),
         guestName: name, guestPhone: phone, note,
         source: 'phone_manual',
         createdByAdminId: adminId,
@@ -84,32 +114,34 @@ function ManualBookingModal({ adminId, onSaved, onClose }) {
           <div className="adm-form-row">
             <div className="adm-form-field">
               <label className="adm-form-lbl">СТОЛ</label>
-              <select className="adm-form-input" value={tableId} onChange={e => setTableId(e.target.value)}>
+              <select required className="adm-form-input" value={tableId} onChange={e => setTableId(e.target.value)}>
                 {tableOptions.map(t => <option key={t.id} value={t.id}>{t.id} — {t.name || t.zone}</option>)}
               </select>
             </div>
             <div className="adm-form-field">
               <label className="adm-form-lbl">ДАТА</label>
-              <input className="adm-form-input" type="date" value={date} onChange={e => setDate(e.target.value)} />
+              <input className="adm-form-input" type="date" required value={date} onChange={e => setDate(e.target.value)} />
             </div>
           </div>
           <div className="adm-form-row">
             <div className="adm-form-field">
               <label className="adm-form-lbl">НАЧАЛО</label>
-              <select className="adm-form-input" value={timeFrom} onChange={e => setTimeFrom(e.target.value)}>
-                {TIME_OPTS.map(t => <option key={t} value={t}>{t}</option>)}
+              <select required className="adm-form-input" value={timeFrom} onChange={e => setTimeFrom(e.target.value)}>
+                <option value="">Выберите время</option>
+                {arrivalSlots.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div className="adm-form-field">
               <label className="adm-form-lbl">КОНЕЦ</label>
-              <select className="adm-form-input" value={timeTo} onChange={e => setTimeTo(e.target.value)}>
-                {TIME_OPTS.map(t => <option key={t} value={t}>{t}</option>)}
+              <select required className="adm-form-input" value={timeTo} onChange={e => setTimeTo(e.target.value)}>
+                {endTimeOptions(timeTo).map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div className="adm-form-field">
               <label className="adm-form-lbl">ГОСТЕЙ</label>
-              <select className="adm-form-input" value={guests} onChange={e => setGuests(e.target.value)}>
-                {['1','2','3','4','5','6','7','8'].map(n => <option key={n}>{n}</option>)}
+              <select required className="adm-form-input" value={guests} onChange={e => setGuests(e.target.value)}>
+                <option value="">Выберите число гостей</option>
+                {guestsOptions.map(n => <option key={n}>{n}</option>)}
               </select>
             </div>
           </div>
@@ -142,10 +174,17 @@ function TransferModal({ reservation: r, onSaved, onClose }) {
   const [timeFrom, setTimeFrom] = useState(r.timeFrom);
   const [timeTo,   setTimeTo]   = useState(r.timeTo);
   const [err,      setErr]      = useState('');
+  const arrivalSlots = adminArrivalSlots(date);
+  const selectedTable = tableOptions.find(t => t.id === tableId);
+  const fits = selectedTable && Number.isInteger(r.guestsCount) && r.guestsCount > 0 && activeSeats(selectedTable) >= r.guestsCount;
+  useEffect(() => { if (!arrivalSlots.includes(timeFrom)) setTimeFrom(''); }, [date]);
+
 
   async function handleSave(e) {
     e.preventDefault();
     setErr('');
+    if (!fits) { setErr('Выберите стол, который вмещает всех гостей брони'); return; }
+    if (!adminArrivalSlots(date).includes(timeFrom)) { setErr('Выберите время прихода для этой даты'); return; }
     try {
       await BookingService.updateReservation(r.id, { tableId, date, timeFrom, timeTo });
       onSaved();
@@ -163,34 +202,36 @@ function TransferModal({ reservation: r, onSaved, onClose }) {
         </div>
         <form className="adm-modal__form" onSubmit={handleSave}>
           <div className="adm-modal__res-info">
-            <strong>{r.guestName}</strong> · {r.guestPhone || '—'}
+            <strong>{r.guestName}</strong> · {r.guestPhone || '—'} · {r.guestsCount} гостей
           </div>
           <div className="adm-form-row">
             <div className="adm-form-field">
               <label className="adm-form-lbl">СТОЛ</label>
-              <select className="adm-form-input" value={tableId} onChange={e => setTableId(e.target.value)}>
-                {tableOptions.map(t => <option key={t.id} value={t.id}>{t.id}</option>)}
+              <select required className="adm-form-input" value={tableId} onChange={e => setTableId(e.target.value)}>
+                {tableOptions.map(t => <option key={t.id} value={t.id} disabled={activeSeats(t) < r.guestsCount}>{t.id} — {activeSeats(t)} мест{activeSeats(t) < r.guestsCount ? ` (нужно ${r.guestsCount})` : ''}</option>)}
               </select>
             </div>
             <div className="adm-form-field">
               <label className="adm-form-lbl">ДАТА</label>
-              <input className="adm-form-input" type="date" value={date} onChange={e => setDate(e.target.value)} />
+              <input className="adm-form-input" type="date" required value={date} onChange={e => setDate(e.target.value)} />
             </div>
           </div>
           <div className="adm-form-row">
             <div className="adm-form-field">
               <label className="adm-form-lbl">НАЧАЛО</label>
-              <select className="adm-form-input" value={timeFrom} onChange={e => setTimeFrom(e.target.value)}>
-                {TIME_OPTS.map(t => <option key={t} value={t}>{t}</option>)}
+              <select required className="adm-form-input" value={timeFrom} onChange={e => setTimeFrom(e.target.value)}>
+                <option value="">Выберите время</option>
+                {arrivalSlots.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div className="adm-form-field">
               <label className="adm-form-lbl">КОНЕЦ</label>
-              <select className="adm-form-input" value={timeTo} onChange={e => setTimeTo(e.target.value)}>
-                {TIME_OPTS.map(t => <option key={t} value={t}>{t}</option>)}
+              <select required className="adm-form-input" value={timeTo} onChange={e => setTimeTo(e.target.value)}>
+                {endTimeOptions(timeTo).map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
           </div>
+          {selectedTable && !fits && <div className="adm-error">В этом столе недостаточно мест для {r.guestsCount} гостей. Выберите другой стол.</div>}
           {err && <div className="adm-error">{err}</div>}
           <button className="adm-btn adm-btn--primary" type="submit">Сохранить</button>
         </form>

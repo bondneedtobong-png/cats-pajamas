@@ -1,0 +1,55 @@
+name: Restricted encrypted backup
+on:
+  schedule:
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cats-encrypted-backup
+  cancel-in-progress: false
+jobs:
+  backup:
+    if: github.ref == 'refs/heads/main' && vars.CATS_BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Collect restricted encrypted export
+        env:
+          BACKUP_KEY: ${{ secrets.CATS_BACKUP_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          folder="$RUNNER_TEMP/cats-restricted-backup"
+          install -d -m 700 "$folder"
+          test -n "$BACKUP_KEY"
+          printf '%s\n' "$BACKUP_KEY" > "$folder/key"
+          install -m 600 ops/cats-pajamas-known-hosts "$folder/known_hosts"
+          # Limit file output to 513 MiB and wall-clock collection to five minutes.
+          ulimit -f 525312
+          timeout 300 ssh -i "$folder/key" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$folder/known_hosts" \
+            -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 \
+            cats-backup@31.77.151.27 export-latest > "$folder/latest.enc.partial"
+          # Structural and freshness validation. Authentication of ciphertext happens locally on recovery.
+          node --input-type=module - "$folder" <<'JS'
+          import { renameSync } from 'node:fs';
+          import { exportLatest } from './ops/backup-channel.mjs';
+          const folder = process.argv[2];
+          renameSync(`${folder}/latest.enc.partial`, `${folder}/latest.enc`);
+          exportLatest(folder, 'export-latest');
+          JS
+      - name: Store encrypted envelope
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: protected-backup
+          path: ${{ runner.temp }}/cats-restricted-backup/latest.enc
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove temporary files
+        if: always()
+        run: |
+          rm -f -- "$RUNNER_TEMP/cats-restricted-backup/key" "$RUNNER_TEMP/cats-restricted-backup/known_hosts" "$RUNNER_TEMP/cats-restricted-backup/latest.enc" "$RUNNER_TEMP/cats-restricted-backup/latest.enc.partial"

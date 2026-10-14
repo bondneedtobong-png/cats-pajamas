@@ -43,6 +43,7 @@ jobs:
               'auth-dialog': Path('../docs/audit-2026-10-09/fixes/auth-dialog'),
               'events': Path('../docs/audit-2026-10-09/fixes/events'),
               'mobile': Path('../docs/audit-2026-10-13/screenshots'),
+              'admin-booking': Path('../docs/audit-2026-10-09/fixes/admin-booking'),
           }
           count = 0
           for name, source in fixtures.items():

@@ -84,8 +84,15 @@ async function main() {
     const snapshots = await Promise.all(manifestFiles.map(async file => [path.join(root, file), await readFile(path.join(root, file), 'utf8')]));
     try { await npm('build'); } finally { await restoreGeneratedMetadata(snapshots); }
     await npm('test:security');
+    await node('devtools/booking_validation_test.mjs');
     await npm('test:photos');
     await node('ops/backup-envelope-test.mjs');
+    await node('ops/backup-channel-test.mjs');
+    await node('ops/backup-installer-test.mjs');
+    if (process.platform === 'win32') {
+      await step('Windows GitHub backup collector fixtures', path.join(process.env.SystemRoot || 'C:/Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe'),
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(root, 'ops/backup-github-test.ps1')]);
+    } else console.log('SKIP Windows collector fixtures: Linux; run separately on Windows PowerShell 5.1.');
     await node('devtools/bot_e2e.mjs');
     await node('devtools/menu_import_test.mjs');
     await node('devtools/menu_book_test.mjs');
@@ -112,7 +119,7 @@ async function main() {
     assert(address && typeof address !== 'string' && address.address === '127.0.0.1');
     const url = `http://127.0.0.1:${address.port}`;
     console.log(`→ Own isolated Vite: ${url}`);
-    for (const file of ['floorplan_keyboard_test.mjs', 'auth_dialog_test.mjs', 'event_photo_browser_test.mjs', 'mobile_usability_test.mjs']) {
+    for (const file of ['floorplan_keyboard_test.mjs', 'auth_dialog_test.mjs', 'event_photo_browser_test.mjs', 'mobile_usability_test.mjs', 'admin_booking_options_test.mjs']) {
       await node(`devtools/${file}`, url);
     }
     builtPreview = await preview({ root, configFile: false, envDir: temporary,
