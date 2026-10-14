@@ -32,6 +32,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y nginx
       - name: Settings migration and concurrent CAS in an isolated PostgreSQL
         run: bash devtools/app_config_revision_concurrency_test.sh
+      - name: Atomic content reorder rollback and races in an isolated PostgreSQL
+        run: bash devtools/content_reorder_postgres_test.sh
       - run: npm run check
       - name: Stage only browser fixture screenshots inside the workspace
         if: ${{ !cancelled() }}

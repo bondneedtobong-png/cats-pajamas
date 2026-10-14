@@ -1,4 +1,4 @@
-import { readBody, ok, badRequest, forbidden, serverError, applyCors } from './_lib/http.js';
+import { readBody, ok, badRequest, forbidden, serverError, applyCors, json } from './_lib/http.js';
 import { getUser } from './_lib/session.js';
 import {
   getTeamMembers, createTeamMember, updateTeamMember, deleteTeamMember, moveTeamMember,
@@ -34,6 +34,7 @@ export default async function handler(req, res) {
 
     return badRequest(res, 'Метод не поддерживается');
   } catch (e) {
+    if (e.status === 409 || e.status === 400) return json(res, e.status, { error: e.message });
     if (/обязательно|не найден/.test(e.message)) return badRequest(res, e.message);
     return serverError(res, e);
   }

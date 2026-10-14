@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { reorderContent } from './contentReorder.js';
 
 // Server-side cocktail menu logic, backed by Supabase.
 // Content is Russian-only by design (owner's decision) — the site's RU/EN
@@ -24,7 +25,7 @@ function rowToCocktail(r) {
 }
 
 export async function getCocktails({ activeOnly = true } = {}) {
-  let q = supabase.from('cocktails').select('*').order('sort_order', { ascending: true });
+  let q = supabase.from('cocktails').select('*').order('sort_order', { ascending: true }).order('id', { ascending: true });
   if (activeOnly) q = q.eq('active', true);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
@@ -78,18 +79,5 @@ export async function deleteCocktail(id) {
 
 /** Swap sort_order with the adjacent row (admin reordering, no-op at edges). */
 export async function moveCocktail(id, direction) {
-  const all = await getCocktails({ activeOnly: false });
-  const idx = all.findIndex(c => c.id === id);
-  if (idx === -1) throw new Error('Коктейль не найден');
-  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-  if (swapIdx < 0 || swapIdx >= all.length) return all;
-
-  const a = all[idx], b = all[swapIdx];
-  const { error: aError, data: aRow } = await supabase.from('cocktails').update({ sort_order: b.sortOrder }).eq('id', a.id).select('id').single();
-  if (aError) throw new Error(aError.message);
-  if (!aRow) throw new Error('Не удалось сохранить порядок');
-  const { error: bError, data: bRow } = await supabase.from('cocktails').update({ sort_order: a.sortOrder }).eq('id', b.id).select('id').single();
-  if (bError) throw new Error(bError.message);
-  if (!bRow) throw new Error('Не удалось сохранить порядок');
-  return getCocktails({ activeOnly: false });
+  return reorderContent('move_cocktail_atomic', id, direction, getCocktails, rowToCocktail, 'Коктейль не найден');
 }

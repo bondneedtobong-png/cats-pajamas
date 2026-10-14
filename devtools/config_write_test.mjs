@@ -10,6 +10,7 @@ async function load(file, dependencies, exports) {
 let revision = 0, value = null, failure = null, requests = [];
 const clone = x => JSON.parse(JSON.stringify(x));
 const fixture = {
+  async rpc() { return { data: null, error: failure ? { message: failure } : null }; },
   from(table) {
     let mode = 'read', patch, filters = {};
     const q = {
@@ -50,8 +51,9 @@ await assert.rejects(setBarMenu(sample('failed'), revision), /database failure/)
 failure = null;
 assert.deepEqual(value, sample('edit 0'));
 assert.ok(requests.some(r => r.mode === 'update' && 'revision' in r.filters), 'CAS predicate belongs to UPDATE');
+const { reorderContent } = await load('../api/_lib/contentReorder.js', { supabase: fixture }, 'reorderContent');
 for (const [file, name] of [['team', 'moveTeamMember'], ['cocktails', 'moveCocktail']]) {
-  const fns = await load(`../api/_lib/${file}.js`, { supabase: fixture }, name);
+  const fns = await load(`../api/_lib/${file}.js`, { supabase: fixture, reorderContent }, name);
   failure = 'update denied';
   await assert.rejects(fns[name]('a', 'down'), /update denied/);
   failure = null;

@@ -26,6 +26,29 @@ const d=JSON.parse(s),r=d.configRevision;
 if(!Array.isArray(d.menu)||!d.menu.length||(r!==null&&(!Number.isSafeInteger(r)||r<0)))process.exit(1);
 console.log("PASS public menu settings revision available");
 }catch{process.exit(1)}})'
+# Invalid direction is rejected before SQL takes any lock or reads/writes rows.
+# This validates service-role grants and the live PostgREST schema cache. The
+# raw environment, URL, key and error payload never reach release logs.
+timeout 15 node --input-type=module <<'JS'
+import fs from 'node:fs';
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+try {
+  const config = dotenv.parse(fs.readFileSync('.env'));
+  const client = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(6000) }) } });
+  for (const rpc of ['move_team_member_atomic', 'move_cocktail_atomic']) {
+    const { error } = await client.rpc(rpc, { p_id: null, p_direction: 'ci-invalid', p_expected: null });
+    const verified = error?.code === 'PT400';
+    console.log(`${verified ? 'PASS' : 'FAIL'} ${rpc} schema_cache=${verified}`);
+    if (!verified) process.exit(1);
+  }
+} catch {
+  console.log('FAIL content_reorder_rpc schema_cache=false');
+  process.exit(1);
+}
+JS
 curl "${curl_args[@]}" --fail -H 'Content-Type: application/json' -d '{"action":"login_options"}' https://cats-pajamas.ru/api/auth | node -e 'let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{try{process.exit(JSON.parse(s).demoOtpEnabled===false?0:1)}catch{process.exit(1)}})'
 # Raw PM2 JSON stays in the pipe; only a boolean result reaches the log.
 timeout 10 pm2 jlist | node --input-type=module -e '

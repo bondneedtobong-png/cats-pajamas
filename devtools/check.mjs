@@ -84,6 +84,7 @@ async function main() {
     const snapshots = await Promise.all(manifestFiles.map(async file => [path.join(root, file), await readFile(path.join(root, file), 'utf8')]));
     try { await npm('build'); } finally { await restoreGeneratedMetadata(snapshots); }
     await npm('test:security');
+    await node('devtools/content_reorder_test.mjs');
     await node('devtools/config_write_test.mjs');
     await node('devtools/config_booking_write_test.mjs');
     await node('devtools/config_write_browser_test.mjs');

@@ -470,6 +470,8 @@ function CocktailModal({ initial, onSave, onClose }) {
 }
 
 function TabMenu() {
+  const { toast } = useFeedback();
+  const moveRequest = useRef(0);
   const [tick,      setTick]      = useState(0);
   const [cocktails, setCocktails] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -477,7 +479,13 @@ function TabMenu() {
   const [confirm,   setConfirm]   = useState(null);
 
   useEffect(() => {
-    CocktailsService.getAllAdmin().then(setCocktails).catch(() => {});
+    const request = ++moveRequest.current;
+    CocktailsService.getAllAdmin().then(list => {
+      if (request === moveRequest.current) setCocktails(list);
+    }).catch(() => {});
+    return () => {
+      if (request === moveRequest.current) moveRequest.current++;
+    };
   }, [tick]);
 
   async function handleSave(data) {
@@ -489,8 +497,22 @@ function TabMenu() {
   }
 
   async function handleMove(id, direction) {
-    await CocktailsService.move(id, direction);
-    setTick(n => n + 1);
+    const request = ++moveRequest.current;
+    try {
+      const updated = await CocktailsService.move(id, direction);
+      if (request === moveRequest.current) setCocktails(updated);
+    } catch (error) {
+      if (request !== moveRequest.current) return;
+      toast.error(error.message);
+      if (error.status === 409) {
+        try {
+          const fresh = await CocktailsService.getAllAdmin();
+          if (request === moveRequest.current) setCocktails(fresh);
+        } catch {
+          if (request === moveRequest.current) toast.error('Не удалось обновить список. Обновите страницу перед повторной перестановкой.');
+        }
+      }
+    }
   }
 
   function handleDelete(c) {
@@ -1388,6 +1410,8 @@ function TeamModal({ initial, onSave, onClose }) {
 }
 
 function TabTeam() {
+  const { toast } = useFeedback();
+  const moveRequest = useRef(0);
   const [tick,        setTick]        = useState(0);
   const [members,     setMembers]     = useState([]);
   const [applications, setApplications] = useState([]);
@@ -1396,8 +1420,14 @@ function TabTeam() {
   const [confirm,      setConfirm]     = useState(null);
 
   useEffect(() => {
-    TeamService.getAllAdmin().then(setMembers).catch(() => {});
+    const request = ++moveRequest.current;
+    TeamService.getAllAdmin().then(list => {
+      if (request === moveRequest.current) setMembers(list);
+    }).catch(() => {});
     ApplicationsService.getAllAdmin().then(setApplications).catch(() => {});
+    return () => {
+      if (request === moveRequest.current) moveRequest.current++;
+    };
   }, [tick]);
 
   async function handleSave(data) {
@@ -1409,8 +1439,22 @@ function TabTeam() {
   }
 
   async function handleMove(id, direction) {
-    await TeamService.move(id, direction);
-    setTick(n => n + 1);
+    const request = ++moveRequest.current;
+    try {
+      const updated = await TeamService.move(id, direction);
+      if (request === moveRequest.current) setMembers(updated);
+    } catch (error) {
+      if (request !== moveRequest.current) return;
+      toast.error(error.message);
+      if (error.status === 409) {
+        try {
+          const fresh = await TeamService.getAllAdmin();
+          if (request === moveRequest.current) setMembers(fresh);
+        } catch {
+          if (request === moveRequest.current) toast.error('Не удалось обновить список. Обновите страницу перед повторной перестановкой.');
+        }
+      }
+    }
   }
 
   function handleDelete(m) {

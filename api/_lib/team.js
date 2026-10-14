@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { reorderContent } from './contentReorder.js';
 
 function generateId() { return 'tm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
 
@@ -22,7 +23,7 @@ function rowToMember(r) {
 }
 
 export async function getTeamMembers({ activeOnly = true } = {}) {
-  let q = supabase.from('team_members').select('*').order('sort_order', { ascending: true });
+  let q = supabase.from('team_members').select('*').order('sort_order', { ascending: true }).order('id', { ascending: true });
   if (activeOnly) q = q.eq('active', true);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
@@ -79,18 +80,5 @@ export async function deleteTeamMember(id) {
 
 /** Swap sort_order with the adjacent row (admin reordering, no-op at edges). */
 export async function moveTeamMember(id, direction) {
-  const all = await getTeamMembers({ activeOnly: false });
-  const idx = all.findIndex(m => m.id === id);
-  if (idx === -1) throw new Error('Участник не найден');
-  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-  if (swapIdx < 0 || swapIdx >= all.length) return all;
-
-  const a = all[idx], b = all[swapIdx];
-  const { error: aError, data: aRow } = await supabase.from('team_members').update({ sort_order: b.sortOrder }).eq('id', a.id).select('id').single();
-  if (aError) throw new Error(aError.message);
-  if (!aRow) throw new Error('Не удалось сохранить порядок');
-  const { error: bError, data: bRow } = await supabase.from('team_members').update({ sort_order: a.sortOrder }).eq('id', b.id).select('id').single();
-  if (bError) throw new Error(bError.message);
-  if (!bRow) throw new Error('Не удалось сохранить порядок');
-  return getTeamMembers({ activeOnly: false });
+  return reorderContent('move_team_member_atomic', id, direction, getTeamMembers, rowToMember, 'Участник не найден');
 }

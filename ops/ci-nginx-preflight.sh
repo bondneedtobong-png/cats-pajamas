@@ -54,5 +54,11 @@ timeout 60 docker exec -i supabase-db psql -X -U postgres -d postgres \
   -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate \
   < supabase/migrations/20261014152121_app_config_revision.sql
 echo 'PASS additive app_config revision migration'
+# Apply only this additive RPC migration before activating RPC-backed code.
+# Old application rollback keeps the functions; no historical migration replay.
+timeout 60 docker exec -i supabase-db psql -X -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate \
+  < supabase/migrations/20261014202634_atomic_content_reorder.sql
+echo 'PASS additive atomic content reorder migration'
 printf '%s\n' "$sha" > "$state/preflight-passed"
 echo "PASS production preflight commit=$sha backup=true isolated_nginx=true"
