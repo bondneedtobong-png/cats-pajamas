@@ -99,24 +99,35 @@ export function sanitizeBarMenu(payload) {
 export async function getBarMenu() {
   try {
     const { data, error } = await supabase
-      .from('app_config').select('value').eq('key', CONFIG_KEY).maybeSingle();
+      .from('app_config').select('value,revision').eq('key', CONFIG_KEY).maybeSingle();
     if (error) throw error;
     const v = data?.value;
     if (v && Array.isArray(v.menu) && v.menu.length) {
-      return { menu: v.menu, stories: v.stories && typeof v.stories === 'object' ? v.stories : {} };
+      return { menu: v.menu, stories: v.stories && typeof v.stories === 'object' ? v.stories : {}, configRevision: data.revision };
     }
+    return { ...STATIC, configRevision: data ? data.revision : null };
   } catch (e) {
     console.warn('[barMenu] getBarMenu → статический фолбэк:', e.message);
   }
   return STATIC;
 }
 
-/** Админское сохранение карты (upsert в app_config). */
-export async function setBarMenu(payload) {
+/** Compare the monotonic database revision so stale editors cannot overwrite it. */
+export async function setBarMenu(payload, configRevision) {
+  const conflict = () => Object.assign(new Error('Карта уже изменена или не загружена. Обновите страницу перед сохранением.'), { status: 409 });
+  if (configRevision !== null && (!Number.isSafeInteger(configRevision) || configRevision < 0)) throw conflict();
   const clean = sanitizeBarMenu(payload);
   if (!clean.menu.length) throw new Error('Карта не может быть пустой');
-  const { error } = await supabase
-    .from('app_config').upsert({ key: CONFIG_KEY, value: clean }, { onConflict: 'key' });
-  if (error) throw new Error(error.message);
-  return clean;
+  let result;
+  if (configRevision === null) {
+    result = await supabase.from('app_config').insert({ key: CONFIG_KEY, value: clean }).select('key,revision').single();
+    if (result.error?.code === '23505') throw conflict();
+  } else {
+    result = await supabase.from('app_config').update({ value: clean })
+      .eq('key', CONFIG_KEY).eq('revision', configRevision).select('key,revision').maybeSingle();
+  }
+  if (result.error) throw new Error(result.error.message);
+  if (!result.data) throw conflict();
+  if (!Number.isSafeInteger(result.data.revision) || result.data.revision < 0) throw new Error('Версия настроек недоступна');
+  return { ...clean, configRevision: result.data.revision };
 }

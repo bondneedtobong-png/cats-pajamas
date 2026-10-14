@@ -84,11 +84,16 @@ async function main() {
     const snapshots = await Promise.all(manifestFiles.map(async file => [path.join(root, file), await readFile(path.join(root, file), 'utf8')]));
     try { await npm('build'); } finally { await restoreGeneratedMetadata(snapshots); }
     await npm('test:security');
+    await node('devtools/config_write_test.mjs');
+    await node('devtools/config_booking_write_test.mjs');
+    await node('devtools/config_write_browser_test.mjs');
     await node('devtools/booking_validation_test.mjs');
     await npm('test:photos');
     await node('ops/backup-envelope-test.mjs');
     await node('ops/backup-channel-test.mjs');
     await node('ops/backup-installer-test.mjs');
+    await step('Isolated restore parser fixtures', process.platform === 'win32' ? 'python' : 'python3',
+      ['ops/backup-restore-proof-test.py']);
     if (process.platform === 'win32') {
       await step('Windows GitHub backup collector fixtures', path.join(process.env.SystemRoot || 'C:/Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe'),
         ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(root, 'ops/backup-github-test.ps1')]);

@@ -1,8 +1,8 @@
-import { readBody, ok, badRequest, forbidden, serverError, applyCors } from './_lib/http.js';
+import { readBody, ok, badRequest, forbidden, serverError, applyCors, json } from './_lib/http.js';
 import { getUser } from './_lib/session.js';
 import {
   getTablesWithStatus, getTablesWithStatusAdmin, getTablesMerged,
-  setTableDepositPrice, setTableSeatsCount,
+  setTableDepositPrice, setTableSeatsCount, setTableConfig,
   getBookingDatesConfig, setBookingDatesConfig,
 } from './_lib/booking.js';
 
@@ -32,18 +32,18 @@ export default async function handler(req, res) {
       // План статичен (v2): позиции столов не редактируются — только депозит,
       // число мест и календарь дат (см. AdminPage, вкладка СТОЛЫ).
       switch (body.action) {
+        case 'set_config':
+          if (!body.expected) return json(res, 409, { error: 'Обновите страницу перед сохранением настроек.' });
+          await setTableConfig(body.tableId, body.patch || {}, body.expected); break;
         case 'set_deposit':     await setTableDepositPrice(body.tableId, body.price); break;
         case 'set_seats_count': await setTableSeatsCount(body.tableId, body.count); break;
         case 'set_dates': {
-          const cur = await getBookingDatesConfig();
           const patch = {};
-          if ('blockToday' in body)    patch.blockToday = !!body.blockToday;
+          if ('blockToday' in body) patch.blockToday = !!body.blockToday;
           if ('blockTomorrow' in body) patch.blockTomorrow = !!body.blockTomorrow;
-          let blocked = cur.blockedDates;
-          if (body.addDate)    blocked = [...blocked, body.addDate];
-          if (body.removeDate) blocked = blocked.filter(d => d !== body.removeDate);
-          patch.blockedDates = blocked;
-          return ok(res, { dates: await setBookingDatesConfig(patch) });
+          if (body.addDate) patch.addDate = body.addDate;
+          if (body.removeDate) patch.removeDate = body.removeDate;
+          return ok(res, { dates: await setBookingDatesConfig(patch, body.expected) });
         }
         default: return badRequest(res, 'Неизвестное действие');
       }
@@ -52,6 +52,7 @@ export default async function handler(req, res) {
 
     return badRequest(res, 'Метод не поддерживается');
   } catch (e) {
+    if (e.status === 409) return json(res, 409, { error: e.message });
     if (/от 1 до 30/.test(e.message)) return badRequest(res, e.message);
     return serverError(res, e);
   }

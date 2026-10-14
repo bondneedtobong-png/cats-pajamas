@@ -1816,8 +1816,9 @@ function TableEditorPanel({ table, onSaved }) {
     e.preventDefault();
     setSaving(true);
     try {
-      await BookingService.setTableDepositPrice(table.id, parseInt(price, 10) || 0);
-      await BookingService.setTableSeatsCount(table.id, parseInt(seats, 10) || 1);
+      await BookingService.setTableConfig(table.id, {
+        depositPrice: parseInt(price, 10) || 0, seatsCount: parseInt(seats, 10) || 1,
+      }, { depositPrice: table.depositPrice ?? 0, seatsCount: table.activeSeatsCount ?? 4 });
       toast.success('Настройки стола сохранены');
       onSaved();
     } catch (ex) {
@@ -1861,11 +1862,17 @@ function BookingDatesSection() {
 
   async function apply(patch, okText) {
     try {
-      const next = await BookingService.setBookingDates(patch);
+      const expected = {};
+      if ('blockToday' in patch) expected.blockToday = cfg.blockToday;
+      if ('blockTomorrow' in patch) expected.blockTomorrow = cfg.blockTomorrow;
+      if (patch.addDate || patch.removeDate) expected.dateBlocked = cfg.blockedDates.includes(patch.addDate || patch.removeDate);
+      const next = await BookingService.setBookingDates({ ...patch, expected });
       setCfg(next);
       if (okText) toast.success(okText);
+      return true;
     } catch (e) {
       toast.error(e.message);
+      return false;
     }
   }
 
@@ -1915,7 +1922,7 @@ function BookingDatesSection() {
       <div className="adm-filters" style={{ marginTop: 10 }}>
         <input className="adm-select" type="date" value={newDate} onChange={e => setNewDate(e.target.value)} />
         <button type="button" className="adm-btn adm-btn--ghost" disabled={!newDate}
-          onClick={() => { apply({ addDate: newDate }, 'Дата закрыта для брони'); setNewDate(''); }}>
+          onClick={async () => { if (await apply({ addDate: newDate }, 'Дата закрыта для брони')) setNewDate(''); }}>
           Закрыть выбранную дату
         </button>
       </div>

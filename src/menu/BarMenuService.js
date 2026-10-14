@@ -18,17 +18,17 @@ const BarMenuService = {
       if (Array.isArray(d?.menu) && d.menu.length) {
         // applySubgroups — страховка для карты, залитой до третьего уровня:
         // «Шотландия/Ирландия/…» получают parent «Виски» уже на чтении.
-        return { menu: applySubgroups(d.menu), stories: d.stories && typeof d.stories === 'object' ? d.stories : {} };
+        return { configRevision: d.configRevision, menu: applySubgroups(d.menu), stories: d.stories && typeof d.stories === 'object' ? d.stories : {} };
       }
     } catch { /* ниже — фолбэк */ }
     return { menu: applySubgroups(BAR_MENU), stories: CATEGORY_STORIES };
   },
 
   /** Админское сохранение всей карты одним блобом. */
-  async save(data) {
-    const d = await apiFetch('/api/bar-menu', { method: 'POST', body: { action: 'save', data } });
+  async save(data, configRevision) {
+    const d = await apiFetch('/api/bar-menu', { method: 'POST', body: { action: 'save', data, configRevision } });
     if (!Array.isArray(d?.menu)) throw new Error('Некорректный ответ сервера');
-    return { menu: d.menu, stories: d.stories && typeof d.stories === 'object' ? d.stories : {} };
+    return { configRevision: d.configRevision, menu: d.menu, stories: d.stories && typeof d.stories === 'object' ? d.stories : {} };
   },
 };
 

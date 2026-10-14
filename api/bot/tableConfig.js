@@ -121,7 +121,7 @@ tableConfigComposer.callbackQuery(/^bd(today|tomorrow)$/, async (ctx) => {
   const key = ctx.match[1] === 'today' ? 'blockToday' : 'blockTomorrow';
   const cfg = await getBookingDatesConfig();
   const next = !cfg[key];
-  await setBookingDatesConfig({ [key]: next });
+  await setBookingDatesConfig({ [key]: next }, { [key]: cfg[key] });
   await ctx.answerCallbackQuery({ text: next ? 'Закрыто для брони' : 'Открыто для брони' });
   return renderBdates(ctx);
 });
@@ -132,8 +132,8 @@ tableConfigComposer.callbackQuery(/^bdt:(\d{4}-\d{2}-\d{2})$/, async (ctx) => {
   const cfg = await getBookingDatesConfig();
   const wasBlocked = cfg.blockedDates.includes(iso);
   await setBookingDatesConfig({
-    blockedDates: wasBlocked ? cfg.blockedDates.filter(d => d !== iso) : [...cfg.blockedDates, iso],
-  });
+    ...(wasBlocked ? { removeDate: iso } : { addDate: iso }),
+  }, { dateBlocked: wasBlocked });
   await ctx.answerCallbackQuery({ text: wasBlocked ? 'Дата открыта' : 'Дата закрыта' });
   return renderBdates(ctx);
 });
@@ -198,8 +198,8 @@ tableConfigComposer.on('message:text', async (ctx, next) => {
     const cfg = await getBookingDatesConfig();
     const wasBlocked = cfg.blockedDates.includes(iso);
     await setBookingDatesConfig({
-      blockedDates: wasBlocked ? cfg.blockedDates.filter(d => d !== iso) : [...cfg.blockedDates, iso],
-    });
+      ...(wasBlocked ? { removeDate: iso } : { addDate: iso }),
+    }, { dateBlocked: wasBlocked });
     resetSession(ctx);
     const { text: bdText, kb: bdKb } = await bdatesContent();
     await ctx.reply(wasBlocked ? `Дата ${text} снова открыта для брони.` : `Дата ${text} закрыта для брони.`);

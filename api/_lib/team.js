@@ -86,7 +86,11 @@ export async function moveTeamMember(id, direction) {
   if (swapIdx < 0 || swapIdx >= all.length) return all;
 
   const a = all[idx], b = all[swapIdx];
-  await supabase.from('team_members').update({ sort_order: b.sortOrder }).eq('id', a.id);
-  await supabase.from('team_members').update({ sort_order: a.sortOrder }).eq('id', b.id);
+  const { error: aError, data: aRow } = await supabase.from('team_members').update({ sort_order: b.sortOrder }).eq('id', a.id).select('id').single();
+  if (aError) throw new Error(aError.message);
+  if (!aRow) throw new Error('Не удалось сохранить порядок');
+  const { error: bError, data: bRow } = await supabase.from('team_members').update({ sort_order: a.sortOrder }).eq('id', b.id).select('id').single();
+  if (bError) throw new Error(bError.message);
+  if (!bRow) throw new Error('Не удалось сохранить порядок');
   return getTeamMembers({ activeOnly: false });
 }

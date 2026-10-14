@@ -1,4 +1,4 @@
-import { readBody, ok, badRequest, forbidden, serverError, applyCors } from './_lib/http.js';
+import { readBody, ok, badRequest, forbidden, serverError, applyCors, json } from './_lib/http.js';
 import { getUser } from './_lib/session.js';
 import { getBarMenu, setBarMenu } from './_lib/barMenu.js';
 
@@ -16,13 +16,14 @@ export default async function handler(req, res) {
       if (!user || user.role !== 'admin') return forbidden(res);
       const body = await readBody(req);
       if (body.action === 'save') {
-        return ok(res, await setBarMenu(body.data || {}));
+        return ok(res, await setBarMenu(body.data || {}, body.configRevision));
       }
       return badRequest(res, 'Неизвестное действие');
     }
 
     return badRequest(res, 'Метод не поддерживается');
   } catch (e) {
+    if (e.status === 409) return json(res, 409, { error: e.message });
     if (/пустой|обязательно/.test(e.message)) return badRequest(res, e.message);
     return serverError(res, e);
   }

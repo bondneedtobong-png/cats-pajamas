@@ -26,13 +26,14 @@ export default function Menu({ tx }) {
   // карту из БД, когда она приедет. При недоступном API остаётся статика.
   const [menu, setMenu] = useState(BAR_MENU);
   const [stories, setStories] = useState(CATEGORY_STORIES);
+  const [configRevision, setConfigRevision] = useState(undefined);
   const [editing, setEditing] = useState(false);
   const isAdmin = AuthService.isAdmin();
 
   useEffect(() => {
     let alive = true;
     BarMenuService.getPublic().then((d) => {
-      if (alive) { setMenu(d.menu); setStories(d.stories); }
+      if (alive) { setMenu(d.menu); setStories(d.stories); setConfigRevision(d.configRevision); }
     });
     return () => { alive = false; };
   }, []);
@@ -48,9 +49,10 @@ export default function Menu({ tx }) {
         {editing ? (
           <Suspense fallback={<div className="mbk-edit-emptyspread">Загрузка редактора…</div>}>
             <MenuInlineEditor
-              initial={{ menu, stories }}
+              initial={{ menu, stories, configRevision }}
               onCancel={() => setEditing(false)}
               onSaved={(saved) => {
+                setConfigRevision(saved.configRevision);
                 setMenu(saved.menu);
                 setStories(saved.stories);
                 setEditing(false);

@@ -74,6 +74,7 @@ function fromDraft(draft) {
 
 export default function MenuInlineEditor({ initial, onCancel, onSaved }) {
   const [draft, setDraft] = useState(() => toDraft(initial));
+  const configRevision = useRef(initial.configRevision);
   const [sel, setSel] = useState({ g: 0, c: 0 });
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -211,7 +212,7 @@ export default function MenuInlineEditor({ initial, onCancel, onSaved }) {
   async function handleSave() {
     setErr(''); setSaving(true);
     try {
-      const saved = await BarMenuService.save(fromDraft(draft));
+      const saved = await BarMenuService.save(fromDraft(draft), configRevision.current);
       toast.success('Барная карта сохранена');
       onSaved(saved);
     } catch (ex) {

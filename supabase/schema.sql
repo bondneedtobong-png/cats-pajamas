@@ -171,6 +171,7 @@ alter table public.reservations add column if not exists attendance_prompt_sent_
 create table if not exists public.app_config (
   key        text primary key,
   value      jsonb       not null default '{}'::jsonb,
+  revision   bigint      not null default 0,
   updated_at timestamptz not null default now()
 );
 
@@ -515,6 +516,27 @@ drop trigger if exists app_config_touch on public.app_config;
 create trigger app_config_touch
   before update on public.app_config
   for each row execute function public.touch_updated_at();
+
+-- Monotonic revision also covers legacy writers and no-op updates.
+alter table public.app_config
+  add column if not exists revision bigint not null default 0;
+create or replace function public.bump_app_config_revision()
+returns trigger language plpgsql security invoker
+set search_path = pg_catalog, public as $$
+begin
+  if tg_op = 'INSERT' then
+    new.revision = 0;
+  else
+    new.revision = old.revision + 1;
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.bump_app_config_revision() from public;
+drop trigger if exists app_config_revision on public.app_config;
+create trigger app_config_revision
+  before insert or update on public.app_config
+  for each row execute function public.bump_app_config_revision();
 
 drop trigger if exists cocktails_touch on public.cocktails;
 create trigger cocktails_touch

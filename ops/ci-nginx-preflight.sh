@@ -46,5 +46,13 @@ npm ci --no-audit --no-fund
 npm run build
 node ops/prepare-nginx-404.mjs "$state/before.conf" "$state/candidate.conf"
 python3 ops/test_nginx_404.py "$state/candidate.conf" "$scratch/dist"
+# Verify the fresh archive in a disposable, offline container before changing
+# application code or its additive settings schema. Use the installed DB image.
+db_image=$(docker inspect supabase-db --format '{{.Image}}')
+bash ops/ci-backup-restore.sh "$db_image" "$scratch/ops/backup-restore-proof.py"
+timeout 60 docker exec -i supabase-db psql -X -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate \
+  < supabase/migrations/20261014152121_app_config_revision.sql
+echo 'PASS additive app_config revision migration'
 printf '%s\n' "$sha" > "$state/preflight-passed"
 echo "PASS production preflight commit=$sha backup=true isolated_nginx=true"

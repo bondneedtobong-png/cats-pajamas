@@ -50,7 +50,7 @@ const DEFAULTS = {
   reservations: r => ({ staff_message_id: null, staff_reminder_count: 0, attendance_prompt_sent_at: null, cancelled_at: null, cancellation_reason: null, note: '', guest_phone: '', created_at: now(), updated_at: now(), ...r }),
   booking_inquiries: r => ({ guest_id: null, telegram_id: null, guest_name: '', guest_phone: '', when_text: '', guests_count: 1, message: '', status: 'new', staff_message_id: null, created_at: now(), updated_at: now(), ...r }),
   table_occupancy: r => ({ source: 'walk_in', reservation_id: null, occupied_since: now(), freed_at: null, ...r }),
-  app_config: r => ({ value: {}, updated_at: now(), ...r }),
+  app_config: r => ({ value: {}, updated_at: now(), ...r, revision: 0 }),
   events: r => ({ time: '', description: '', image_url: '', image_urls: [], sort_order: 0, active: true, awards_points: false, attendance_prompt_sent_at: null, created_at: now(), updated_at: now(), ...r }),
 };
 
@@ -204,7 +204,7 @@ export function startPgrestMock(db, port = 54321, { reservationOccupancyTrigger 
       for (const item of items) {
         if (isUpsert) {
           const existing = rows.find(r => String(r[pk]) === String(item[pk]));
-          if (existing) { syncOccupancy(existing, item); Object.assign(existing, item, { updated_at: now() }); inserted.push(existing); continue; }
+          if (existing) { if (table === 'app_config') item.revision = existing.revision + 1; syncOccupancy(existing, item); Object.assign(existing, item, { updated_at: now() }); inserted.push(existing); continue; }
         }
         const viol = checkUnique(table, rows, item);
         if (viol) throw Object.assign(new Error(`duplicate key value violates unique constraint "${viol}"`), { code: "23505" });
@@ -223,6 +223,7 @@ export function startPgrestMock(db, port = 54321, { reservationOccupancyTrigger 
         const viol = checkUnique(table, rows, next, r);
         if (viol) throw Object.assign(new Error(`duplicate key value violates unique constraint "${viol}"`), { code: "23505" });
         syncOccupancy(r, next);
+        if (table === 'app_config') payload.revision = r.revision + 1;
         Object.assign(r, payload, 'updated_at' in r ? { updated_at: now() } : {});
       }
       if (!wantRep) { res.writeHead(204); return res.end(); }

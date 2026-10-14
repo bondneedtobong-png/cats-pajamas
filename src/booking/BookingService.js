@@ -70,6 +70,9 @@ const BookingService = {
   },
 
   // ─── table config (admin) ─────────────────────────────────────────────────
+  async setTableConfig(tableId, patch, expected) {
+    return apiFetch('/api/tables', { method: 'POST', body: { action: 'set_config', tableId, patch, expected } });
+  },
   async setTableDepositPrice(tableId, price) {
     return apiFetch('/api/tables', { method: 'POST', body: { action: 'set_deposit', tableId, price } });
   },

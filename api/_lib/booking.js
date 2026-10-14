@@ -1,3 +1,4 @@
+import { patchConfig, configConflict } from './configWrite.js';
 import { supabase } from './supabase.js';
 import { TABLES, activeSeats } from '../../src/booking/tablesConfig.js';
 import {
@@ -143,11 +144,9 @@ async function clearStaffReminders(idOrRow) {
 async function loadTableConfig() {
   const { data, error } = await supabase
     .from('app_config').select('value').eq('key', TABLE_CONFIG_KEY).maybeSingle();
-  if (error || !data) return {};
+  if (error) throw new Error(error.message);
+  if (!data) return {};
   return data.value || {};
-}
-async function saveTableConfig(cfg) {
-  await supabase.from('app_config').upsert({ key: TABLE_CONFIG_KEY, value: cfg });
 }
 
 // План статичен (v2): позиции столов живут только в tablesConfig.js.
@@ -173,7 +172,8 @@ export async function getTablesMerged() {
 const BOOKING_DATES_KEY = 'booking_dates';
 
 export async function getBookingDatesConfig() {
-  const { data } = await supabase.from('app_config').select('value').eq('key', BOOKING_DATES_KEY).maybeSingle();
+  const { data, error } = await supabase.from('app_config').select('value').eq('key', BOOKING_DATES_KEY).maybeSingle();
+  if (error) throw new Error(error.message);
   const v = data?.value || {};
   return {
     blockToday: !!v.blockToday,
@@ -182,14 +182,30 @@ export async function getBookingDatesConfig() {
   };
 }
 
-export async function setBookingDatesConfig(patch) {
-  const cur = await getBookingDatesConfig();
-  const next = { ...cur, ...patch };
-  next.blockedDates = [...new Set(next.blockedDates)]
-    .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
-    .sort();
-  await supabase.from('app_config').upsert({ key: BOOKING_DATES_KEY, value: next });
-  return next;
+export async function setBookingDatesConfig(patch, expected = {}) {
+  return patchConfig(BOOKING_DATES_KEY, (cur, initial) => {
+    const next = { ...cur };
+    for (const key of ['blockToday', 'blockTomorrow']) {
+      if (!(key in patch)) continue;
+      const base = key in expected ? !!expected[key] : !!initial[key];
+      if (!!cur[key] !== base) throw configConflict();
+      next[key] = !!patch[key];
+    }
+    let blocked = Array.isArray(cur.blockedDates) ? cur.blockedDates : [];
+    if ('blockedDates' in patch) {
+      const base = expected.blockedDates ?? initial.blockedDates ?? [];
+      if (JSON.stringify(blocked) !== JSON.stringify(base)) throw configConflict();
+      blocked = patch.blockedDates;
+    }
+    for (const [operation, shouldBlock] of [['addDate', true], ['removeDate', false]]) {
+      if (!patch[operation]) continue;
+      const date = patch[operation];
+      if ('dateBlocked' in expected && blocked.includes(date) !== expected.dateBlocked) throw configConflict();
+      blocked = shouldBlock ? [...blocked, date] : blocked.filter(d => d !== date);
+    }
+    next.blockedDates = [...new Set(blocked)].filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    return { ...next, blockToday: !!next.blockToday, blockTomorrow: !!next.blockTomorrow };
+  });
 }
 
 function tomorrowEveningDate() {
@@ -797,17 +813,33 @@ export async function payDeposit(reservationId, { guestId } = {}) {
   return res;
 }
 
-export async function setTableSeatsCount(tableId, count) {
-  const n = parseInt(count, 10);
-  if (!Number.isFinite(n) || n < 1 || n > 30) throw new Error('Число мест — от 1 до 30');
-  const cfg = await loadTableConfig();
-  if (!cfg[tableId]) cfg[tableId] = {};
-  cfg[tableId].seatsCount = n;
-  await saveTableConfig(cfg);
-  return n;
+export async function setTableConfig(tableId, patch, expected) {
+  const table = TABLES.find(t => t.id === tableId);
+  if (!table) throw new Error('Стол не найден');
+  const clean = {};
+  if ('depositPrice' in patch) clean.depositPrice = Math.max(0, Number(patch.depositPrice) || 0);
+  if ('seatsCount' in patch) {
+    const n = parseInt(patch.seatsCount, 10);
+    if (!Number.isFinite(n) || n < 1 || n > 30) throw new Error('Число мест — от 1 до 30');
+    clean.seatsCount = n;
+  }
+  const effective = (cfg, field) => field === 'depositPrice'
+    ? cfg[tableId]?.depositPrice ?? table.depositPrice ?? 0
+    : activeSeats({ ...table, ...cfg[tableId], seats: table.seats.map((seat, i) => ({ ...seat, active: cfg[tableId]?.seats?.[i]?.active ?? seat.active })) });
+  return patchConfig(TABLE_CONFIG_KEY, (cur, initial) => {
+    for (const field of Object.keys(clean)) {
+      const base = expected ? expected[field] : effective(initial, field);
+      if (base === undefined || effective(cur, field) !== base) throw configConflict();
+    }
+    return { ...cur, [tableId]: { ...cur[tableId], ...clean } };
+  });
 }
 
-// ─── table config setters ─────────────────────────────────────────────────────
+export async function setTableSeatsCount(tableId, count) {
+  await setTableConfig(tableId, { seatsCount: count });
+  return parseInt(count, 10);
+}
+
 export async function getTableDepositPrices() {
   return (await getTablesMerged()).map(t => ({
     id: t.id, name: t.name || t.id, zone: t.zone, type: t.type, depositPrice: t.depositPrice ?? 0,
@@ -815,22 +847,21 @@ export async function getTableDepositPrices() {
 }
 
 export async function setTableDepositPrice(tableId, price) {
-  const cfg = await loadTableConfig();
-  if (!cfg[tableId]) cfg[tableId] = {};
-  cfg[tableId].depositPrice = Math.max(0, Number(price) || 0);
-  await saveTableConfig(cfg);
+  await setTableConfig(tableId, { depositPrice: price });
 }
 
 export async function setTableSeatActive(tableId, seatIndex, active) {
-  const cfg = await loadTableConfig();
-  if (!cfg[tableId]) cfg[tableId] = {};
-  if (!cfg[tableId].seats) {
+  await patchConfig(TABLE_CONFIG_KEY, (cfg, initial) => {
     const src = TABLES.find(t => t.id === tableId);
-    cfg[tableId].seats = src ? src.seats.map(s => ({ active: s.active })) : [];
-  }
-  while (cfg[tableId].seats.length <= seatIndex) cfg[tableId].seats.push({ active: true });
-  cfg[tableId].seats[seatIndex] = { ...cfg[tableId].seats[seatIndex], active };
-  await saveTableConfig(cfg);
+    const original = initial[tableId]?.seats?.[seatIndex]?.active ?? src?.seats?.[seatIndex]?.active ?? true;
+    const current = cfg[tableId]?.seats?.[seatIndex]?.active ?? src?.seats?.[seatIndex]?.active ?? true;
+    if (original !== current) throw configConflict();
+    if (!cfg[tableId]) cfg[tableId] = {};
+    if (!cfg[tableId].seats) cfg[tableId].seats = src ? src.seats.map(s => ({ active: s.active })) : [];
+    while (cfg[tableId].seats.length <= seatIndex) cfg[tableId].seats.push({ active: true });
+    cfg[tableId].seats[seatIndex] = { ...cfg[tableId].seats[seatIndex], active };
+    return cfg;
+  });
 }
 
 // ─── Текстовые заявки гостя через Telegram-бота (booking_inquiries) ───────────

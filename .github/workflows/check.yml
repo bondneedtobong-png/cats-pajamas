@@ -30,6 +30,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Install isolated nginx test dependency
         run: sudo apt-get update && sudo apt-get install -y nginx
+      - name: Settings migration and concurrent CAS in an isolated PostgreSQL
+        run: bash devtools/app_config_revision_concurrency_test.sh
       - run: npm run check
       - name: Stage only browser fixture screenshots inside the workspace
         if: ${{ !cancelled() }}
@@ -44,6 +46,7 @@ jobs:
               'events': Path('../docs/audit-2026-10-09/fixes/events'),
               'mobile': Path('../docs/audit-2026-10-13/screenshots'),
               'admin-booking': Path('../docs/audit-2026-10-09/fixes/admin-booking'),
+              'settings': Path('../docs/audit-2026-10-14/settings'),
           }
           count = 0
           for name, source in fixtures.items():

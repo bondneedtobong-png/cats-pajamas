@@ -18,6 +18,14 @@ for route in "/ci-unknown-$sha" /booking/deeper "/assets/ci-missing-$sha.js" "/f
   grep -q 'noindex, nofollow' "$body"
 done
 curl "${curl_args[@]}" --fail https://cats-pajamas.ru/health | node -e 'let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{try{process.exit(JSON.parse(s).ok===true?0:1)}catch{process.exit(1)}})'
+# A missing revision would mean the new API or PostgREST schema cache cannot
+# read the additive migration. Inspect the public menu without changing it.
+curl "${curl_args[@]}" --fail https://cats-pajamas.ru/api/bar-menu | node -e '
+let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{try{
+const d=JSON.parse(s),r=d.configRevision;
+if(!Array.isArray(d.menu)||!d.menu.length||(r!==null&&(!Number.isSafeInteger(r)||r<0)))process.exit(1);
+console.log("PASS public menu settings revision available");
+}catch{process.exit(1)}})'
 curl "${curl_args[@]}" --fail -H 'Content-Type: application/json' -d '{"action":"login_options"}' https://cats-pajamas.ru/api/auth | node -e 'let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{try{process.exit(JSON.parse(s).demoOtpEnabled===false?0:1)}catch{process.exit(1)}})'
 # Raw PM2 JSON stays in the pipe; only a boolean result reaches the log.
 timeout 10 pm2 jlist | node --input-type=module -e '
