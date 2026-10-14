@@ -134,9 +134,9 @@ jobs:
           # OpenSSH intentionally discards remote fd2 for subsystem sessions.
           # Prove authenticated subsystem execution returned a refusal, rather than
           # accepting an authentication/connection failure or timeout as denial.
-          grep -Eq '^Authenticated to 31[.]77[.]151[.]27 .* using "publickey"[.]$' "$folder/deny.stderr"
-          grep -Eq '^debug2: subsystem request accepted on channel [0-9]+$' "$folder/deny.stderr"
-          grep -Fxq 'debug1: Exit status 1' "$folder/deny.stderr"
+          grep -Eq '^Authenticated to 31[.]77[.]151[.]27 .* using "publickey"[.][[:space:]]*$' "$folder/deny.stderr"
+          grep -Eq '^debug2: subsystem request accepted on channel [0-9]+[[:space:]]*$' "$folder/deny.stderr"
+          grep -Eq '^debug1: Exit status 1[[:space:]]*$' "$folder/deny.stderr"
           echo 'PASS restricted SFTP subsystem'
           stage=pty
           status=0
