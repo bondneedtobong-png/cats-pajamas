@@ -115,10 +115,8 @@ jobs:
           # timeout, authentication failure and connection failure never count as success.
           reject_command() {
             stage="$1"
-            set +e
-            timeout 30 ssh "${options[@]}" "$target" "$1" > "$folder/deny.stdout" 2> "$folder/deny.stderr"
-            status=$?
-            set -e
+            status=0
+            timeout 30 ssh "${options[@]}" "$target" "$1" > "$folder/deny.stdout" 2> "$folder/deny.stderr" || status=$?
             [[ $status == 1 && ! -s "$folder/deny.stdout" ]]
             grep -Fxq 'Backup command rejected' "$folder/deny.stderr"
             echo "PASS restricted command $stage"
@@ -127,26 +125,20 @@ jobs:
           reject_command bash
           reject_command 'scp -f /var/backups/cats-pajamas/'
           stage=sftp
-          set +e
-          timeout 30 ssh "${options[@]}" -s "$target" sftp > "$folder/deny.stdout" 2> "$folder/deny.stderr"
-          status=$?
-          set -e
+          status=0
+          timeout 30 ssh "${options[@]}" -s "$target" sftp > "$folder/deny.stdout" 2> "$folder/deny.stderr" || status=$?
           [[ $status == 1 && ! -s "$folder/deny.stdout" ]]
           grep -Fxq 'Backup command rejected' "$folder/deny.stderr"
           echo 'PASS restricted SFTP subsystem'
           stage=pty
-          set +e
-          timeout 30 ssh "${options[@]}" -tt "$target" id > "$folder/deny.stdout" 2> "$folder/deny.stderr"
-          status=$?
-          set -e
+          status=0
+          timeout 30 ssh "${options[@]}" -tt "$target" id > "$folder/deny.stdout" 2> "$folder/deny.stderr" || status=$?
           [[ $status != 124 && $status != 0 && ! -s "$folder/deny.stdout" ]]
           grep -Eq '^PTY allocation request failed on channel [0-9]+[[:space:]]*$' "$folder/deny.stderr"
           echo 'PASS PTY allocation denied'
           stage=forwarding
-          set +e
-          timeout 30 ssh "${options[@]}" -N -o ExitOnForwardFailure=yes -R 127.0.0.1:0:127.0.0.1:22 "$target" > "$folder/deny.stdout" 2> "$folder/deny.stderr"
-          status=$?
-          set -e
+          status=0
+          timeout 30 ssh "${options[@]}" -N -o ExitOnForwardFailure=yes -R 127.0.0.1:0:127.0.0.1:22 "$target" > "$folder/deny.stdout" 2> "$folder/deny.stderr" || status=$?
           [[ $status == 255 && ! -s "$folder/deny.stdout" ]]
           grep -Fq 'remote port forwarding failed for listen port 0' "$folder/deny.stderr"
           echo 'PASS: fresh encrypted export; shell, SCP command, SFTP, PTY and remote forwarding denied'
