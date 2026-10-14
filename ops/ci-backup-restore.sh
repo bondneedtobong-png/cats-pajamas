@@ -12,7 +12,7 @@ cleanup() {
   if [[ $owned == 1 && "$container" =~ ^cats-restore-[0-9]+-[a-f0-9]{12}$ ]]; then
     if docker inspect "$container" >/dev/null 2>&1; then
       if [[ $(docker inspect "$container" --format '{{index .Config.Labels "cats.restore.proof"}}') == true ]]; then
-        docker rm -f "$container" >/dev/null 2>&1 || code=1
+        docker rm -f -v "$container" >/dev/null 2>&1 || code=1
       else code=1; fi
     fi
   fi

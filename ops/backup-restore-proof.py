@@ -52,8 +52,15 @@ def prepare(archive, work):
     roles = sorted(set(re.findall(r'OWNER TO (\w+);',sql) + re.findall(r' TO (\w+)(?:;| WITH GRANT OPTION;)',sql)) - {'postgres','PUBLIC'})
     schemas = sorted(set(re.findall(r'^CREATE SCHEMA (\w+);',sql,re.M)))
     (work/'database.sql').write_text(sql,encoding='utf-8')
-    (work/'roles.sql').write_text(''.join('CREATE ROLE "'+r+'" NOLOGIN;\n' for r in roles),encoding='utf-8')
-    (work/'expected.json').write_text(json.dumps({'tables':blocks,'roles':roles,'schemas':schemas}),encoding='utf-8')
+    # Supabase provisioning: migrations/db/init-scripts/00000000000000-initial-schema.sql
+    # supabase_admin is the superuser owner of extension event triggers.
+    # Fixture LOGIN remains disabled and no production password is imported.
+    attributes={'supabase_admin':'SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS'}
+    event_owners=set(re.findall(r'^ALTER EVENT TRIGGER \w+ OWNER TO (\w+);',sql,re.M))
+    if not event_owners <= {'postgres','supabase_admin'}:
+        raise ValueError('Unrecognized privileged event trigger owner')
+    (work/'roles.sql').write_text(''.join('CREATE ROLE "'+r+'" NOLOGIN '+attributes.get(r,'NOSUPERUSER')+';\n' for r in roles),encoding='utf-8')
+    (work/'expected.json').write_text(json.dumps({'tables':blocks,'roles':roles,'schemas':schemas,'privileged_event_owners':sorted(event_owners)}),encoding='utf-8')
 
 def verify(work, container):
     expected=json.loads((pathlib.Path(work)/'expected.json').read_text())
@@ -65,6 +72,9 @@ def verify(work, container):
     roles=set(query('SELECT rolname FROM pg_roles;').splitlines())
     if not set(expected['schemas'])<=schemas or not set(expected['roles'])<=roles:
         raise RuntimeError('Schema or role mismatch')
+    superusers=set(query('SELECT rolname FROM pg_roles WHERE rolsuper;').splitlines())
+    if not set(expected['privileged_event_owners']) <= superusers:
+        raise RuntimeError('Event trigger owner attributes mismatch')
     tables=set(query("SELECT schemaname||'.'||tablename FROM pg_tables WHERE schemaname='public';").splitlines())
     if tables != {b['table'] for b in expected['tables']}: raise RuntimeError('Public table set mismatch')
     result=[]
