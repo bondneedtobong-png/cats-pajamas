@@ -10,7 +10,7 @@ trap 'rm -f -- "$body"' EXIT
 for route in / /menu/ /booking /auth /profile /app /admin /booking-rules /privacy /game/; do
   code=$(curl "${curl_args[@]}" -o "$body" -w '%{http_code}' "https://cats-pajamas.ru$route")
   [[ "$code" == 200 ]]
-  if [[ "$route" == /menu/ ]]; then grep -q 'Барная карта' "$body"; fi
+  if [[ "$route" == /menu/ ]]; then node ops/verify-menu-html.mjs "$body"; fi
 done
 for route in "/ci-unknown-$sha" /booking/deeper "/assets/ci-missing-$sha.js" "/fonts/ci-missing-$sha.woff2"; do
   code=$(curl "${curl_args[@]}" -o "$body" -w '%{http_code}' "https://cats-pajamas.ru$route")

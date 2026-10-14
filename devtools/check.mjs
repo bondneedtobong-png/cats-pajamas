@@ -92,6 +92,8 @@ async function main() {
     await node('devtools/menu_content_test.mjs');
     await node('devtools/menu_prerender_price_test.mjs');
     await node('devtools/raw_404_test.mjs');
+    await node('devtools/nginx_404_migration_test.mjs');
+    await node('devtools/menu_raw_html_test.mjs');
 
     server = await createServer({ root, configFile: false, envDir: temporary,
       define: { 'import.meta.env.VITE_API_BASE': '""', 'import.meta.env.VITE_GA_ID': '""', 'import.meta.env.VITE_YM_ID': '""' },
