@@ -71,7 +71,7 @@ export default async function handler(req, res) {
       if (user.role !== 'admin') return forbidden(res);
       if (action === 'status') return ok(res, { reservation: await updateReservationStatus(id, body.status, { fromStatus: body.fromStatus }) });
       if (action === 'update') {
-        if (body.expected === undefined) return badRequest(res, 'Исходные данные брони обязательны. Обновите список перед переносом');
+        if (body.expected === undefined) return badRequest(res, 'Исходные данные брони обязательны. Обновите страницу перед переносом');
         return ok(res, { reservation: await updateReservation(id, body.updates || {}, body.expected) });
       }
       return badRequest(res, 'Неизвестное действие');

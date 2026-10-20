@@ -749,7 +749,7 @@ function transferSnapshot(expected) {
     || !Number.isFinite(Date.parse(expected.date + 'T00:00:00Z'))
     || new Date(expected.date + 'T00:00:00Z').toISOString().slice(0, 10) !== expected.date
     || !Number.isSafeInteger(expected.guestsCount) || expected.guestsCount < 1 || expected.guestsCount > 2147483647) {
-    throw bookingError('Исходные данные брони отсутствуют или некорректны. Обновите список перед переносом');
+    throw bookingError('Исходные данные брони отсутствуют или некорректны. Обновите страницу перед переносом');
   }
   assertClockTime(expected.timeFrom, 'Некорректное исходное время брони');
   assertClockTime(expected.timeTo, 'Некорректное исходное время окончания брони');
