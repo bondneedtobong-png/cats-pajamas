@@ -93,6 +93,7 @@ async function main() {
     await node('ops/backup-envelope-test.mjs');
     await node('ops/backup-channel-test.mjs');
     await node('ops/backup-installer-test.mjs');
+    await node('ops/original-media-backup-test.mjs');
     await step('Isolated restore parser fixtures', process.platform === 'win32' ? 'python' : 'python3',
       ['ops/backup-restore-proof-test.py']);
     await step('Read-only backup scope audit fixtures', process.platform === 'win32' ? 'python' : 'python3',
