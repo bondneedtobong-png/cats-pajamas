@@ -1,0 +1,4 @@
+# These byte-pinned backup sources must match on Windows and Linux checkouts.
+ops/backup-builder-before.fixture.sh text eol=lf
+ops/backup-builder.sh text eol=lf
+ops/backup-runtime-media.py text eol=lf

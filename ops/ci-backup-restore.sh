@@ -32,14 +32,18 @@ image=${1:?immutable installed Supabase PostgreSQL image ID required}
 [[ $(docker image inspect "$image" --format '{{.Id}}' 2>/dev/null) == "$image" ]]
 helper=${2:?checked backup-restore-proof.py path required}
 [[ -f "$helper" && ! -L "$helper" ]]
+media_helper=${3:-}
+if [[ -n "$media_helper" ]]; then [[ -f "$media_helper" && ! -L "$media_helper" ]]; fi
+minimum_created=${4:-0}
+[[ "$minimum_created" =~ ^[0-9]{1,12}$ ]]
 for executable in python3 docker sha256sum timeout; do command -v "$executable" >/dev/null; done
 work=$(mktemp -d /var/tmp/cats-restore.XXXXXXXX)
 chmod 700 "$work"
 container="cats-restore-$$-$(python3 -c 'import secrets; print(secrets.token_hex(6))')"
 stage=archive
-archive=$(python3 - <<'PY'
+archive=$(python3 - "$minimum_created" <<'PY'
 from pathlib import Path
-import re,time
+import re,time,sys
 root=Path('/var/backups/cats-pajamas')
 assert root.is_dir() and not root.is_symlink()
 items=sorted(p for p in root.iterdir() if re.fullmatch(r'\d{8}-\d{6}\.tar\.gz',p.name))
@@ -48,12 +52,19 @@ p=items[-1]
 assert p.is_file() and not p.is_symlink() and p.stat().st_uid==0
 assert 0 < p.stat().st_size <= 512*1024*1024
 assert 0 <= time.time()-p.stat().st_mtime < 3600
+assert p.stat().st_mtime >= int(sys.argv[1]), 'Fresh archive from this backup start required'
 print(p)
 PY
 )
 # Snapshot the owned input to prevent backup rotation/change during verification.
 cp -- "$archive" "$work/archive.tar.gz"
 archive_sha=$(sha256sum "$work/archive.tar.gz" | cut -d' ' -f1)
+photo_restore=unproven
+if [[ -n "$media_helper" ]]; then
+  stage=runtime_media
+  timeout 180 python3 -B "$media_helper" verify-backup "$work/archive.tar.gz" >"$work/media-proof.json" 2>"$work/media.log"
+  photo_restore=manifest_verified
+fi
 python3 "$helper" prepare "$work/archive.tar.gz" "$work" >"$work/prepare.log" 2>&1
 stage=container
 # Bare initdb, no image initialization scripts, host ports, production mounts, or network.
@@ -81,5 +92,6 @@ stage=sql
 timeout 180 docker exec -i "$container" psql -h /tmp -X -U postgres -d postgres -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate -f - <"$work/database.sql" >"$work/sql.log" 2>&1
 stage=content
 timeout 180 python3 "$helper" verify "$work" "$container" >"$work/proof.json" 2>"$work/verify.log"
-printf 'PASS isolated backup restore archive=%s sha256=%s network=none photo_restore=unproven\n' "${archive##*/}" "$archive_sha"
+printf 'PASS isolated backup restore archive=%s sha256=%s network=none photo_restore=%s\n' "${archive##*/}" "$archive_sha" "$photo_restore"
 cat "$work/proof.json"
+if [[ -n "$media_helper" ]]; then cat "$work/media-proof.json"; fi
