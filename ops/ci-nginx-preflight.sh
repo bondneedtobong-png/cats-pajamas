@@ -46,6 +46,11 @@ npm ci --no-audit --no-fund
 npm run build
 node ops/prepare-nginx-404.mjs "$state/before.conf" "$state/candidate.conf"
 python3 ops/test_nginx_404.py "$state/candidate.conf" "$scratch/dist"
+# Observational source audit: bounded, redacted, and read-only. UNKNOWN scope
+# does not replace the restore gate or block an otherwise safe release.
+if ! timeout 30 python3 -B ops/backup-scope-audit.py --nginx-config "$state/before.conf"; then
+  echo 'UNKNOWN backup_source_scope audit_unavailable=true'
+fi
 # Verify the fresh archive in a disposable, offline container before changing
 # application code or its additive settings schema. Use the installed DB image.
 db_image=$(docker inspect supabase-db --format '{{.Image}}')

@@ -95,6 +95,8 @@ async function main() {
     await node('ops/backup-installer-test.mjs');
     await step('Isolated restore parser fixtures', process.platform === 'win32' ? 'python' : 'python3',
       ['ops/backup-restore-proof-test.py']);
+    await step('Read-only backup scope audit fixtures', process.platform === 'win32' ? 'python' : 'python3',
+      ['-B', 'ops/backup-scope-audit-test.py']);
     if (process.platform === 'win32') {
       await step('Windows GitHub backup collector fixtures', path.join(process.env.SystemRoot || 'C:/Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe'),
         ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(root, 'ops/backup-github-test.ps1')]);

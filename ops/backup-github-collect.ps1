@@ -25,6 +25,11 @@ using System;
 using System.IO;
 using System.Diagnostics;
 using System.Text;
+public sealed class CatsGithubProcessException : Exception {
+    public string Code { get; private set; }
+    public int? ExitCode { get; private set; }
+    public CatsGithubProcessException(string code, int? exitCode=null) : base(code) { Code=code; ExitCode=exitCode; }
+}
 public static class CatsGithubProcess {
     static string Quote(string value) {
         var b = new StringBuilder("\""); int slashes=0;
@@ -45,35 +50,62 @@ public static class CatsGithubProcess {
         start.EnvironmentVariables["GH_PROMPT_DISABLED"]="1";
         using(var process=new Process()) {
             process.StartInfo=start;
-            Stream target=null; var clock=Stopwatch.StartNew();
+            Stream target=null; bool createdOutput=false, completed=false; var clock=Stopwatch.StartNew();
             try {
                 target=string.IsNullOrEmpty(output) ? (Stream)new MemoryStream() : new FileStream(output,FileMode.CreateNew,FileAccess.Write,FileShare.None);
-                if(!process.Start()) throw new Exception("Process start failed");
+                createdOutput=!string.IsNullOrEmpty(output);
+                if(!process.Start()) throw new CatsGithubProcessException("process_start");
                 // Binary draining keeps even an unterminated diagnostic line bounded.
                 var diagnostics=process.StandardError.BaseStream.CopyToAsync(Stream.Null);
                 var buffer=new byte[65536]; long total=0;
                 while(true) {
                     int remaining=(int)Math.Max(0,seconds*1000L-clock.ElapsedMilliseconds);
                     var read=process.StandardOutput.BaseStream.ReadAsync(buffer,0,buffer.Length);
-                    if(remaining==0 || !read.Wait(remaining)) throw new Exception("Process timeout");
+                    if(remaining==0 || !read.Wait(remaining)) throw new CatsGithubProcessException("process_timeout");
                     int count=read.Result; if(count==0) break;
-                    total+=count; if(total>maximum) throw new Exception("Output exceeds limit");
+                    total+=count; if(total>maximum) throw new CatsGithubProcessException("output_limit");
                     target.Write(buffer,0,count);
                 }
                 int wait=(int)Math.Max(0,seconds*1000L-clock.ElapsedMilliseconds);
-                if(!process.WaitForExit(wait) || process.ExitCode!=0) throw new Exception("Process failed or timed out");
-                target.Flush(); return string.IsNullOrEmpty(output) ? ((MemoryStream)target).ToArray() : null;
+                if(!process.WaitForExit(wait)) throw new CatsGithubProcessException("process_timeout");
+                if(process.ExitCode!=0) throw new CatsGithubProcessException("process_exit",process.ExitCode);
+                target.Flush(); completed=true; return string.IsNullOrEmpty(output) ? ((MemoryStream)target).ToArray() : null;
+            } catch(CatsGithubProcessException) { throw;
+            } catch { throw new CatsGithubProcessException("process_io");
             } finally {
                 try { if(!process.HasExited) { process.Kill(); process.WaitForExit(5000); } } catch { }
                 if(target!=null) target.Dispose();
+                // Only the stream successfully created by this attempt is ours.
+                if(createdOutput && !completed) File.Delete(output);
             }
         }
     }
 }
 '@
 }
-function Invoke-GithubJson([string]$Tool, [string[]]$Arguments) {
-    $bytes = [CatsGithubProcess]::Run($Tool,$Arguments,$null,1MB,120)
+function Get-GithubProcessFailure($Exception) {
+    while ($Exception) {
+        if ($Exception -is [CatsGithubProcessException] -and $Exception.Code -cin @('process_start','process_timeout','process_exit','process_io','output_limit')) { return $Exception }
+        $Exception = $Exception.InnerException
+    }
+    return $null
+}
+function Invoke-GithubProcess([string]$Tool, [string[]]$Arguments, [string]$OutputPath, [long]$Maximum, [int]$Seconds, [int]$RetryDelaySeconds = 10) {
+    # A transient CLI/network error previously ended the day's only attempt.
+    # Retry only the bounded transfer, never failed ZIP/authentication validation.
+    if ($OutputPath -and (Test-Path -LiteralPath $OutputPath)) { throw 'Transfer output already exists' }
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try { return [CatsGithubProcess]::Run($Tool,$Arguments,$OutputPath,$Maximum,$Seconds) }
+        catch {
+            $failure = Get-GithubProcessFailure $_.Exception
+            if (!$failure -or $failure.Code -cnotin @('process_timeout','process_exit') -or $attempt -eq 3) { throw }
+            if ($RetryDelaySeconds -gt 0) { Start-Sleep -Seconds ($RetryDelaySeconds * $attempt) }
+        }
+    }
+}
+function Invoke-GithubJson([string]$Tool, [string[]]$Arguments, [switch]$Retry) {
+    # Worst-case GH transfers/backoff + ZIP/decrypt stay below the task's 20m cap.
+    $bytes = if ($Retry) { Invoke-GithubProcess $Tool $Arguments $null 1MB 45 } else { [CatsGithubProcess]::Run($Tool,$Arguments,$null,1MB,120) }
     return [Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
 }
 function Expand-GithubBackupZip([string]$ZipPath, [string]$Folder) {
@@ -128,39 +160,65 @@ function Invoke-GithubBackupCollection {
     $Destination = [IO.Path]::GetFullPath($Destination).Replace('/','\')
     Assert-BackupDirectory $Destination
     if (!(Test-Path -LiteralPath $Destination -PathType Container)) { throw 'Protected backup directory missing' }
-    $lock = $null; $owned = $null
+    $lock = $null; $owned = $null; $stage = 'lock'
     try {
         # Shared with the SCP collector; status and archives have a single writer.
         $lock = [IO.File]::Open((Join-Path $Destination 'collector.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
+        $stage = 'directory_access'
         Set-BackupDirectoryAccess $Destination
         $repo = 'bondneedtobong-png/cats-pajamas'
-        $runs = (Invoke-GithubJson $GhPath @('api',"repos/$repo/actions/workflows/backup.yml/runs?branch=main&status=success&per_page=100")).workflow_runs
+        $stage = 'list_runs'
+        $runs = (Invoke-GithubJson $GhPath @('api',"repos/$repo/actions/workflows/backup.yml/runs?branch=main&status=success&per_page=100") -Retry).workflow_runs
+        $stage = 'validate_run'
         $run = @($runs | Where-Object { $_.status -ceq 'completed' -and $_.conclusion -ceq 'success' -and $_.head_branch -ceq 'main' -and $_.event -cin @('schedule','workflow_dispatch') -and $_.path -ceq '.github/workflows/backup.yml' -and $_.repository.full_name -ceq $repo } | Sort-Object { [datetime]$_.created_at } -Descending | Select-Object -First 1)
         if ($run.Count -ne 1 -or [string]$run[0].id -notmatch '^\d+$') { throw 'No trusted successful backup run' }
         $runId = [string]$run[0].id
-        $artifacts = (Invoke-GithubJson $GhPath @('api',"repos/$repo/actions/runs/$runId/artifacts?per_page=100")).artifacts
+        $stage = 'list_artifacts'
+        $artifacts = (Invoke-GithubJson $GhPath @('api',"repos/$repo/actions/runs/$runId/artifacts?per_page=100") -Retry).artifacts
+        $stage = 'validate_artifact'
         $artifact = @($artifacts | Where-Object { $_.name -ceq 'protected-backup' })
         if ($artifact.Count -ne 1 -or $artifact[0].expired -ne $false -or [string]$artifact[0].id -notmatch '^\d+$' -or $artifact[0].size_in_bytes -le 0 -or $artifact[0].size_in_bytes -gt (512MB+16384) -or [string]$artifact[0].workflow_run.id -cne $runId -or $artifact[0].workflow_run.head_branch -cne 'main' -or $artifact[0].workflow_run.head_sha -cne $run[0].head_sha) { throw 'Invalid backup artifact' }
+        $stage = 'prepare_download'
         $owned = Join-Path $Destination ('github-download-' + [guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $owned | Out-Null
         $zipPath = Join-Path $owned 'artifact.zip'
-        [CatsGithubProcess]::Run($GhPath,@('api',"repos/$repo/actions/artifacts/$($artifact[0].id)/zip"),$zipPath,(512MB+16384),300) | Out-Null
+        $stage = 'download'
+        Invoke-GithubProcess $GhPath @('api',"repos/$repo/actions/artifacts/$($artifact[0].id)/zip") $zipPath (512MB+16384) 150 | Out-Null
+        $stage = 'expand_zip'
         Assert-BackupDirectory $owned
         Expand-GithubBackupZip $zipPath $owned
         Remove-Item -LiteralPath $zipPath
         $files = @(Get-ChildItem -LiteralPath $owned -Force)
         if ($files.Count -ne 1 -or $files[0].Name -cne 'latest.enc') { throw 'Unexpected artifact contents' }
+        $stage = 'validate_envelope'
         $meta = Read-GithubBackupHeader $files[0].FullName
         $keyPath = Join-Path $Destination 'cats-backup-decryption-key.pem'
+        $stage = 'decrypt'
         $result = Invoke-GithubJson $NodePath @((Join-Path $PSScriptRoot 'backup-envelope.mjs'),'decrypt',$files[0].FullName,$Destination,$keyPath)
         if (!$result.ok -or $result.archive -cne $meta.archive -or $result.sha256 -cne $meta.sha256) { throw 'Decryption verification failed' }
+        $stage = 'verify_hash'
         Assert-BackupHash (Join-Path $Destination $result.archive) $result.sha256
+        $stage = 'retention'
         Remove-ExpiredBackups $Destination ([datetime]::UtcNow.AddDays(-$RetentionDays)) $result.archive
+        $stage = 'write_status'
         $notification = $null
         try { $notification = (Get-Content -LiteralPath (Join-Path $Destination 'status.json') -Raw | ConvertFrom-Json).lastNotificationUtc } catch { }
         $success = @{ checkedUtc=[datetime]::UtcNow.ToString('o'); archive=$result.archive; sha256=$result.sha256; source='GitHub Actions'; runId=$runId; artifactId=[string]$artifact[0].id }
         @{ ok=$true; checkedUtc=$success.checkedUtc; archive=$success.archive; sha256=$success.sha256; source=$success.source; runId=$runId; artifactId=$success.artifactId; lastSuccess=$success; lastNotificationUtc=$notification } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Destination 'status.json') -Encoding UTF8
     } catch {
+        # Public diagnostics are fixed stage/code values and an optional integer.
+        # Never retain stderr, exception text, command arguments, URLs or payloads.
+        $failure = Get-GithubProcessFailure $_.Exception
+        $diagnostic = @{ stage=$stage; code='stage_failed' }
+        if ($failure) {
+            $diagnostic.code = $failure.Code
+            if ($null -ne $failure.ExitCode) { $diagnostic.exitCode = [int]$failure.ExitCode }
+        } elseif ($stage -in @('list_runs','list_artifacts')) { $diagnostic.code = 'invalid_json' }
+        elseif ($stage -in @('validate_run','validate_artifact')) { $diagnostic.code = 'metadata_rejected' }
+        elseif ($stage -eq 'expand_zip') { $diagnostic.code = 'zip_rejected' }
+        elseif ($stage -eq 'validate_envelope') { $diagnostic.code = 'envelope_rejected' }
+        elseif ($stage -eq 'decrypt') { $diagnostic.code = 'decryption_rejected' }
+        elseif ($stage -eq 'verify_hash') { $diagnostic.code = 'checksum_rejected' }
         # A failed lock acquisition must never write the other collector's status.
         if ($lock) {
             $previous = $null
@@ -171,7 +229,7 @@ function Invoke-GithubBackupCollection {
             $notify = !$NoNotification -and (Test-BackupNotificationDue $notification)
             if ($notify) { $notification = [datetime]::UtcNow.ToString('o') }
             $message = 'Новая копия пока не сохранена. Прежние копии сохранены. Следующая попытка автоматически.'
-            @{ ok=$false; checkedUtc=[datetime]::UtcNow.ToString('o'); error=$message; lastSuccess=$last; lastNotificationUtc=$notification } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Destination 'status.json') -Encoding UTF8
+            @{ ok=$false; checkedUtc=[datetime]::UtcNow.ToString('o'); error=$message; diagnostic=$diagnostic; lastSuccess=$last; lastNotificationUtc=$notification } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $Destination 'status.json') -Encoding UTF8
             if ($notify) { try { Show-BackupFailureToast $message } catch { } }
         }
         throw 'GitHub backup collection failed; previous verified copies preserved.'
