@@ -166,7 +166,14 @@ function ManualBookingModal({ adminId, onSaved, onClose }) {
 }
 
 // ─── Transfer (reschedule) modal ─────────────────────────────────
-function TransferModal({ reservation: r, onSaved, onClose }) {
+function TransferModal({ reservation: r, onSaved, onClose, onConflict }) {
+  const [expected] = useState(() => Object.freeze({
+    status: r.status, tableId: r.tableId, date: r.date,
+    timeFrom: r.timeFrom, timeTo: r.timeTo, guestsCount: r.guestsCount,
+  }));
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  function close() { active.current = false; onClose(); }
   const [tableOptions, setTableOptions] = useState([]);
   const [tableId,  setTableId]  = useState(r.tableId);
   useEffect(() => { BookingService.getTablesMerged().then(setTableOptions).catch(() => {}); }, []);
@@ -186,19 +193,22 @@ function TransferModal({ reservation: r, onSaved, onClose }) {
     if (!fits) { setErr('Выберите стол, который вмещает всех гостей брони'); return; }
     if (!adminArrivalSlots(date).includes(timeFrom)) { setErr('Выберите время прихода для этой даты'); return; }
     try {
-      await BookingService.updateReservation(r.id, { tableId, date, timeFrom, timeTo });
-      onSaved();
+      await BookingService.updateReservation(r.id, { tableId, date, timeFrom, timeTo }, expected);
+      if (active.current) onSaved();
     } catch (ex) {
-      setErr(ex.message);
+      if (active.current) {
+        setErr(ex.message);
+        if (ex.status === 409) onConflict?.();
+      }
     }
   }
 
   return (
-    <div className="adm-modal-overlay" onClick={onClose}>
+    <div className="adm-modal-overlay" onClick={close}>
       <div className="adm-modal" onClick={e => e.stopPropagation()}>
         <div className="adm-modal__head">
           <span className="adm-modal__title">Перенести бронь</span>
-          <button className="adm-modal__close" onClick={onClose}>✕</button>
+          <button className="adm-modal__close" onClick={close}>✕</button>
         </div>
         <form className="adm-modal__form" onSubmit={handleSave}>
           <div className="adm-modal__res-info">
@@ -371,7 +381,7 @@ function TabReservations({ adminId }) {
         <ManualBookingModal adminId={adminId} onSaved={() => { setShowNew(false); setTick(n => n + 1); }} onClose={() => setShowNew(false)} />
       )}
       {transferRes && (
-        <TransferModal reservation={transferRes} onSaved={() => { setTransferRes(null); setTick(n => n + 1); }} onClose={() => setTransferRes(null)} />
+        <TransferModal key={transferRes.id} reservation={transferRes} onSaved={() => { setTransferRes(null); setTick(n => n + 1); }} onClose={() => setTransferRes(null)} onConflict={() => setTick(n => n + 1)} />
       )}
       {confirm && (
         <ConfirmModal

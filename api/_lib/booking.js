@@ -738,12 +738,38 @@ export async function markAttendancePromptSent(id) {
   await supabase.from('reservations').update({ attendance_prompt_sent_at: new Date().toISOString() }).eq('id', id);
 }
 
-export async function updateReservation(id, updates) {
+const TRANSFER_SNAPSHOT_FIELDS = ['status', 'tableId', 'date', 'timeFrom', 'timeTo', 'guestsCount'];
+function transferSnapshot(expected) {
+  if (!expected || typeof expected !== 'object' || Array.isArray(expected)
+    || Object.keys(expected).length !== TRANSFER_SNAPSHOT_FIELDS.length
+    || !TRANSFER_SNAPSHOT_FIELDS.every(key => Object.hasOwn(expected, key))
+    || ![...ACTIVE_STATUSES, ...FINAL_STATUSES].includes(expected.status)
+    || typeof expected.tableId !== 'string' || !expected.tableId.trim()
+    || typeof expected.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(expected.date)
+    || !Number.isFinite(Date.parse(expected.date + 'T00:00:00Z'))
+    || new Date(expected.date + 'T00:00:00Z').toISOString().slice(0, 10) !== expected.date
+    || !Number.isSafeInteger(expected.guestsCount) || expected.guestsCount < 1 || expected.guestsCount > 2147483647) {
+    throw bookingError('Исходные данные брони отсутствуют или некорректны. Обновите список перед переносом');
+  }
+  assertClockTime(expected.timeFrom, 'Некорректное исходное время брони');
+  assertClockTime(expected.timeTo, 'Некорректное исходное время окончания брони');
+  return { ...expected };
+}
+function transferConflict() {
+  return bookingError('Бронь изменилась. Закройте окно переноса и откройте его заново.', 409);
+}
+
+// HTTP callers supply the original modal snapshot. Trusted internal callers may
+// omit it; their read/write race is still guarded by the complete fresh tuple.
+export async function updateReservation(id, updates, expected) {
+  const snapshot = expected === undefined ? null : transferSnapshot(expected);
   if (Object.hasOwn(updates, 'status')) {
     throw bookingError('Меняйте статус отдельным действием — перенос не меняет статус брони');
   }
   const existing = await getReservationById(id);
-  if (!existing) throw bookingError('Бронь не найдена');
+  if (!existing) throw snapshot ? transferConflict() : bookingError('Бронь не найдена');
+  if (snapshot && TRANSFER_SNAPSHOT_FIELDS.some(key => snapshot[key] !== existing[key])) throw transferConflict();
+  const original = snapshot || existing;
   const relocating = ['tableId', 'date', 'timeFrom', 'timeTo'].some(k => Object.hasOwn(updates, k) && updates[k] !== existing[k]);
   const target = { ...existing, ...updates };
   if (Object.hasOwn(updates, 'timeTo')) assertClockTime(target.timeTo, 'Выберите корректное время окончания');
@@ -769,14 +795,14 @@ export async function updateReservation(id, updates) {
   const patch = {};
   for (const [k, v] of Object.entries(updates)) if (Object.hasOwn(map, k)) patch[map[k]] = v;
   const { data, error } = await supabase.from('reservations').update(patch)
-    .eq('id', id).eq('status', existing.status).eq('table_id', existing.tableId)
-    .eq('date', existing.date).eq('time_from', existing.timeFrom)
-    .eq('guests_count', existing.guestsCount).select().maybeSingle();
+    .eq('id', id).eq('status', original.status).eq('table_id', original.tableId)
+    .eq('date', original.date).eq('time_from', original.timeFrom).eq('time_to', original.timeTo)
+    .eq('guests_count', original.guestsCount).select().maybeSingle();
   if (error) {
     if (error.code === '23505') throw bookingError('Этот стол уже занят в выбранный вечер');
     throw new Error(error.message);
   }
-  if (!data) throw bookingError('Заявка уже обработана — обновите список');
+  if (!data) throw transferConflict();
   return rowToRes(data);
 }
 

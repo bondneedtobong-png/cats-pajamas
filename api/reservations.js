@@ -1,4 +1,4 @@
-import { readBody, ok, badRequest, unauthorized, forbidden, serverError, applyCors } from './_lib/http.js';
+import { readBody, ok, badRequest, unauthorized, forbidden, serverError, applyCors, json } from './_lib/http.js';
 import { getUser } from './_lib/session.js';
 import {
   getReservations, createReservation, cancelReservation,
@@ -70,12 +70,16 @@ export default async function handler(req, res) {
       // status / transfer — admin only
       if (user.role !== 'admin') return forbidden(res);
       if (action === 'status') return ok(res, { reservation: await updateReservationStatus(id, body.status, { fromStatus: body.fromStatus }) });
-      if (action === 'update') return ok(res, { reservation: await updateReservation(id, body.updates || {}) });
+      if (action === 'update') {
+        if (body.expected === undefined) return badRequest(res, 'Исходные данные брони обязательны. Обновите список перед переносом');
+        return ok(res, { reservation: await updateReservation(id, body.updates || {}, body.expected) });
+      }
       return badRequest(res, 'Неизвестное действие');
     }
 
     return badRequest(res, 'Метод не поддерживается');
   } catch (e) {
+    if (e.statusCode === 409) return json(res, 409, { error: e.message });
     if (e.statusCode === 403) return forbidden(res, e.message);
     if (e.statusCode === 400) return badRequest(res, e.message);
     if (/обязательн|занят|не найдена|не требуется|уже оплачен|выбран|уже прошло|уже есть|нет на плане|уже отменена|финальном статусе/.test(e.message)) return badRequest(res, e.message);

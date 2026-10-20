@@ -60,8 +60,8 @@ const BookingService = {
     const d = await apiFetch('/api/reservations', { method: 'PATCH', body: { id, action: 'status', status, fromStatus } });
     return d.reservation;
   },
-  async updateReservation(id, updates) {
-    const d = await apiFetch('/api/reservations', { method: 'PATCH', body: { id, action: 'update', updates } });
+  async updateReservation(id, updates, expected) {
+    const d = await apiFetch('/api/reservations', { method: 'PATCH', body: { id, action: 'update', updates, expected } });
     return d.reservation;
   },
   async payDeposit(id) {

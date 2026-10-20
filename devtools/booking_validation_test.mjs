@@ -19,7 +19,14 @@ const { issueToken } = await import('../api/_lib/session.js');
 const { reservationInstant } = await import('../src/booking/barTime.js');
 const { TABLES, activeSeats } = await import('../src/booking/tablesConfig.js');
 const base = { tableId: 'T1', date: '2099-10-12', timeFrom: '20:00', guestsCount: 2, guestName: 'Guest' };
+function currentSnapshot(id) {
+  const row = db.t('reservations').find(r => r.id === id);
+  return { status: row.status, tableId: row.table_id, date: row.date, timeFrom: row.time_from, timeTo: row.time_to, guestsCount: row.guests_count };
+}
 async function api(method, body) {
+  // These existing semantic-validation cases submit a fresh initial snapshot.
+  // Stale/missing/malformed expectations are covered separately, without rebasing.
+  if (body.action === 'update' && !Object.hasOwn(body, 'expected')) body = { ...body, expected: currentSnapshot(body.id) };
   const res = { status(code) { this.code = code; return this; }, end(value) { this.value = JSON.parse(value); }, setHeader() {} };
   await handler({ method, headers: { authorization: 'Bearer ' + issueToken('admin') }, body, query: {} }, res);
   return res;
@@ -55,7 +62,7 @@ try {
         assert.equal((await api('PATCH', { id, action: 'update', updates: { guestsCount: 5 } })).code, 200);
       }
     };
-    assert.equal((await api('PATCH', { id, action: 'update', updates: { tableId: 'T2' } })).code, 400);
+    assert.equal((await api('PATCH', { id, action: 'update', updates: { tableId: 'T2' } })).code, 409);
     assert.equal(db.t('reservations')[0].table_id, 'T1'); assert.equal(db.t('reservations')[0].guests_count, 5);
   });
   await test('default count and three-hour end retained', async () => {

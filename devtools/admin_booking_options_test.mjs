@@ -11,6 +11,7 @@ try {
  for (const width of [390,768,1366]) {
   const page = await browser.newPage({ viewport:{ width, height:width===1366?700:900 } });
   const errors=[], writes=[];
+  let transferConflict=false;
   page.on('pageerror', e=>errors.push(e.message));
   await page.clock.install({ time:new Date('2026-10-14T14:20:00Z') });
   await page.route('**/*', async route=> {
@@ -20,7 +21,13 @@ try {
     if(url.pathname==='/api/tables') data={tables:[{id:'two', seatsCount:2, name:'Два места'},{id:'six',seatsCount:6,name:'Шесть мест'}]};
     if(url.pathname==='/api/reservations') {
      if(route.request().method()==='GET') data={reservations:[reservation]};
-     else { writes.push(route.request().postDataJSON()); data={reservation}; }
+     else {
+      const body=route.request().postDataJSON(); writes.push(body);
+      if(transferConflict && body.action==='update') {
+       await route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'Бронь изменилась. Закройте окно переноса и откройте его заново.'})}); return;
+      }
+      data={reservation};
+     }
     }
     await route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
    } else if(url.origin===base.origin) await route.continue(); else await route.abort();
@@ -55,6 +62,20 @@ try {
   await page.screenshot({path:new URL(`transfer-${width}.png`,shots).pathname.replace(/^\/(\w:)/,'$1'),fullPage:true});
   await transfer.getByRole('button',{name:'Сохранить',exact:true}).click(); await transfer.waitFor({state:'detached'});
   assert.equal(writes[1].updates.tableId,'six'); assert.equal(writes[1].updates.timeFrom,'01:00'); assert.equal(writes[1].updates.timeTo,'03:15'); assert(!('guestsCount' in writes[1].updates));
+  transferConflict=true;
+  await page.getByRole('button',{name:'Перенести',exact:true}).click();
+  const conflicted=page.locator('.adm-modal');
+  await conflicted.locator('input[type=date]').fill('2026-10-15');
+  await conflicted.locator('select').nth(1).selectOption('01:00');
+  await conflicted.getByRole('button',{name:'Сохранить',exact:true}).click();
+  await conflicted.getByText('Бронь изменилась. Закройте окно переноса и откройте его заново.',{exact:true}).waitFor();
+  assert.equal(await conflicted.locator('input[type=date]').inputValue(),'2026-10-15');
+  assert.equal(await conflicted.locator('select').nth(1).inputValue(),'01:00');
+  assert.deepEqual(writes[2].expected,Object.fromEntries(['status','tableId','date','timeFrom','timeTo','guestsCount'].map(key=>[key,reservation[key]])));
+  await page.waitForTimeout(100); assert.equal(writes.length,3,'Conflict must not automatically retry');
+  assert(await conflicted.evaluate(el=>el.scrollWidth<=el.clientWidth+1),'Conflict text overflows the modal');
+  await page.screenshot({path:new URL(`transfer-conflict-${width}.png`,shots).pathname.replace(/^\/(\w:)/,'$1'),fullPage:true});
+  await conflicted.locator('.adm-modal__close').click(); await conflicted.waitFor({state:'detached'});
   await page.clock.setSystemTime(new Date('2026-10-14T01:20:00Z'));
   await page.getByRole('button',{name:'+ Добавить (звонок)'}).click();
   assert.equal(await page.locator('.adm-modal input[type=date]').inputValue(),'2026-10-13','before 06:00 Samara belongs to previous evening');

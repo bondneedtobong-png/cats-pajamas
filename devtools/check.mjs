@@ -89,6 +89,7 @@ async function main() {
     await node('devtools/config_booking_write_test.mjs');
     await node('devtools/config_write_browser_test.mjs');
     await node('devtools/booking_validation_test.mjs');
+    await node('devtools/transfer_snapshot_test.mjs');
     await npm('test:photos');
     await node('ops/backup-envelope-test.mjs');
     await node('ops/backup-channel-test.mjs');
